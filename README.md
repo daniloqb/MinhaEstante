@@ -1,12 +1,14 @@
 # Minha Estante 📚
 
-Aplicativo Android nativo para registro de leituras e lista de interesse ("Quero Ler"), com funcionamento 100% offline, armazenamento local via SQLite (Room), e identidade visual imersiva de biblioteca clássica em madeira nobre e papel envelhecido.
+Aplicativo web React responsivo para registro de leituras e lista de interesse ("Quero Ler"), com funcionamento 100% offline, persistência local no navegador, e identidade visual imersiva de biblioteca clássica em madeira nobre e papel envelhecido.
+
+Reescrito a partir do aplicativo original em Android para React + Vite + TypeScript e Tailwind CSS, preservando integralmente todas as funcionalidades, regras de negócio e estética original.
 
 ---
 
 ## 🎨 Identidade Visual & Design System
 
-- **Madeira Escura / Nogueira Clássica**: Fundo em `#4A2C1A` com veios desenhados por `Canvas` procedural, topo e navegação em `#2E1A0F` com filete de acabamento em latão dourado `#8B5A33`.
+- **Madeira Escura / Nogueira Clássica**: Fundo em `#4A2C1A` com veios de madeira, topo e navegação em `#2E1A0F` com filete de acabamento em latão dourado `#8B5A33`.
 - **Prateleiras 3D**: Prateleiras chanfradas (`#7A4A2A`) com reflexo dourado superior e sombra projetada inferior.
 - **Lombadas e Capas Realistas**: Capas com sombra lateral simulando lombada e cantos arredondados. Quando não há imagem de capa, uma capa clássica ornamental em serifada com moldura em latão dourado é gerada dinamicamente.
 - **Cartões em Papel Envelhecido**: Superfície em `#F3E6CF` com bordas suaves e tipografia elegante.
@@ -25,8 +27,9 @@ Aplicativo Android nativo para registro de leituras e lista de interesse ("Quero
 4. **Cadastro Manual**: Formulário completo para inclusão de livros físicos ou raros, com pré-visualização em tempo real da capa gerada.
 5. **Detalhes da Obra**: Visão do livro em pé sobre a prateleira, metadados (editora, ano, páginas, ISBN), sinopse expansível e observações pessoais.
 6. **Avaliação 0 a 10**: Seletor de 10 estrelas douradas interativas, suporte a "Sem nota" e seletor rápido de mês/ano.
-7. **Estatísticas da Biblioteca**: Gráfico de barras "Livros lidos por ano" desenhado em Canvas, total de páginas lidas, média de notas e rankings dos autores e gêneros mais lidos.
-8. **Backup e Sincronização**: Exportação e importação em CSV e JSON com compartilhamento nativo do Android.
+7. **Estatísticas da Biblioteca**: Gráfico de barras "Livros lidos por ano", total de páginas lidas, média de notas e rankings dos autores e gêneros mais lidos.
+8. **Backup e Sincronização**: Exportação e importação em CSV e JSON com download direto de arquivo ou cópia.
+9. **Detecção de Duplicatas**: Ao adicionar livro da busca, detecta se a obra já existe na estante por ISBN ou título e oferece opção de abrir o registro existente ou cadastrar como novo.
 
 ---
 
@@ -47,34 +50,19 @@ Grande Sertão: Veredas,João Guimarães Rosa,,,624,quero_ler
 
 ---
 
-## 🛠️ Como Compilar e Gerar APK
+## 🛠️ Execução e Desenvolvimento
 
 ### Pré-requisitos
-- JDK 17 ou superior
-- Android SDK (API 34/36)
-- Gradle 8+
+- Node.js 20+ ou 22
+- npm
 
-### Como Rodar em Debug
+### Como rodar em desenvolvimento
 ```bash
-gradle :app:installDebug
+npm install
+npm run dev
 ```
 
-### Como Gerar o APK de Release
+### Como compilar para produção
 ```bash
-gradle :app:assembleRelease
-```
-O APK final será gerado em:
-`app/build/outputs/apk/release/app-release-unsigned.apk` (ou assinado se configurada a keystore).
-
-### Como Gerar Keystore e Assinar o Release
-Para gerar sua chave de assinatura:
-```bash
-keytool -genkey -v -keystore minha-chave.jks -keyalg RSA -keysize 2048 -validity 10000 -alias estante
-```
-Em seguida, defina as variáveis de ambiente antes do build:
-```bash
-export KEYSTORE_PATH="caminho/para/minha-chave.jks"
-export STORE_PASSWORD="sua_senha_store"
-export KEY_PASSWORD="sua_senha_key"
-gradle :app:assembleRelease
+npm run build
 ```

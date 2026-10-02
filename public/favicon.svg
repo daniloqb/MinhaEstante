@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <rect width="48" height="48" rx="10" fill="#2E1A0F"/>
+  <rect x="4" y="4" width="40" height="40" rx="8" fill="#4A2C1A" stroke="#8B5A33" stroke-width="1"/>
+  <!-- 3D Shelf -->
+  <rect x="6" y="34" width="36" height="5" rx="1" fill="#7A4A2A"/>
+  <rect x="6" y="34" width="36" height="1" fill="#E8C98A" opacity="0.6"/>
+  <!-- Books on shelf -->
+  <rect x="10" y="16" width="6" height="18" rx="1" fill="#4A1521" stroke="#E8C98A" stroke-width="0.5"/>
+  <rect x="17" y="12" width="7" height="22" rx="1" fill="#1E3F20" stroke="#E8C98A" stroke-width="0.5"/>
+  <rect x="25" y="18" width="5" height="16" rx="1" fill="#2C3E50" stroke="#E8C98A" stroke-width="0.5"/>
+  <rect x="31" y="14" width="7" height="20" rx="1" fill="#6B3A1C" stroke="#E8C98A" stroke-width="0.5"/>
+</svg>
