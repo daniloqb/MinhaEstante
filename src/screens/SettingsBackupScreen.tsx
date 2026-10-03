@@ -3,7 +3,21 @@ import { ViewMode, GroupByMode } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
 import { PaperCard } from '../components/PaperCard';
-import { Download, Upload, Share2, Key, Palette, Library, X } from 'lucide-react';
+import {
+  Download,
+  Upload,
+  Share2,
+  Key,
+  Palette,
+  Library,
+  X,
+  Usb,
+  Terminal,
+  Check,
+  Copy,
+  ExternalLink,
+} from 'lucide-react';
+import { PWAInstallButton } from '../components/PWAInstallButton';
 
 interface SettingsBackupScreenProps {
   palette: WoodPalette;
@@ -39,7 +53,26 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
   const [showImportDialog, setShowImportDialog] = useState<'csv' | 'json' | null>(null);
   const [importText, setImportText] = useState('');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isUsbGuideOpen, setIsUsbGuideOpen] = useState(false);
+  const [copiedAdb, setCopiedAdb] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCopyAdb = () => {
+    navigator.clipboard.writeText('adb install -r minha-estante.apk');
+    setCopiedAdb(true);
+    setTimeout(() => setCopiedAdb(false), 2500);
+  };
+
+  const handleDownloadApk = () => {
+    const a = document.createElement('a');
+    a.href = '/minha-estante.apk?v=' + Date.now();
+    a.download = 'minha-estante.apk';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setStatusMessage('Download do .APK iniciado!');
+    setTimeout(() => setStatusMessage(null), 3000);
+  };
 
   const downloadFile = (content: string, filename: string, mimeType: string) => {
     try {
@@ -227,6 +260,130 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
 
       {/* Conteúdo Principal */}
       <div className="flex-1 w-full max-w-2xl mx-auto px-4 py-6 flex flex-col gap-5 pb-16">
+        {/* Instalação no Android (.APK / Cabo USB) */}
+        <PaperCard palette={palette} elevated className="flex flex-col gap-3.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <span className="p-2 rounded-lg bg-amber-900/10 text-xl flex items-center justify-center">
+                🤖
+              </span>
+              <div>
+                <h3 className="font-serif font-bold text-lg leading-tight" style={{ color: palette.textOnPaper }}>
+                  Instalar no Android (.APK & Via USB)
+                </h3>
+                <p className="text-xs font-serif" style={{ color: palette.textSecondaryOnPaper }}>
+                  Versão 2.1 compilada e assinada na raiz do projeto
+                </p>
+              </div>
+            </div>
+
+            <span
+              className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider"
+              style={{
+                backgroundColor: `${palette.goldPrimary}20`,
+                color: palette.goldPrimary,
+                border: `1px solid ${palette.goldPrimary}40`,
+              }}
+            >
+              v2.1 .apk
+            </span>
+          </div>
+
+          <p className="text-xs leading-relaxed" style={{ color: palette.textOnPaper }}>
+            Você pode baixar o arquivo <strong>.apk</strong> diretamente para instalar no celular ou conectar o aparelho via cabo USB ao computador e instalar com depuração USB (ADB).
+          </p>
+
+          <div className="flex flex-wrap items-center gap-2.5 pt-1">
+            <button
+              type="button"
+              onClick={handleDownloadApk}
+              className="flex-1 min-w-[140px] py-2.5 px-4 rounded-xl font-serif font-bold text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer hover:brightness-105 active:scale-98 transition-all"
+              style={{
+                backgroundColor: palette.goldPrimary,
+                color: palette.textOnGold,
+              }}
+              title="Baixar minha-estante.apk diretamente no computador ou celular"
+            >
+              <Download size={15} strokeWidth={2.5} />
+              Baixar .APK Direto
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsUsbGuideOpen(!isUsbGuideOpen)}
+              className="flex-1 min-w-[140px] py-2.5 px-4 rounded-xl font-serif font-bold text-xs border flex items-center justify-center gap-2 cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+              style={{
+                borderColor: palette.woodBorder,
+                color: palette.textOnPaper,
+                backgroundColor: isUsbGuideOpen ? `${palette.goldPrimary}25` : 'transparent',
+              }}
+              title="Ver instruções para instalação via cabo USB com ADB"
+            >
+              <Usb size={15} />
+              {isUsbGuideOpen ? 'Ocultar Guia USB' : 'Instalar via USB (ADB)'}
+            </button>
+          </div>
+
+          {/* Painel com Instruções e Linha de Comando para Instalação via Cabo USB */}
+          {isUsbGuideOpen && (
+            <div
+              className="p-3.5 rounded-xl border flex flex-col gap-3 text-xs animate-in fade-in slide-in-from-top-2 duration-200 mt-1"
+              style={{
+                backgroundColor: palette.paperSurfaceElevated,
+                borderColor: `${palette.woodBorder}50`,
+              }}
+            >
+              <div className="flex items-center gap-2 font-serif font-bold text-xs" style={{ color: palette.woodBorder }}>
+                <Terminal size={15} />
+                <span>Instalação rápida via Cabo USB (ADB):</span>
+              </div>
+
+              <ol className="list-decimal list-inside space-y-1.5 text-xs leading-relaxed" style={{ color: palette.textOnPaper }}>
+                <li>Conecte o smartphone Android ao computador usando o <strong>cabo USB</strong>.</li>
+                <li>
+                  No celular, ative a <strong>Depuração USB</strong> em:{' '}
+                  <em>Configurações &gt; Opções do Desenvolvedor &gt; Depuração USB</em>.
+                </li>
+                <li>
+                  Baixe o arquivo <strong>minha-estante.apk</strong> (ou use o arquivo já existente na raiz do projeto).
+                </li>
+                <li>Abra o terminal na pasta do arquivo e execute o comando:</li>
+              </ol>
+
+              {/* Bloco de Comando com botão Copiar */}
+              <div className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-black/90 text-emerald-400 font-mono text-xs shadow-inner">
+                <span className="select-all break-all">adb install -r minha-estante.apk</span>
+                <button
+                  type="button"
+                  onClick={handleCopyAdb}
+                  className="px-2.5 py-1 rounded bg-white/15 hover:bg-white/25 text-white font-sans text-[11px] font-bold flex items-center gap-1.5 shrink-0 cursor-pointer transition-colors"
+                >
+                  {copiedAdb ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                  {copiedAdb ? 'Copiado!' : 'Copiar'}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-black/10 text-[11px]">
+                <span className="text-stone-500">
+                  Sem terminal? Use o instalador no navegador:
+                </span>
+                <a
+                  href="https://webadb.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-serif font-bold underline flex items-center gap-1 hover:opacity-80"
+                  style={{ color: palette.goldPrimary }}
+                >
+                  Abrir WebADB <ExternalLink size={11} />
+                </a>
+              </div>
+            </div>
+          )}
+        </PaperCard>
+
+        {/* Instalação no Smartphone */}
+        <PWAInstallButton variant="card" palette={palette} />
+
         {/* Identidade Visual & Tema */}
         <PaperCard palette={palette} elevated className="flex flex-col gap-3">
           <div className="flex items-center gap-2">

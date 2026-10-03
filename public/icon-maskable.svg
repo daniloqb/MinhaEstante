@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Gradiente de Fundo Madeira Escura Full Bleed -->
+    <linearGradient id="mWoodBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3A1F10" />
+      <stop offset="50%" stop-color="#24130A" />
+      <stop offset="100%" stop-color="#180C06" />
+    </linearGradient>
+
+    <!-- Gradiente Dourado Real -->
+    <linearGradient id="mGoldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F9E4B7" />
+      <stop offset="35%" stop-color="#D4AF37" />
+      <stop offset="70%" stop-color="#AA820A" />
+      <stop offset="100%" stop-color="#E5C158" />
+    </linearGradient>
+
+    <linearGradient id="mShelfTop" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5C3317" />
+      <stop offset="50%" stop-color="#7A4522" />
+      <stop offset="100%" stop-color="#4E2911" />
+    </linearGradient>
+
+    <linearGradient id="mShelfFront" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#42220D" />
+      <stop offset="40%" stop-color="#321908" />
+      <stop offset="100%" stop-color="#1F0E04" />
+    </linearGradient>
+
+    <filter id="mBookShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- Fundo Full-Bleed Sem Arredondamento para Suportar Qualquer Recorte Maskable -->
+  <rect width="512" height="512" fill="url(#mWoodBg)" />
+
+  <!-- Conteúdo Escalonado no Centro (Safe Zone com 18% de margem) -->
+  <g transform="translate(40, 40) scale(0.84)">
+    <!-- Conjunto de Livros na Estante -->
+    <g filter="url(#mBookShadow)">
+      <!-- Livro 1: Borgonha Profundo (Inclinado) -->
+      <g transform="translate(90, 160) rotate(-10)">
+        <rect x="0" y="0" width="56" height="200" rx="6" fill="#581825" stroke="#7A2233" stroke-width="2" />
+        <line x1="6" y1="35" x2="50" y2="35" stroke="url(#mGoldGradient)" stroke-width="3" />
+        <line x1="6" y1="41" x2="50" y2="41" stroke="url(#mGoldGradient)" stroke-width="1.5" />
+        <line x1="6" y1="165" x2="50" y2="165" stroke="url(#mGoldGradient)" stroke-width="3" />
+        <line x1="6" y1="171" x2="50" y2="171" stroke="url(#mGoldGradient)" stroke-width="1.5" />
+        <circle cx="28" cy="100" r="10" fill="url(#mGoldGradient)" opacity="0.85" />
+      </g>
+
+      <!-- Livro 2: Verde Floresta Clássico (Alto) -->
+      <g transform="translate(170, 120)">
+        <rect x="0" y="0" width="62" height="240" rx="6" fill="#1C3823" stroke="#2D5A38" stroke-width="2" />
+        <line x1="6" y1="30" x2="56" y2="30" stroke="url(#mGoldGradient)" stroke-width="3" />
+        <line x1="6" y1="36" x2="56" y2="36" stroke="url(#mGoldGradient)" stroke-width="1" />
+        <line x1="6" y1="205" x2="56" y2="205" stroke="url(#mGoldGradient)" stroke-width="3" />
+        <line x1="6" y1="211" x2="56" y2="211" stroke="url(#mGoldGradient)" stroke-width="1" />
+        <polygon points="26,0 36,0 36,-24 31,-16 26,-24" fill="url(#mGoldGradient)" />
+        <rect x="18" y="70" width="26" height="60" rx="2" fill="none" stroke="url(#mGoldGradient)" stroke-width="1.5" opacity="0.6" />
+      </g>
+
+      <!-- Livro 3: Azul Meia-Noite Real -->
+      <g transform="translate(245, 145)">
+        <rect x="0" y="0" width="58" height="215" rx="6" fill="#1E2F44" stroke="#2B4360" stroke-width="2" />
+        <line x1="6" y1="28" x2="52" y2="28" stroke="url(#mGoldGradient)" stroke-width="3" />
+        <line x1="6" y1="185" x2="52" y2="185" stroke="url(#mGoldGradient)" stroke-width="3" />
+        <circle cx="29" cy="90" r="8" fill="none" stroke="url(#mGoldGradient)" stroke-width="2" />
+        <polygon points="29,85 33,93 25,93" fill="url(#mGoldGradient)" />
+      </g>
+
+      <!-- Livro 4: Couro Ocre / Terracota -->
+      <g transform="translate(315, 175)">
+        <rect x="0" y="0" width="54" height="185" rx="6" fill="#753C19" stroke="#944E22" stroke-width="2" />
+        <line x1="6" y1="25" x2="48" y2="25" stroke="url(#mGoldGradient)" stroke-width="2.5" />
+        <line x1="6" y1="155" x2="48" y2="155" stroke="url(#mGoldGradient)" stroke-width="2.5" />
+        <circle cx="27" cy="85" r="9" fill="url(#mGoldGradient)" opacity="0.75" />
+      </g>
+
+      <!-- Livro 5: Ouro Velho -->
+      <g transform="translate(380, 195)">
+        <rect x="0" y="0" width="46" height="165" rx="6" fill="#3D291C" stroke="#5C3E2A" stroke-width="2" />
+        <line x1="5" y1="22" x2="41" y2="22" stroke="url(#mGoldGradient)" stroke-width="2" />
+        <line x1="5" y1="140" x2="41" y2="140" stroke="url(#mGoldGradient)" stroke-width="2" />
+      </g>
+    </g>
+
+    <!-- Prateleira de Madeira Maciça 3D -->
+    <rect x="45" y="358" width="422" height="14" rx="2" fill="url(#mShelfTop)" />
+    <line x1="45" y1="358" x2="467" y2="358" stroke="url(#mGoldGradient)" stroke-width="2" opacity="0.8" />
+    <rect x="45" y="372" width="422" height="42" rx="4" fill="url(#mShelfFront)" stroke="#221107" stroke-width="1.5" />
+    <line x1="55" y1="390" x2="457" y2="390" stroke="url(#mGoldGradient)" stroke-width="1" opacity="0.45" />
+
+    <!-- Placa "MINHA ESTANTE" -->
+    <rect x="156" y="380" width="200" height="26" rx="4" fill="url(#mGoldGradient)" stroke="#8A6608" stroke-width="1" />
+    <circle cx="166" cy="393" r="2.5" fill="#5A3A05" />
+    <circle cx="346" cy="393" r="2.5" fill="#5A3A05" />
+    <text x="256" y="398" font-family="serif" font-weight="900" font-size="13" letter-spacing="3" fill="#2C1A06" text-anchor="middle">
+      MINHA ESTANTE
+    </text>
+  </g>
+</svg>

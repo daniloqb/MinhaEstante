@@ -20,6 +20,7 @@ import { QuickActionModal } from './components/QuickActionModal';
 import { FilterModal } from './components/FilterModal';
 import { BookEditModal } from './components/BookEditModal';
 import { DuplicateConflictModal } from './components/DuplicateConflictModal';
+import { OfflineIndicator } from './components/OfflineIndicator';
 
 // Screens
 import { HomeScreen } from './screens/HomeScreen';
@@ -663,6 +664,9 @@ export const App: React.FC = () => {
           />
         </>
       )}
+
+      {/* Indicador de Conexão Offline */}
+      <OfflineIndicator />
     </WoodBackground>
   );
 };
