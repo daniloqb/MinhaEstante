@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Book,
-  BookStatus,
+  ShelfTab,
+  ReadingStatus,
   ViewMode,
   GroupByMode,
   SortOption,
   SearchResultBook,
+  isBookInTab,
 } from './types/book';
 import { getPalette } from './theme/woodTheme';
 import { BookStorage } from './services/storage';
@@ -26,6 +28,7 @@ import { SearchScreen } from './screens/SearchScreen';
 import { ManualBookScreen } from './screens/ManualBookScreen';
 import { StatsScreen } from './screens/StatsScreen';
 import { SettingsBackupScreen } from './screens/SettingsBackupScreen';
+import { CheckCircle2, AlertTriangle } from 'lucide-react';
 
 export const App: React.FC = () => {
   // App Persistent State
@@ -49,13 +52,27 @@ export const App: React.FC = () => {
     existingBook: Book;
   } | null>(null);
 
-  // Shelf Filtering State
-  const [statusTab, setStatusTab] = useState<BookStatus>('lido');
-  const [sortBy, setSortBy] = useState<SortOption>('DATA_LEITURA');
+  // Livro que ficou sem posse e sem status de leitura
+  const [orphanConflictBook, setOrphanConflictBook] = useState<Book | null>(null);
+
+  // Shelf Filtering State - Abas independentes: meus_livros | lido | quero_ler
+  const [statusTab, setStatusTab] = useState<ShelfTab>('meus_livros');
+  const [sortBy, setSortBy] = useState<SortOption>('TITULO');
   const [textQuery, setTextQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [selectedRatingMin, setSelectedRatingMin] = useState<number | null>(null);
+
+  // Toast Notification State
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => {
+      setToastMessage(null);
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
 
   // Online Search State
   const [searchInput, setSearchInput] = useState('');
@@ -113,21 +130,78 @@ export const App: React.FC = () => {
         setSelectedBookDetail(null);
       }
       setQuickActionBook(null);
+      setOrphanConflictBook(null);
+      setToastMessage(`"${book.titulo}" removido da estante.`);
     },
     [books, selectedBookDetail]
   );
 
-  const handleToggleStatus = useCallback(
+  // Regra de negócio: Posse independente
+  const handleTogglePosse = useCallback(
     (book: Book) => {
-      const nextStatus: BookStatus = book.status === 'lido' ? 'quero_ler' : 'lido';
+      const nextTenho = !book.tenho_fisico;
+
+      // Se desmarcar posse e não tem status de leitura: alerta de livro órfão
+      if (!nextTenho && book.status_leitura === 'nenhum') {
+        setOrphanConflictBook(book);
+        return;
+      }
+
       const updated: Book = {
         ...book,
-        status: nextStatus,
+        tenho_fisico: nextTenho,
         dataAtualizacao: Date.now(),
       };
       handleSaveBook(updated);
+
+      if (selectedBookDetail && selectedBookDetail.id === book.id) {
+        setSelectedBookDetail(updated);
+      }
+
+      setQuickActionBook(null);
+      setToastMessage(
+        nextTenho
+          ? `"${book.titulo}" adicionado a Meus Livros (tenho em casa)!`
+          : `"${book.titulo}" removido de Meus Livros!`
+      );
     },
-    [handleSaveBook]
+    [handleSaveBook, selectedBookDetail]
+  );
+
+  // Regra de negócio: Status de leitura independente
+  const handleSetStatusLeitura = useCallback(
+    (book: Book, targetStatus: ReadingStatus) => {
+      // Se remover status de leitura e não tiver posse física: alerta de livro órfão
+      if (targetStatus === 'nenhum' && !book.tenho_fisico) {
+        setOrphanConflictBook(book);
+        return;
+      }
+
+      const isNowLido = targetStatus === 'lido';
+      const updated: Book = {
+        ...book,
+        status_leitura: targetStatus,
+        anoLeitura: isNowLido ? (book.anoLeitura || new Date().getFullYear()) : book.anoLeitura,
+        mesLeitura: isNowLido ? (book.mesLeitura || new Date().getMonth() + 1) : book.mesLeitura,
+        dataAtualizacao: Date.now(),
+      };
+      handleSaveBook(updated);
+
+      if (selectedBookDetail && selectedBookDetail.id === book.id) {
+        setSelectedBookDetail(updated);
+      }
+
+      setQuickActionBook(null);
+
+      if (targetStatus === 'lido') {
+        setToastMessage(`"${book.titulo}" marcado como Lido!`);
+      } else if (targetStatus === 'quero_ler') {
+        setToastMessage(`"${book.titulo}" marcado como Quero Ler!`);
+      } else {
+        setToastMessage(`Status de leitura removido de "${book.titulo}".`);
+      }
+    },
+    [handleSaveBook, selectedBookDetail]
   );
 
   // Search logic
@@ -154,19 +228,57 @@ export const App: React.FC = () => {
     [googleApiKey]
   );
 
-  // Add searched book with duplicate detection
-  const handleSelectBookToAdd = (searchedBook: SearchResultBook) => {
-    const existing = BookStorage.findPotentialDuplicate(
-      searchedBook.isbn13,
-      searchedBook.isbn10,
-      searchedBook.titulo,
-      books
-    );
+  // Add searched book with duplicate detection and independent status
+  const handleSelectBookToAdd = useCallback(
+    (searchedBook: SearchResultBook, targetAction: ShelfTab = 'meus_livros') => {
+      const existing = BookStorage.findPotentialDuplicate(
+        searchedBook.isbn13,
+        searchedBook.isbn10,
+        searchedBook.titulo,
+        searchedBook.autores,
+        books
+      );
 
-    if (existing) {
-      setDuplicateConflict({ newBook: searchedBook, existingBook: existing });
-    } else {
-      const newBookEntity: Book = {
+      if (existing) {
+        // Já existe: atualiza a posse ou o status sem duplicar!
+        if (targetAction === 'meus_livros') {
+          const updated: Book = {
+            ...existing,
+            tenho_fisico: true,
+            dataAtualizacao: Date.now(),
+          };
+          handleSaveBook(updated);
+          setToastMessage(`"${existing.titulo}" já constava na biblioteca e foi marcado como posse física (Meus Livros)!`);
+          return;
+        }
+
+        if (targetAction === 'lido') {
+          // Abre edição para preencher avaliação e data, mantendo a posse do livro
+          const forEdit: Book = {
+            ...existing,
+            status_leitura: 'lido',
+            anoLeitura: existing.anoLeitura || new Date().getFullYear(),
+            mesLeitura: existing.mesLeitura || (new Date().getMonth() + 1),
+          };
+          setEditingBookInModal(forEdit);
+          return;
+        }
+
+        if (targetAction === 'quero_ler') {
+          const updated: Book = {
+            ...existing,
+            status_leitura: 'quero_ler',
+            dataAtualizacao: Date.now(),
+          };
+          handleSaveBook(updated);
+          setToastMessage(`"${existing.titulo}" atualizado para Quero Ler!`);
+          return;
+        }
+      }
+
+      // Novo livro
+      const now = Date.now();
+      const baseBook: Book = {
         id: 0,
         origem: searchedBook.origem,
         idExterno: searchedBook.idExterno,
@@ -181,22 +293,36 @@ export const App: React.FC = () => {
         generos: searchedBook.generos,
         descricao: searchedBook.descricao,
         capaUrl: searchedBook.capaUrl,
-        status: 'lido',
-        anoLeitura: new Date().getFullYear(),
-        mesLeitura: new Date().getMonth() + 1,
-        nota: 10,
-        dataCadastro: Date.now(),
-        dataAtualizacao: Date.now(),
+        tenho_fisico: targetAction === 'meus_livros',
+        status_leitura: targetAction === 'lido' ? 'lido' : targetAction === 'quero_ler' ? 'quero_ler' : 'nenhum',
+        anoLeitura: targetAction === 'lido' ? new Date().getFullYear() : null,
+        mesLeitura: targetAction === 'lido' ? new Date().getMonth() + 1 : null,
+        nota: targetAction === 'lido' ? 10 : null,
+        dataCadastro: now,
+        dataAtualizacao: now,
       };
-      setEditingBookInModal(newBookEntity);
-    }
-  };
 
-  // Filter & Sort books
+      if (targetAction === 'lido') {
+        setEditingBookInModal(baseBook);
+      } else {
+        const { updatedBooks } = BookStorage.saveBook(baseBook, books);
+        setBooks(updatedBooks);
+        setToastMessage(
+          targetAction === 'meus_livros'
+            ? `"${searchedBook.titulo}" adicionado a Meus Livros!`
+            : `"${searchedBook.titulo}" adicionado a Quero Ler!`
+        );
+      }
+    },
+    [books, handleSaveBook]
+  );
+
+  // Filter & Sort books por consulta de aba e filtros avançados
   const filteredBooks = useMemo(() => {
-    let list = books.filter((b) => b.status === statusTab);
+    // 1. Consulta da aba ativa
+    let list = books.filter((b) => isBookInTab(b, statusTab));
 
-    // Text query
+    // 2. Filtro de texto
     if (textQuery.trim()) {
       const q = textQuery.toLowerCase().trim();
       list = list.filter((b) => {
@@ -209,56 +335,59 @@ export const App: React.FC = () => {
       });
     }
 
-    // Year filter
+    // 3. Filtro por Ano de leitura:
+    // Regra: nas abas Quero ler e Meus Livros, livros sem ano de leitura ficam de fora quando o filtro de ano está ativo.
     if (selectedYear != null) {
-      if (selectedYear === -1) {
-        list = list.filter((b) => b.anoLeitura == null);
-      } else {
-        list = list.filter((b) => b.anoLeitura === selectedYear);
-      }
+      list = list.filter((b) => b.anoLeitura === selectedYear);
     }
 
-    // Genre filter
+    // 4. Filtro por gênero
     if (selectedGenre) {
       list = list.filter((b) =>
         b.generos.some((g) => g.toLowerCase() === selectedGenre.toLowerCase())
       );
     }
 
-    // Rating filter
+    // 5. Filtro por nota mínima
     if (selectedRatingMin != null) {
-      list = list.filter((b) => (b.nota ?? -1) >= selectedRatingMin);
+      list = list.filter((b) => b.nota != null && b.nota >= selectedRatingMin);
     }
 
-    // Sorting
-    list = [...list].sort((a, b) => {
+    // 6. Ordenação
+    return [...list].sort((a, b) => {
       switch (sortBy) {
         case 'DATA_LEITURA': {
-          const yearDiff = (b.anoLeitura ?? -1) - (a.anoLeitura ?? -1);
-          if (yearDiff !== 0) return yearDiff;
-          const monthDiff = (b.mesLeitura ?? -1) - (a.mesLeitura ?? -1);
-          if (monthDiff !== 0) return monthDiff;
-          return b.dataCadastro - a.dataCadastro;
+          const yearA = a.anoLeitura ?? -1;
+          const yearB = b.anoLeitura ?? -1;
+          if (yearA !== yearB) return yearB - yearA;
+          const monthA = a.mesLeitura ?? -1;
+          const monthB = b.mesLeitura ?? -1;
+          return monthB - monthA;
         }
         case 'TITULO':
-          return a.titulo.localeCompare(b.titulo, 'pt-BR');
-        case 'AUTOR':
-          return (a.autores[0] || '').localeCompare(b.autores[0] || '', 'pt-BR');
-        case 'NOTA':
-          return (b.nota ?? -1) - (a.nota ?? -1);
+          return a.titulo.localeCompare(b.titulo);
+        case 'AUTOR': {
+          const authA = a.autores[0] || '';
+          const authB = b.autores[0] || '';
+          return authA.localeCompare(authB);
+        }
+        case 'NOTA': {
+          const ratingA = a.nota ?? -1;
+          const ratingB = b.nota ?? -1;
+          return ratingB - ratingA;
+        }
         case 'DATA_CADASTRO':
           return b.dataCadastro - a.dataCadastro;
         default:
           return 0;
       }
     });
-
-    return list;
   }, [books, statusTab, textQuery, selectedYear, selectedGenre, selectedRatingMin, sortBy]);
 
-  // Computed Stats
-  const stats = useMemo(() => BookStorage.computeStats(books), [books]);
+  // Estatísticas calculadas
+  const stats = useMemo(() => BookStorage.calculateStats(books), [books]);
 
+  // Limpar filtros
   const clearFilters = () => {
     setTextQuery('');
     setSelectedYear(null);
@@ -266,37 +395,96 @@ export const App: React.FC = () => {
     setSelectedRatingMin(null);
   };
 
-  // Esc key closes modals
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (quickActionBook) setQuickActionBook(null);
-        else if (duplicateConflict) setDuplicateConflict(null);
-        else if (isFilterModalOpen) setIsFilterModalOpen(false);
-        else if (editingBookInModal) setEditingBookInModal(null);
-        else if (selectedBookDetail) setSelectedBookDetail(null);
-        else if (isManualRegisterOpen) setIsManualRegisterOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [
-    quickActionBook,
-    duplicateConflict,
-    isFilterModalOpen,
-    editingBookInModal,
-    selectedBookDetail,
-    isManualRegisterOpen,
-  ]);
-
   return (
-    <WoodBackground palette={palette}>
-      {/* Diálogo de Conflito de Duplicata */}
+    <WoodBackground palette={palette} className="relative">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-sm sm:max-w-md w-[90%] pointer-events-none animate-in fade-in slide-in-from-top-4 duration-300">
+          <div
+            className="flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl border"
+            style={{
+              backgroundColor: palette.paperSurface,
+              borderColor: palette.goldPrimary,
+              color: palette.textOnPaper,
+            }}
+          >
+            <CheckCircle2 size={18} style={{ color: palette.goldPrimary }} className="shrink-0" />
+            <span className="font-serif text-sm font-semibold leading-tight line-clamp-2">
+              {toastMessage}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Diálogo para Livro Órfão (tenho_fisico = false e status_leitura = 'nenhum') */}
+      {orphanConflictBook && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs"
+          onClick={() => setOrphanConflictBook(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl p-6 shadow-2xl border"
+            style={{
+              backgroundColor: palette.paperSurface,
+              borderColor: palette.woodBorder,
+              color: palette.textOnPaper,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 mb-3 text-amber-700">
+              <AlertTriangle size={24} />
+              <h3 className="font-serif font-bold text-xl leading-tight">
+                Livro sem lista ativa
+              </h3>
+            </div>
+
+            <p className="text-sm leading-relaxed mb-6" style={{ color: palette.textOnPaper }}>
+              Este livro não está mais em nenhuma lista (não é posse física em casa e não possui status de leitura). Deseja excluí-lo do aplicativo?
+            </p>
+
+            <div className="flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  handleDeleteBook(orphanConflictBook);
+                }}
+                className="w-full py-2.5 px-4 rounded-lg font-serif font-bold text-sm bg-red-700 text-white cursor-pointer hover:bg-red-800 active:scale-98 transition-colors"
+              >
+                Excluir livro definitivamente
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const updated: Book = {
+                    ...orphanConflictBook,
+                    tenho_fisico: false,
+                    status_leitura: 'nenhum',
+                    dataAtualizacao: Date.now(),
+                  };
+                  handleSaveBook(updated);
+                  setOrphanConflictBook(null);
+                  setToastMessage(`"${orphanConflictBook.titulo}" mantido oculto no arquivo.`);
+                }}
+                className="w-full py-2.5 px-4 rounded-lg font-serif font-semibold text-sm border cursor-pointer hover:bg-black/5 active:scale-98"
+                style={{
+                  borderColor: palette.woodBorder,
+                  color: palette.textOnPaper,
+                }}
+              >
+                Manter oculto no arquivo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Conflito de Livro Duplicado */}
       <DuplicateConflictModal
         palette={palette}
         conflict={duplicateConflict}
         onDismiss={() => setDuplicateConflict(null)}
-        onOpenExisting={(existing) => {
+        onOpenExisting={(existing: Book) => {
           setDuplicateConflict(null);
           setSelectedBookDetail(existing);
         }}
@@ -317,14 +505,14 @@ export const App: React.FC = () => {
             generos: searchedBook.generos,
             descricao: searchedBook.descricao,
             capaUrl: searchedBook.capaUrl,
-            status: 'lido',
-            anoLeitura: new Date().getFullYear(),
-            mesLeitura: new Date().getMonth() + 1,
-            nota: 10,
+            tenho_fisico: true,
+            status_leitura: 'nenhum',
             dataCadastro: Date.now(),
             dataAtualizacao: Date.now(),
           };
-          setEditingBookInModal(newBookEntity);
+          const { updatedBooks } = BookStorage.saveBook(newBookEntity, books);
+          setBooks(updatedBooks);
+          setToastMessage(`"${searchedBook.titulo}" adicionado a Meus Livros!`);
         }}
       />
 
@@ -335,11 +523,12 @@ export const App: React.FC = () => {
         onDismiss={() => setQuickActionBook(null)}
         onViewDetails={(b) => setSelectedBookDetail(b)}
         onEdit={(b) => setEditingBookInModal(b)}
-        onToggleStatus={handleToggleStatus}
+        onTogglePosse={handleTogglePosse}
+        onSetStatusLeitura={handleSetStatusLeitura}
         onDelete={handleDeleteBook}
       />
 
-      {/* Modal de Filtros Completos */}
+      {/* Modal de Filtros com Ano de Leitura */}
       <FilterModal
         palette={palette}
         isOpen={isFilterModalOpen}
@@ -350,16 +539,19 @@ export const App: React.FC = () => {
         onSortChange={setSortBy}
         selectedRatingMin={selectedRatingMin}
         onRatingFilterChange={setSelectedRatingMin}
+        selectedYear={selectedYear}
+        onYearFilterChange={setSelectedYear}
         onClearFilters={clearFilters}
       />
 
-      {/* Modal de Registro & Edição de Leitura */}
+      {/* Modal de Registro & Edição com controles independentes */}
       <BookEditModal
         palette={palette}
         book={editingBookInModal}
         isOpen={Boolean(editingBookInModal)}
         onDismiss={() => setEditingBookInModal(null)}
         onSave={handleSaveBook}
+        onDelete={handleDeleteBook}
       />
 
       {/* Telas Principais ou Telas Sobrepostas */}
@@ -370,16 +562,20 @@ export const App: React.FC = () => {
           onBack={() => setSelectedBookDetail(null)}
           onEdit={() => setEditingBookInModal(selectedBookDetail)}
           onDelete={() => handleDeleteBook(selectedBookDetail)}
-          onToggleStatus={() => handleToggleStatus(selectedBookDetail)}
+          onTogglePosse={() => handleTogglePosse(selectedBookDetail)}
+          onSetStatusLeitura={(status) => handleSetStatusLeitura(selectedBookDetail, status)}
         />
       ) : isManualRegisterOpen ? (
         <ManualBookScreen
           palette={palette}
+          initialTab={statusTab}
           onBack={() => setIsManualRegisterOpen(false)}
           onSave={(newBook) => {
             handleSaveBook(newBook);
             setIsManualRegisterOpen(false);
+            setToastMessage(`"${newBook.titulo}" salvo com sucesso!`);
           }}
+          onDelete={handleDeleteBook}
         />
       ) : (
         <>
@@ -387,6 +583,7 @@ export const App: React.FC = () => {
             <HomeScreen
               palette={palette}
               books={filteredBooks}
+              allBooks={books}
               statusTab={statusTab}
               onStatusTabChange={setStatusTab}
               viewMode={viewMode}
@@ -407,7 +604,7 @@ export const App: React.FC = () => {
               onSelectBook={(book) => setSelectedBookDetail(book)}
               onOpenQuickAction={(book) => setQuickActionBook(book)}
               onOpenFiltersModal={() => setIsFilterModalOpen(true)}
-              onAddBookClick={() => setCurrentTab('BUSCAR')}
+              onAddBookClick={() => setIsManualRegisterOpen(true)}
             />
           )}
 
@@ -422,6 +619,7 @@ export const App: React.FC = () => {
               errorMessage={searchError}
               onSelectBookToAdd={handleSelectBookToAdd}
               onOpenManualRegister={() => setIsManualRegisterOpen(true)}
+              userBooks={books}
             />
           )}
 
@@ -445,11 +643,13 @@ export const App: React.FC = () => {
               onImportCsv={(csv) => {
                 const res = BookStorage.importCsv(csv, books);
                 setBooks(res.updatedBooks);
+                setToastMessage(`${res.count} livros importados com sucesso!`);
                 return { count: res.count };
               }}
               onImportJson={(json) => {
                 const res = BookStorage.importJson(json, books);
                 setBooks(res.updatedBooks);
+                setToastMessage(`${res.count} livros importados com sucesso!`);
                 return { count: res.count };
               }}
             />

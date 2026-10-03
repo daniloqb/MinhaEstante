@@ -1,22 +1,24 @@
 import React from 'react';
-import { SearchResultBook } from '../types/book';
+import { SearchResultBook, ShelfTab, Book } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
 import { WoodShelf } from '../components/WoodShelf';
 import { BookCoverView } from '../components/BookCoverView';
 import { PaperCard } from '../components/PaperCard';
-import { Search, X, Loader2, BookOpen, Plus } from 'lucide-react';
+import { areBooksDuplicate } from '../services/storage';
+import { Search, X, Loader2, BookOpen, Plus, Check, Library, Bookmark } from 'lucide-react';
 
 interface SearchScreenProps {
   palette: WoodPalette;
   searchQuery: string;
   onQueryChange: (query: string) => void;
   onSearch: (query: string) => void;
-  isLoading: Boolean;
+  isLoading: boolean;
   results: SearchResultBook[];
   errorMessage: string | null;
-  onSelectBookToAdd: (book: SearchResultBook) => void;
+  onSelectBookToAdd: (book: SearchResultBook, targetAction?: ShelfTab) => void;
   onOpenManualRegister: () => void;
+  userBooks?: Book[];
 }
 
 export const SearchScreen: React.FC<SearchScreenProps> = ({
@@ -29,6 +31,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
   errorMessage,
   onSelectBookToAdd,
   onOpenManualRegister,
+  userBooks = [],
 }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +53,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               value={searchQuery}
               onChange={(e) => onQueryChange(e.target.value)}
               placeholder="Digite título, autor ou ISBN..."
-              className="w-full pl-10 pr-9 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 shadow-sm"
+              className="w-full pl-10 pr-9 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 shadow-sm font-sans"
               style={{
                 backgroundColor: palette.paperSurface,
                 borderColor: palette.woodBorder,
@@ -158,7 +161,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                 }}
               >
                 <Plus size={18} />
-                Ou cadastre um livro manualmente
+                Cadastrar um livro manualmente
               </button>
             </div>
           ) : (
@@ -181,84 +184,192 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                 </button>
               </div>
 
-              {results.map((item, idx) => (
-                <PaperCard
-                  key={`${item.idExterno || item.isbn13 || idx}`}
-                  palette={palette}
-                  onClick={() => onSelectBookToAdd(item)}
-                  className="group"
-                >
-                  <div className="flex gap-3">
-                    <BookCoverView
-                      palette={palette}
-                      title={item.titulo}
-                      author={item.autores[0]}
-                      coverUrl={item.capaUrl}
-                      width={64}
-                      height={96}
-                    />
+              {results.map((item, idx) => {
+                const existingInLibrary = userBooks.find((b) => areBooksDuplicate(b, item));
 
-                    <div className="flex-1 flex flex-col justify-between min-w-0">
-                      <div>
-                        <div className="flex items-center justify-between gap-2 mb-0.5">
-                          <span
-                            className="text-[10px] font-bold px-1.5 py-0.5 rounded border"
-                            style={{
-                              borderColor: `${palette.woodBorder}60`,
-                              color: palette.woodBorder,
-                            }}
-                          >
-                            {item.origem === 'google' ? 'Google Books' : 'Open Library'}
-                          </span>
-                          {item.anoPublicacao != null && (
+                return (
+                  <PaperCard
+                    key={`${item.idExterno || item.isbn13 || idx}`}
+                    palette={palette}
+                    onClick={() => onSelectBookToAdd(item, 'meus_livros')}
+                    className="group"
+                  >
+                    <div className="flex gap-3">
+                      <BookCoverView
+                        palette={palette}
+                        title={item.titulo}
+                        author={item.autores[0]}
+                        coverUrl={item.capaUrl}
+                        width={64}
+                        height={96}
+                      />
+
+                      <div className="flex-1 flex flex-col justify-between min-w-0">
+                        <div>
+                          <div className="flex items-center justify-between gap-1.5 mb-0.5 flex-wrap">
                             <span
-                              className="font-serif text-xs font-semibold"
+                              className="text-[10px] font-bold px-1.5 py-0.5 rounded border"
+                              style={{
+                                borderColor: `${palette.woodBorder}60`,
+                                color: palette.woodBorder,
+                              }}
+                            >
+                              {item.origem === 'google' ? 'Google Books' : 'Open Library'}
+                            </span>
+
+                            {existingInLibrary ? (
+                              <div className="flex items-center gap-1">
+                                {existingInLibrary.tenho_fisico && (
+                                  <span
+                                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1 border"
+                                    style={{
+                                      backgroundColor: `${palette.goldPrimary}20`,
+                                      borderColor: palette.goldPrimary,
+                                      color: palette.woodBorder,
+                                    }}
+                                  >
+                                    <Library size={10} /> Tenho
+                                  </span>
+                                )}
+
+                                {existingInLibrary.status_leitura === 'lido' && (
+                                  <span
+                                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1 border bg-emerald-50 text-emerald-800 border-emerald-300"
+                                  >
+                                    <Check size={10} /> Lido
+                                  </span>
+                                )}
+
+                                {existingInLibrary.status_leitura === 'quero_ler' && (
+                                  <span
+                                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1 border bg-blue-50 text-blue-800 border-blue-300"
+                                  >
+                                    <Bookmark size={10} /> Quero
+                                  </span>
+                                )}
+                              </div>
+                            ) : item.anoPublicacao != null ? (
+                              <span
+                                className="font-serif text-xs font-semibold"
+                                style={{ color: palette.textSecondaryOnPaper }}
+                              >
+                                {item.anoPublicacao}
+                              </span>
+                            ) : null}
+                          </div>
+
+                          <h3
+                            className="font-serif font-bold text-base leading-tight line-clamp-2"
+                            style={{ color: palette.textOnPaper }}
+                          >
+                            {item.titulo}
+                          </h3>
+
+                          {item.subtitulo && (
+                            <p
+                              className="text-xs truncate"
                               style={{ color: palette.textSecondaryOnPaper }}
                             >
-                              {item.anoPublicacao}
-                            </span>
+                              {item.subtitulo}
+                            </p>
                           )}
+
+                          <p
+                            className="font-serif text-xs font-medium mt-1 truncate"
+                            style={{ color: palette.woodBorder }}
+                          >
+                            {item.autores.join(', ') || 'Autor desconhecido'}
+                          </p>
                         </div>
 
-                        <h3
-                          className="font-serif font-bold text-base leading-tight line-clamp-2"
-                          style={{ color: palette.textOnPaper }}
-                        >
-                          {item.titulo}
-                        </h3>
+                        <div className="flex flex-wrap items-center justify-between gap-1.5 mt-2.5 pt-2 border-t border-black/5">
+                          <span className="text-[11px]" style={{ color: palette.textSecondaryOnPaper }}>
+                            {item.paginas ? `${item.paginas} págs` : ''}
+                          </span>
 
-                        {item.subtitulo && (
-                          <p
-                            className="text-xs truncate"
-                            style={{ color: palette.textSecondaryOnPaper }}
-                          >
-                            {item.subtitulo}
-                          </p>
-                        )}
+                          <div className="flex items-center gap-1.5">
+                            {/* Botão Tenho (Posse física independente) */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectBookToAdd(item, 'meus_livros');
+                              }}
+                              className="px-2.5 py-1 rounded-md font-serif font-bold text-xs flex items-center gap-1 shadow-sm cursor-pointer hover:brightness-105 active:scale-95 transition-all"
+                              style={{
+                                backgroundColor: existingInLibrary?.tenho_fisico
+                                  ? `${palette.goldPrimary}80`
+                                  : palette.goldPrimary,
+                                color: palette.textOnGold,
+                              }}
+                              title="Adicionar exemplar físico em casa (Aba Meus Livros)"
+                            >
+                              <Library size={12} strokeWidth={2.5} />
+                              {existingInLibrary?.tenho_fisico ? 'Tenho ✓' : 'Tenho'}
+                            </button>
 
-                        <p
-                          className="font-serif text-xs font-medium mt-1 truncate"
-                          style={{ color: palette.woodBorder }}
-                        >
-                          {item.autores.join(', ') || 'Autor desconhecido'}
-                        </p>
-                      </div>
+                            {/* Botão Lido (Status de leitura independente) */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectBookToAdd(item, 'lido');
+                              }}
+                              className="px-2 py-1 rounded-md font-serif font-semibold text-xs border cursor-pointer hover:bg-black/5 active:scale-95 transition-all"
+                              style={{
+                                borderColor:
+                                  existingInLibrary?.status_leitura === 'lido'
+                                    ? '#10b981'
+                                    : palette.woodBorder,
+                                color:
+                                  existingInLibrary?.status_leitura === 'lido'
+                                    ? '#065f46'
+                                    : palette.textOnPaper,
+                                backgroundColor:
+                                  existingInLibrary?.status_leitura === 'lido'
+                                    ? '#10b98115'
+                                    : 'transparent',
+                              }}
+                              title="Registrar leitura desta obra"
+                            >
+                              {existingInLibrary?.status_leitura === 'lido' ? 'Lido ✓' : 'Lido'}
+                            </button>
 
-                      <div className="flex items-center justify-between mt-2 pt-1 border-t border-black/5">
-                        <span className="text-[11px]" style={{ color: palette.textSecondaryOnPaper }}>
-                          {item.paginas ? `${item.paginas} págs` : ''}
-                        </span>
-                        <span
-                          className="font-serif font-bold text-xs flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
-                          style={{ color: palette.woodBorder }}
-                        >
-                          Toque para adicionar →
-                        </span>
+                            {/* Botão Quero Ler (Status de leitura independente) */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectBookToAdd(item, 'quero_ler');
+                              }}
+                              className="px-2 py-1 rounded-md font-serif font-semibold text-xs border cursor-pointer hover:bg-black/5 active:scale-95 transition-all"
+                              style={{
+                                borderColor:
+                                  existingInLibrary?.status_leitura === 'quero_ler'
+                                    ? '#3b82f6'
+                                    : `${palette.woodBorder}80`,
+                                color:
+                                  existingInLibrary?.status_leitura === 'quero_ler'
+                                    ? '#1e40af'
+                                    : palette.textSecondaryOnPaper,
+                                backgroundColor:
+                                  existingInLibrary?.status_leitura === 'quero_ler'
+                                    ? '#3b82f615'
+                                    : 'transparent',
+                              }}
+                              title="Adicionar à lista Quero Ler"
+                            >
+                              {existingInLibrary?.status_leitura === 'quero_ler'
+                                ? 'Quero Ler ✓'
+                                : 'Quero Ler'}
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </PaperCard>
-              ))}
+                  </PaperCard>
+                );
+              })}
             </div>
           )}
         </div>

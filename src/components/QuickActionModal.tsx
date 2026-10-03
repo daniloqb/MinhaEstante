@@ -1,7 +1,18 @@
-import React from 'react';
-import { Book } from '../types/book';
+import React, { useState } from 'react';
+import { Book, ReadingStatus } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
-import { BookOpen, Edit, ArrowRightLeft, Trash2, X } from 'lucide-react';
+import {
+  BookOpen,
+  Edit,
+  CheckCircle,
+  Bookmark,
+  Library,
+  Trash2,
+  X,
+  MinusCircle,
+  Check,
+  AlertTriangle,
+} from 'lucide-react';
 
 interface QuickActionModalProps {
   palette: WoodPalette;
@@ -9,7 +20,8 @@ interface QuickActionModalProps {
   onDismiss: () => void;
   onViewDetails: (book: Book) => void;
   onEdit: (book: Book) => void;
-  onToggleStatus: (book: Book) => void;
+  onTogglePosse: (book: Book) => void;
+  onSetStatusLeitura: (book: Book, status: ReadingStatus) => void;
   onDelete: (book: Book) => void;
 }
 
@@ -19,9 +31,12 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
   onDismiss,
   onViewDetails,
   onEdit,
-  onToggleStatus,
+  onTogglePosse,
+  onSetStatusLeitura,
   onDelete,
 }) => {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   if (!book) return null;
 
   return (
@@ -29,6 +44,57 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in"
       onClick={onDismiss}
     >
+      {/* Confirmação de exclusão */}
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs"
+          onClick={() => setShowDeleteConfirm(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl p-6 shadow-2xl border"
+            style={{
+              backgroundColor: palette.paperSurface,
+              borderColor: palette.woodBorder,
+              color: palette.textOnPaper,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 mb-3 text-red-700">
+              <AlertTriangle size={24} />
+              <h3 className="font-serif font-bold text-xl leading-tight">
+                Excluir livro da estante?
+              </h3>
+            </div>
+
+            <p className="text-sm leading-relaxed mb-6" style={{ color: palette.textOnPaper }}>
+              Tem certeza de que deseja excluir <strong>&ldquo;{book.titulo}&rdquo;</strong>? Esta ação apagará todos os dados, avaliações e registros deste livro.
+            </p>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-2 px-3 rounded-lg font-serif font-semibold text-sm border cursor-pointer hover:bg-black/5"
+                style={{ borderColor: palette.woodBorder }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  onDismiss();
+                  onDelete(book);
+                }}
+                className="flex-1 py-2 px-3 rounded-lg font-serif font-bold text-sm bg-red-700 text-white cursor-pointer hover:bg-red-800"
+              >
+                Sim, excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div
         className="w-full max-w-sm rounded-2xl p-5 shadow-2xl border"
         style={{
@@ -38,7 +104,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between mb-3">
+        <div className="flex items-start justify-between mb-2">
           <div>
             <h3
               className="font-serif font-bold text-xl leading-snug line-clamp-2"
@@ -52,15 +118,62 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
           </div>
           <button
             onClick={onDismiss}
-            className="p-1 rounded-full hover:bg-black/10 transition-colors"
+            className="p-1 rounded-full hover:bg-black/10 transition-colors cursor-pointer"
           >
             <X size={18} />
           </button>
         </div>
 
-        <p className="text-xs mb-4" style={{ color: palette.textSecondaryOnPaper }}>
-          Escolha uma ação para esta obra:
-        </p>
+        {/* Indicadores atuais do livro */}
+        <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+          <span
+            className="text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1"
+            style={{
+              backgroundColor: book.tenho_fisico ? `${palette.goldPrimary}20` : '#00000008',
+              borderColor: book.tenho_fisico ? palette.goldPrimary : `${palette.woodBorder}40`,
+              color: book.tenho_fisico ? palette.woodBorder : palette.textSecondaryOnPaper,
+            }}
+          >
+            <Library size={11} />
+            {book.tenho_fisico ? 'Tenho em casa' : 'Não tenho físico'}
+          </span>
+
+          <span
+            className="text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1"
+            style={{
+              backgroundColor:
+                book.status_leitura === 'lido'
+                  ? '#10b98120'
+                  : book.status_leitura === 'quero_ler'
+                  ? '#3b82f620'
+                  : '#00000008',
+              borderColor:
+                book.status_leitura === 'lido'
+                  ? '#10b98180'
+                  : book.status_leitura === 'quero_ler'
+                  ? '#3b82f680'
+                  : `${palette.woodBorder}40`,
+              color:
+                book.status_leitura === 'lido'
+                  ? '#065f46'
+                  : book.status_leitura === 'quero_ler'
+                  ? '#1e40af'
+                  : palette.textSecondaryOnPaper,
+            }}
+          >
+            {book.status_leitura === 'lido' ? (
+              <>
+                <Check size={11} /> Lido {book.nota != null ? `(★ ${book.nota})` : ''}
+              </>
+            ) : book.status_leitura === 'quero_ler' ? (
+              <>
+                <Bookmark size={11} /> Quero ler
+              </>
+            ) : (
+              'Sem leitura'
+            )}
+          </span>
+        </div>
 
         <div className="flex flex-col gap-2">
           {/* Ver Detalhes */}
@@ -69,53 +182,112 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
               onDismiss();
               onViewDetails(book);
             }}
-            className="w-full py-2.5 px-4 rounded-lg font-serif font-bold text-sm flex items-center justify-center gap-2 transition-transform active:scale-98 shadow-sm cursor-pointer"
+            className="w-full py-2.5 px-4 rounded-lg font-serif font-bold text-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer hover:brightness-105 active:scale-98 transition-all"
             style={{
               backgroundColor: palette.goldPrimary,
               color: palette.textOnGold,
             }}
           >
             <BookOpen size={16} />
-            Ver Detalhes
+            Ver Detalhes da Obra
           </button>
 
-          {/* Editar Leitura */}
+          {/* Ação de Posse Física */}
           <button
             onClick={() => {
               onDismiss();
-              onEdit(book);
+              onTogglePosse(book);
             }}
-            className="w-full py-2.5 px-4 rounded-lg font-serif font-semibold text-sm flex items-center justify-center gap-2 transition-transform active:scale-98 cursor-pointer text-white"
-            style={{
-              backgroundColor: palette.woodBorder,
-            }}
-          >
-            <Edit size={16} />
-            Editar Leitura
-          </button>
-
-          {/* Mover status */}
-          <button
-            onClick={() => {
-              onDismiss();
-              onToggleStatus(book);
-            }}
-            className="w-full py-2 px-4 rounded-lg font-serif font-semibold text-sm flex items-center justify-center gap-2 transition-transform active:scale-98 border cursor-pointer"
+            className="w-full py-2 px-4 rounded-lg font-serif font-semibold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
             style={{
               borderColor: palette.woodBorder,
               color: palette.textOnPaper,
             }}
           >
-            <ArrowRightLeft size={16} />
-            {book.status === 'lido' ? 'Mover para Quero Ler' : 'Marcar como Lido'}
+            {book.tenho_fisico ? (
+              <>
+                <MinusCircle size={15} />
+                Remover de Meus Livros (não tenho mais)
+              </>
+            ) : (
+              <>
+                <Library size={15} />
+                Adicionar a Meus Livros (tenho físico)
+              </>
+            )}
           </button>
 
-          {/* Excluir */}
+          {/* Ação: Marcar como Lido */}
+          {book.status_leitura !== 'lido' && (
+            <button
+              onClick={() => {
+                onDismiss();
+                onSetStatusLeitura(book, 'lido');
+              }}
+              className="w-full py-2 px-4 rounded-lg font-serif font-semibold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+              style={{
+                borderColor: palette.woodBorder,
+                color: palette.textOnPaper,
+              }}
+            >
+              <CheckCircle size={15} />
+              Marcar como Lido
+            </button>
+          )}
+
+          {/* Ação: Quero Ler */}
+          {book.status_leitura !== 'quero_ler' && (
+            <button
+              onClick={() => {
+                onDismiss();
+                onSetStatusLeitura(book, 'quero_ler');
+              }}
+              className="w-full py-2 px-4 rounded-lg font-serif font-semibold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+              style={{
+                borderColor: palette.woodBorder,
+                color: palette.textOnPaper,
+              }}
+            >
+              <Bookmark size={15} />
+              Marcar como Quero Ler
+            </button>
+          )}
+
+          {/* Ação: Remover status de leitura */}
+          {book.status_leitura !== 'nenhum' && (
+            <button
+              onClick={() => {
+                onDismiss();
+                onSetStatusLeitura(book, 'nenhum');
+              }}
+              className="w-full py-2 px-4 rounded-lg font-serif text-xs flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+              style={{
+                borderColor: `${palette.woodBorder}60`,
+                color: palette.textSecondaryOnPaper,
+              }}
+            >
+              Remover status de leitura (Nenhum)
+            </button>
+          )}
+
+          {/* Editar completo */}
           <button
             onClick={() => {
               onDismiss();
-              onDelete(book);
+              onEdit(book);
             }}
+            className="w-full py-2 px-4 rounded-lg font-serif font-semibold text-xs flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 text-stone-700"
+            style={{
+              borderColor: `${palette.woodBorder}80`,
+            }}
+          >
+            <Edit size={14} />
+            Editar Dados / Avaliação
+          </button>
+
+          {/* Excluir da Estante */}
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
             className="w-full py-2 px-4 rounded-lg font-serif font-medium text-xs flex items-center justify-center gap-2 transition-colors hover:bg-red-50 text-red-700 cursor-pointer mt-1"
           >
             <Trash2 size={14} />

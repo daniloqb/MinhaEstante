@@ -1,4 +1,10 @@
-export type BookStatus = 'lido' | 'quero_ler';
+export type ReadingStatus = 'nenhum' | 'lido' | 'quero_ler';
+
+// As 3 abas de consulta da estante
+export type ShelfTab = 'meus_livros' | 'lido' | 'quero_ler';
+
+// Legado para compatibilidade retroativa com código existente
+export type BookStatus = 'meus_livros' | 'lido' | 'quero_ler';
 
 export type BookOrigin = 'google' | 'openlibrary' | 'manual';
 
@@ -18,7 +24,14 @@ export interface Book {
   descricao?: string | null;
   capaUrl?: string | null;
   capaLocalPath?: string | null;
-  status: BookStatus;
+
+  // Nova regra de negócio: posse e status de leitura independentes
+  tenho_fisico: boolean;
+  status_leitura: ReadingStatus;
+
+  // Campo de compatibilidade opcional
+  status?: string;
+
   mesLeitura?: number | null; // 1-12
   anoLeitura?: number | null;
   nota?: number | null; // 0-10
@@ -48,6 +61,7 @@ export interface SearchResultBook {
 }
 
 export interface EstanteStats {
+  totalMeusLivros: number;
   totalLidos: number;
   totalQueroLer: number;
   totalPaginasLidas: number;
@@ -57,6 +71,53 @@ export interface EstanteStats {
   lidosPorAno: Record<number, number>;
   topAutores: [string, number][];
   topGeneros: [string, number][];
+}
+
+/**
+ * Consulta de pertencimento à aba:
+ * - Meus Livros: tenho_fisico === true
+ * - Lidos: status_leitura === 'lido'
+ * - Quero ler: status_leitura === 'quero_ler'
+ */
+export function isBookInTab(book: Book, tab: ShelfTab): boolean {
+  switch (tab) {
+    case 'meus_livros':
+      return Boolean(book.tenho_fisico);
+    case 'lido':
+      return book.status_leitura === 'lido';
+    case 'quero_ler':
+      return book.status_leitura === 'quero_ler';
+    default:
+      return false;
+  }
+}
+
+export function getReadingStatusLabel(status: ReadingStatus): string {
+  switch (status) {
+    case 'nenhum':
+      return 'Nenhum';
+    case 'lido':
+      return 'Lido';
+    case 'quero_ler':
+      return 'Quero Ler';
+    default:
+      return 'Nenhum';
+  }
+}
+
+export function getStatusLabel(status: BookStatus | ReadingStatus): string {
+  switch (status) {
+    case 'meus_livros':
+      return 'Meus Livros';
+    case 'lido':
+      return 'Lido';
+    case 'quero_ler':
+      return 'Quero Ler';
+    case 'nenhum':
+      return 'Sem leitura';
+    default:
+      return 'Meus Livros';
+  }
 }
 
 export function formatAuthors(authors: string[]): string {

@@ -10,6 +10,7 @@ interface BookCoverViewProps {
   height?: number | string;
   elevation?: number;
   className?: string;
+  badge?: React.ReactNode;
   onClick?: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
 }
@@ -32,6 +33,7 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
   width = 100,
   height = 150,
   className = '',
+  badge,
   onClick,
   onContextMenu,
 }) => {
@@ -130,6 +132,13 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
           background: 'linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 100%)',
         }}
       />
+
+      {/* Selo / Badge posicionado sobre a capa */}
+      {badge && (
+        <div className="absolute top-1.5 right-1.5 z-30 pointer-events-none">
+          {badge}
+        </div>
+      )}
     </div>
   );
 };

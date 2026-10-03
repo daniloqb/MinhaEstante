@@ -1,10 +1,14 @@
-import { Book, EstanteStats } from '../types/book';
+import { Book, EstanteStats, ReadingStatus } from '../types/book';
 
 const STORAGE_KEY_BOOKS = 'minha_estante_livros_v1';
+const STORAGE_KEY_SCHEMA_VERSION = 'minha_estante_schema_version';
+const STORAGE_KEY_BACKUP_PRE_MIGRATION = 'minha_estante_backup_pre_migration_v1';
 const STORAGE_KEY_THEME = 'minha_estante_light_oak';
 const STORAGE_KEY_VIEW_MODE = 'minha_estante_view_mode';
 const STORAGE_KEY_GROUP_BY = 'minha_estante_group_by';
 const STORAGE_KEY_API_KEY = 'minha_estante_google_api_key';
+
+export const CURRENT_SCHEMA_VERSION = 2;
 
 export const INITIAL_SEED_BOOKS: Book[] = [
   {
@@ -19,11 +23,9 @@ export const INITIAL_SEED_BOOKS: Book[] = [
     generos: ['Literatura Brasileira', 'Romance', 'Clássico'],
     descricao: "Uma das maiores obras-primas da literatura em língua portuguesa. Narra a história de Bento Santiago e sua obsessão ciumenta por Capitu, os 'olhos de ressaca'.",
     capaUrl: 'https://covers.openlibrary.org/b/isbn/9788535902778-M.jpg',
-    status: 'lido',
-    mesLeitura: 5,
-    anoLeitura: 2026,
-    nota: 10,
-    observacoes: 'Releitura magnífica! A prosa irônica de Machado continua insuperável.',
+    tenho_fisico: true,
+    status_leitura: 'nenhum',
+    observacoes: 'Edição física de capa dura comprada em sebo.',
     origem: 'manual',
     dataCadastro: Date.now() - 1000000,
     dataAtualizacao: Date.now() - 1000000,
@@ -40,11 +42,9 @@ export const INITIAL_SEED_BOOKS: Book[] = [
     generos: ['Realismo Mágico', 'Ficção', 'Clássico Latino'],
     descricao: 'A épica saga da família Buendía na mítica aldeia de Macondo, tecida entre milagres, guerras e solidão.',
     capaUrl: 'https://covers.openlibrary.org/b/isbn/9788501012074-M.jpg',
-    status: 'lido',
-    mesLeitura: 2,
-    anoLeitura: 2026,
-    nota: 10,
-    observacoes: 'Obra arrebatadora do início ao fim.',
+    tenho_fisico: true,
+    status_leitura: 'quero_ler',
+    observacoes: 'Comprei e vou ler em breve.',
     origem: 'manual',
     dataCadastro: Date.now() - 2000000,
     dataAtualizacao: Date.now() - 2000000,
@@ -61,11 +61,12 @@ export const INITIAL_SEED_BOOKS: Book[] = [
     generos: ['Mistério', 'Ficção Histórica', 'Filosofia'],
     descricao: 'Durante a última semana de novembro de 1327, em um mosteiro franciscano no norte da Itália, o frade Guilherme de Baskerville investiga assassinatos misteriosos ligados a uma biblioteca labiríntica.',
     capaUrl: 'https://covers.openlibrary.org/b/isbn/9788501017369-M.jpg',
-    status: 'lido',
+    tenho_fisico: true,
+    status_leitura: 'lido',
     mesLeitura: 11,
     anoLeitura: 2025,
     nota: 9,
-    observacoes: 'A descrição da biblioteca clássica é deslumbrante.',
+    observacoes: 'Li um livro que é meu. A descrição da biblioteca clássica é deslumbrante.',
     origem: 'manual',
     dataCadastro: Date.now() - 3000000,
     dataAtualizacao: Date.now() - 3000000,
@@ -82,11 +83,12 @@ export const INITIAL_SEED_BOOKS: Book[] = [
     generos: ['Ficção', 'Existencialismo', 'Clássico'],
     descricao: 'Gregor Samsa acorda certa manhã transformado em um inseto monstruoso.',
     capaUrl: 'https://covers.openlibrary.org/b/isbn/9788571646858-M.jpg',
-    status: 'lido',
+    tenho_fisico: false,
+    status_leitura: 'lido',
     mesLeitura: 8,
     anoLeitura: 2025,
     nota: 9,
-    observacoes: 'Curto e perturbador.',
+    observacoes: 'Li um exemplar emprestado da biblioteca pública.',
     origem: 'manual',
     dataCadastro: Date.now() - 4000000,
     dataAtualizacao: Date.now() - 4000000,
@@ -103,7 +105,8 @@ export const INITIAL_SEED_BOOKS: Book[] = [
     generos: ['Literatura Brasileira', 'Romance'],
     descricao: 'O monólogo de Riobaldo, ex-jagunço que relembra sua vida pelas veredas do sertão e seu sentimento por Diadorim.',
     capaUrl: 'https://covers.openlibrary.org/b/isbn/9788535931983-M.jpg',
-    status: 'quero_ler',
+    tenho_fisico: false,
+    status_leitura: 'quero_ler',
     origem: 'manual',
     dataCadastro: Date.now() - 5000000,
     dataAtualizacao: Date.now() - 5000000,
@@ -120,12 +123,187 @@ export const INITIAL_SEED_BOOKS: Book[] = [
     generos: ['Ficção Gótica', 'Clássico'],
     descricao: 'A busca eterna pela juventude e a degeneração da alma humana.',
     capaUrl: 'https://covers.openlibrary.org/b/isbn/9788563560377-M.jpg',
-    status: 'quero_ler',
+    tenho_fisico: false,
+    status_leitura: 'quero_ler',
     origem: 'manual',
     dataCadastro: Date.now() - 6000000,
     dataAtualizacao: Date.now() - 6000000,
   },
 ];
+
+/**
+ * Normaliza string para comparação de duplicados
+ */
+function normalizeString(val?: string | null): string {
+  if (!val) return '';
+  return val
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
+}
+
+/**
+ * Identifica se dois livros são duplicados
+ */
+export function areBooksDuplicate(a: Partial<Book>, b: Partial<Book>): boolean {
+  const cleanIsbn = (s?: string | null) => (s ? s.replace(/[-\s]/g, '').trim() : '');
+
+  const a13 = cleanIsbn(a.isbn13);
+  const b13 = cleanIsbn(b.isbn13);
+  const a10 = cleanIsbn(a.isbn10);
+  const b10 = cleanIsbn(b.isbn10);
+
+  if (a13 && b13 && a13 === b13) return true;
+  if (a10 && b10 && a10 === b10) return true;
+  if (a13 && b10 && a13 === b10) return true;
+  if (a10 && b13 && a10 === b13) return true;
+
+  const normTitleA = normalizeString(a.titulo);
+  const normTitleB = normalizeString(b.titulo);
+  if (normTitleA && normTitleB && normTitleA === normTitleB) {
+    const normAuthorA = normalizeString(a.autores?.[0]);
+    const normAuthorB = normalizeString(b.autores?.[0]);
+    if (!normAuthorA || !normAuthorB || normAuthorA === normAuthorB) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Mescla dois registros duplicados em um único registro preservando informações
+ */
+export function mergeDuplicateBooks(a: Book, b: Book): Book {
+  // Combina posse física
+  const combinedTenhoFisico = Boolean(a.tenho_fisico || b.tenho_fisico);
+
+  // Status de leitura: 'lido' tem precedência sobre 'quero_ler' que tem precedência sobre 'nenhum'
+  let combinedStatus: ReadingStatus = 'nenhum';
+  if (a.status_leitura === 'lido' || b.status_leitura === 'lido') {
+    combinedStatus = 'lido';
+  } else if (a.status_leitura === 'quero_ler' || b.status_leitura === 'quero_ler') {
+    combinedStatus = 'quero_ler';
+  }
+
+  // Preserva nota, ano e mês de leitura
+  const nota = a.nota != null ? a.nota : b.nota != null ? b.nota : null;
+  const anoLeitura = a.anoLeitura != null ? a.anoLeitura : b.anoLeitura != null ? b.anoLeitura : null;
+  const mesLeitura = a.mesLeitura != null ? a.mesLeitura : b.mesLeitura != null ? b.mesLeitura : null;
+
+  // Mescla observações
+  let observacoes = a.observacoes || null;
+  if (b.observacoes && b.observacoes !== a.observacoes) {
+    observacoes = a.observacoes ? `${a.observacoes}\n\n${b.observacoes}` : b.observacoes;
+  }
+
+  // Mescla gêneros únicos
+  const generosSet = new Set<string>([...(a.generos || []), ...(b.generos || [])]);
+
+  // Autores
+  const autores = (a.autores && a.autores.length > 0) ? a.autores : (b.autores || []);
+
+  return {
+    ...b,
+    ...a,
+    id: Math.min(a.id, b.id),
+    titulo: a.titulo || b.titulo,
+    subtitulo: a.subtitulo || b.subtitulo || null,
+    autores,
+    editora: a.editora || b.editora || null,
+    anoPublicacao: a.anoPublicacao != null ? a.anoPublicacao : b.anoPublicacao != null ? b.anoPublicacao : null,
+    paginas: a.paginas != null ? a.paginas : b.paginas != null ? b.paginas : null,
+    isbn10: a.isbn10 || b.isbn10 || null,
+    isbn13: a.isbn13 || b.isbn13 || null,
+    generos: Array.from(generosSet),
+    descricao: a.descricao || b.descricao || null,
+    capaUrl: a.capaUrl || b.capaUrl || null,
+    tenho_fisico: combinedTenhoFisico,
+    status_leitura: combinedStatus,
+    nota,
+    anoLeitura,
+    mesLeitura,
+    observacoes,
+    dataCadastro: Math.min(a.dataCadastro || Date.now(), b.dataCadastro || Date.now()),
+    dataAtualizacao: Math.max(a.dataAtualizacao || Date.now(), b.dataAtualizacao || Date.now()),
+  };
+}
+
+/**
+ * Migra lista de livros antigos para a nova regra de negócio independente
+ */
+export function migrateLegacyBooks(rawBooks: any[]): Book[] {
+  if (!Array.isArray(rawBooks)) return [];
+
+  // 1. Converte campos individuais para cada livro
+  const converted: Book[] = rawBooks.map((raw, idx) => {
+    let tenho_fisico = false;
+    let status_leitura: ReadingStatus = 'nenhum';
+
+    if (typeof raw.tenho_fisico === 'boolean') {
+      tenho_fisico = raw.tenho_fisico;
+    }
+
+    if (raw.status_leitura === 'lido' || raw.status_leitura === 'quero_ler' || raw.status_leitura === 'nenhum') {
+      status_leitura = raw.status_leitura;
+    } else if (raw.status) {
+      // Regra de migração solicitada:
+      // - "Meus Livros" -> tenho_fisico = true, status_leitura = nenhum
+      // - "lido" -> status_leitura = lido, tenho_fisico = false
+      // - "quero_ler" -> status_leitura = quero_ler, tenho_fisico = false
+      if (raw.status === 'meus_livros') {
+        tenho_fisico = true;
+        status_leitura = 'nenhum';
+      } else if (raw.status === 'lido') {
+        status_leitura = 'lido';
+        if (typeof raw.tenho_fisico !== 'boolean') tenho_fisico = false;
+      } else if (raw.status === 'quero_ler') {
+        status_leitura = 'quero_ler';
+        if (typeof raw.tenho_fisico !== 'boolean') tenho_fisico = false;
+      }
+    }
+
+    return {
+      id: raw.id || idx + 1,
+      origem: raw.origem || 'manual',
+      idExterno: raw.idExterno || null,
+      titulo: raw.titulo || 'Sem título',
+      subtitulo: raw.subtitulo || null,
+      autores: Array.isArray(raw.autores) ? raw.autores : [],
+      editora: raw.editora || null,
+      anoPublicacao: raw.anoPublicacao != null ? parseInt(raw.anoPublicacao, 10) || null : null,
+      paginas: raw.paginas != null ? parseInt(raw.paginas, 10) || null : null,
+      isbn10: raw.isbn10 || null,
+      isbn13: raw.isbn13 || null,
+      generos: Array.isArray(raw.generos) ? raw.generos : [],
+      descricao: raw.descricao || null,
+      capaUrl: raw.capaUrl || null,
+      tenho_fisico,
+      status_leitura,
+      mesLeitura: raw.mesLeitura != null ? parseInt(raw.mesLeitura, 10) || null : null,
+      anoLeitura: raw.anoLeitura != null ? parseInt(raw.anoLeitura, 10) || null : null,
+      nota: raw.nota != null ? parseInt(raw.nota, 10) || null : null,
+      observacoes: raw.observacoes || null,
+      dataCadastro: raw.dataCadastro || Date.now(),
+      dataAtualizacao: raw.dataAtualizacao || Date.now(),
+    };
+  });
+
+  // 2. Mescla registros duplicados (ex.: um livro em Meus Livros e outro em Lido/Quero ler)
+  const merged: Book[] = [];
+  for (const book of converted) {
+    const existingIdx = merged.findIndex((m) => areBooksDuplicate(m, book));
+    if (existingIdx >= 0) {
+      merged[existingIdx] = mergeDuplicateBooks(merged[existingIdx], book);
+    } else {
+      merged.push(book);
+    }
+  }
+
+  return merged;
+}
 
 export const BookStorage = {
   loadBooks(): Book[] {
@@ -133,11 +311,37 @@ export const BookStorage = {
       const data = localStorage.getItem(STORAGE_KEY_BOOKS);
       if (!data) {
         this.saveAllBooks(INITIAL_SEED_BOOKS);
+        localStorage.setItem(STORAGE_KEY_SCHEMA_VERSION, String(CURRENT_SCHEMA_VERSION));
         return INITIAL_SEED_BOOKS;
       }
+
       const parsed = JSON.parse(data);
-      return Array.isArray(parsed) ? parsed : INITIAL_SEED_BOOKS;
-    } catch {
+      if (!Array.isArray(parsed)) {
+        return INITIAL_SEED_BOOKS;
+      }
+
+      const schemaVersion = parseInt(localStorage.getItem(STORAGE_KEY_SCHEMA_VERSION) || '1', 10);
+      const needsMigration =
+        schemaVersion < CURRENT_SCHEMA_VERSION ||
+        parsed.some((b) => typeof b.tenho_fisico !== 'boolean' || !b.status_leitura);
+
+      if (needsMigration) {
+        // Antes da migração, gerar backup JSON automático
+        try {
+          localStorage.setItem(STORAGE_KEY_BACKUP_PRE_MIGRATION, data);
+        } catch (e) {
+          console.warn('Não foi possível salvar backup pré-migração no localStorage', e);
+        }
+
+        const migrated = migrateLegacyBooks(parsed);
+        this.saveAllBooks(migrated);
+        localStorage.setItem(STORAGE_KEY_SCHEMA_VERSION, String(CURRENT_SCHEMA_VERSION));
+        return migrated;
+      }
+
+      return parsed;
+    } catch (err) {
+      console.error('Erro ao carregar livros do storage', err);
       return INITIAL_SEED_BOOKS;
     }
   },
@@ -184,28 +388,27 @@ export const BookStorage = {
   findPotentialDuplicate(
     isbn13: string | null | undefined,
     isbn10: string | null | undefined,
-    title: string,
+    titulo: string,
+    autores: string[] | undefined,
     allBooks: Book[]
   ): Book | undefined {
-    const cleanIsbn13 = isbn13?.replace(/[-\s]/g, '').trim();
-    const cleanIsbn10 = isbn10?.replace(/[-\s]/g, '').trim();
-    const normTitle = title.toLowerCase().trim();
+    return allBooks.find((book) =>
+      areBooksDuplicate({ isbn13, isbn10, titulo, autores }, book)
+    );
+  },
 
-    return allBooks.find((book) => {
-      const bIsbn13 = book.isbn13?.replace(/[-\s]/g, '').trim();
-      const bIsbn10 = book.isbn10?.replace(/[-\s]/g, '').trim();
-
-      if (cleanIsbn13 && (bIsbn13 === cleanIsbn13 || bIsbn10 === cleanIsbn13)) return true;
-      if (cleanIsbn10 && (bIsbn10 === cleanIsbn10 || bIsbn13 === cleanIsbn10)) return true;
-      if (normTitle && book.titulo.toLowerCase().trim() === normTitle) return true;
-      return false;
-    });
+  calculateStats(books: Book[]): EstanteStats {
+    return this.computeStats(books);
   },
 
   computeStats(books: Book[]): EstanteStats {
     const currentYear = new Date().getFullYear();
-    const lidos = books.filter((b) => b.status === 'lido');
-    const queroLer = books.filter((b) => b.status === 'quero_ler');
+    // Meus Livros: tenho_fisico === true
+    const meusLivros = books.filter((b) => b.tenho_fisico);
+    // Lidos: status_leitura === 'lido'
+    const lidos = books.filter((b) => b.status_leitura === 'lido');
+    // Quero Ler: status_leitura === 'quero_ler'
+    const queroLer = books.filter((b) => b.status_leitura === 'quero_ler');
 
     const totalPaginasLidas = lidos.reduce((acc, b) => acc + (b.paginas || 0), 0);
     const livrosAnoAtual = lidos.filter((b) => b.anoLeitura === currentYear);
@@ -254,6 +457,7 @@ export const BookStorage = {
       .slice(0, 8);
 
     return {
+      totalMeusLivros: meusLivros.length,
       totalLidos: lidos.length,
       totalQueroLer: queroLer.length,
       totalPaginasLidas,
@@ -268,84 +472,105 @@ export const BookStorage = {
 
   // Export JSON
   exportJson(books: Book[]): string {
-    return JSON.stringify(books, null, 2);
+    return JSON.stringify(
+      {
+        version: CURRENT_SCHEMA_VERSION,
+        exportedAt: new Date().toISOString(),
+        books,
+      },
+      null,
+      2
+    );
   },
 
-  // Export CSV
+  // Export CSV com os novos campos independentes
   exportCsv(books: Book[]): string {
     const escapeCsv = (str: string | null | undefined): string => {
       if (str == null) return '';
-      const clean = str.replace(/"/g, '""');
+      const clean = String(str).replace(/"/g, '""');
       if (clean.includes(',') || clean.includes('\n') || clean.includes('"')) {
         return `"${clean}"`;
       }
       return clean;
     };
 
-    const headers =
-      'id,origem,titulo,subtitulo,autores,editora,ano_publicacao,paginas,isbn13,isbn10,generos,status,mes_leitura,ano_leitura,nota,observacoes\n';
+    const headers = [
+      'id',
+      'origem',
+      'titulo',
+      'subtitulo',
+      'autores',
+      'editora',
+      'ano_publicacao',
+      'paginas',
+      'isbn10',
+      'isbn13',
+      'generos',
+      'descricao',
+      'capa_url',
+      'tenho_fisico',
+      'status_leitura',
+      'mes_leitura',
+      'ano_leitura',
+      'nota',
+      'observacoes',
+    ];
 
-    const rows = books.map((b) => {
-      return [
-        b.id,
-        b.origem,
-        escapeCsv(b.titulo),
-        escapeCsv(b.subtitulo),
-        escapeCsv(b.autores?.join(';')),
-        escapeCsv(b.editora),
-        b.anoPublicacao || '',
-        b.paginas || '',
-        escapeCsv(b.isbn13),
-        escapeCsv(b.isbn10),
-        escapeCsv(b.generos?.join(';')),
-        b.status,
-        b.mesLeitura || '',
-        b.anoLeitura || '',
-        b.nota != null ? b.nota : '',
-        escapeCsv(b.observacoes),
-      ].join(',');
-    });
+    const rows = books.map((b) => [
+      b.id,
+      escapeCsv(b.origem),
+      escapeCsv(b.titulo),
+      escapeCsv(b.subtitulo),
+      escapeCsv(b.autores?.join('; ')),
+      escapeCsv(b.editora),
+      b.anoPublicacao ?? '',
+      b.paginas ?? '',
+      escapeCsv(b.isbn10),
+      escapeCsv(b.isbn13),
+      escapeCsv(b.generos?.join('; ')),
+      escapeCsv(b.descricao),
+      escapeCsv(b.capaUrl),
+      b.tenho_fisico ? 'sim' : 'nao',
+      escapeCsv(b.status_leitura),
+      b.mesLeitura ?? '',
+      b.anoLeitura ?? '',
+      b.nota ?? '',
+      escapeCsv(b.observacoes),
+    ]);
 
-    return headers + rows.join('\n');
+    return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
   },
 
-  // Import JSON
+  // Import JSON com migração transparente
   importJson(jsonString: string, currentBooks: Book[]): { count: number; updatedBooks: Book[] } {
-    const parsed = JSON.parse(jsonString);
-    if (!Array.isArray(parsed)) throw new Error('O conteúdo deve ser uma lista JSON válida de livros.');
+    try {
+      const parsed = JSON.parse(jsonString);
+      const rawList = Array.isArray(parsed) ? parsed : Array.isArray(parsed.books) ? parsed.books : [];
+      if (rawList.length === 0) return { count: 0, updatedBooks: currentBooks };
 
-    let maxId = currentBooks.reduce((max, b) => Math.max(max, b.id || 0), 0);
-    const imported: Book[] = parsed.map((item) => {
-      maxId++;
-      return {
-        id: maxId,
-        origem: item.origem || 'manual',
-        idExterno: item.idExterno || null,
-        titulo: item.titulo || 'Sem título',
-        subtitulo: item.subtitulo || null,
-        autores: Array.isArray(item.autores) ? item.autores : item.autores ? [String(item.autores)] : [],
-        editora: item.editora || null,
-        anoPublicacao: item.anoPublicacao ? Number(item.anoPublicacao) : null,
-        paginas: item.paginas ? Number(item.paginas) : null,
-        isbn10: item.isbn10 || null,
-        isbn13: item.isbn13 || null,
-        generos: Array.isArray(item.generos) ? item.generos : [],
-        descricao: item.descricao || null,
-        capaUrl: item.capaUrl || null,
-        capaLocalPath: null,
-        status: item.status === 'quero_ler' ? 'quero_ler' : 'lido',
-        mesLeitura: item.mesLeitura ? Number(item.mesLeitura) : null,
-        anoLeitura: item.anoLeitura ? Number(item.anoLeitura) : null,
-        nota: item.nota != null ? Number(item.nota) : null,
-        observacoes: item.observacoes || null,
-        dataCadastro: item.dataCadastro || Date.now(),
-        dataAtualizacao: Date.now(),
-      };
-    });
+      const migrated = migrateLegacyBooks(rawList);
 
-    const updated = [...imported, ...currentBooks];
-    this.saveAllBooks(updated);
-    return { count: imported.length, updatedBooks: updated };
+      // Mescla com livros atuais evitando duplicatas
+      let updated = [...currentBooks];
+      let addedOrUpdatedCount = 0;
+
+      for (const item of migrated) {
+        const existingIdx = updated.findIndex((b) => areBooksDuplicate(b, item));
+        if (existingIdx >= 0) {
+          updated[existingIdx] = mergeDuplicateBooks(updated[existingIdx], item);
+        } else {
+          const maxId = updated.reduce((max, b) => Math.max(max, b.id || 0), 0);
+          updated.push({ ...item, id: maxId + 1 });
+        }
+        addedOrUpdatedCount++;
+      }
+
+      this.saveAllBooks(updated);
+      return { count: addedOrUpdatedCount, updatedBooks: updated };
+    } catch (e) {
+      console.error('Falha ao importar JSON', e);
+      throw new Error('Formato de arquivo JSON inválido');
+    }
   },
 
   // Import CSV
@@ -405,8 +630,10 @@ export const BookStorage = {
     const yearIdx = headers.findIndex((h) => h.includes('ano_leitura') || h.includes('ano leitura') || h === 'ano');
     const monthIdx = headers.findIndex((h) => h.includes('mes_leitura') || h.includes('mês') || h.includes('mes'));
     const ratingIdx = headers.findIndex((h) => h.includes('nota') || h.includes('rating') || h.includes('estrelas'));
-    const statusIdx = headers.findIndex((h) => h.includes('status'));
     const pagesIdx = headers.findIndex((h) => h.includes('pagina') || h.includes('pages'));
+    const tenhoFisicoIdx = headers.findIndex((h) => h.includes('tenho') || h.includes('posse') || h.includes('fisico') || h.includes('own'));
+    const statusLeituraIdx = headers.findIndex((h) => h.includes('status_leitura') || h.includes('leitura'));
+    const legacyStatusIdx = headers.findIndex((h) => h === 'status');
 
     let maxId = currentBooks.reduce((max, b) => Math.max(max, b.id || 0), 0);
     const importedBooks: Book[] = [];
@@ -436,11 +663,33 @@ export const BookStorage = {
       const rawRating = ratingIdx >= 0 && ratingIdx < cols.length ? cols[ratingIdx].trim() : null;
       const parsedRating = rawRating ? Math.min(10, Math.max(0, parseInt(rawRating, 10))) : null;
 
-      const rawStatus = statusIdx >= 0 && statusIdx < cols.length ? cols[statusIdx].trim().toLowerCase() : '';
-      const status = rawStatus.includes('quero') || rawStatus.includes('wish') ? 'quero_ler' : 'lido';
-
       const rawPages = pagesIdx >= 0 && pagesIdx < cols.length ? cols[pagesIdx].trim() : null;
       const pages = rawPages ? parseInt(rawPages, 10) || null : null;
+
+      let tenho_fisico = false;
+      let status_leitura: ReadingStatus = 'nenhum';
+
+      if (tenhoFisicoIdx >= 0 && tenhoFisicoIdx < cols.length) {
+        const val = cols[tenhoFisicoIdx].toLowerCase().trim();
+        tenho_fisico = val === 'sim' || val === 'true' || val === '1' || val === 'yes' || val === 's';
+      }
+
+      if (statusLeituraIdx >= 0 && statusLeituraIdx < cols.length) {
+        const val = cols[statusLeituraIdx].toLowerCase().trim();
+        if (val.includes('lido') || val === 'read') status_leitura = 'lido';
+        else if (val.includes('quero') || val.includes('wish')) status_leitura = 'quero_ler';
+        else status_leitura = 'nenhum';
+      } else if (legacyStatusIdx >= 0 && legacyStatusIdx < cols.length) {
+        const val = cols[legacyStatusIdx].toLowerCase().trim();
+        if (val.includes('meus') || val.includes('tenho')) {
+          tenho_fisico = true;
+          status_leitura = 'nenhum';
+        } else if (val.includes('lido')) {
+          status_leitura = 'lido';
+        } else if (val.includes('quero')) {
+          status_leitura = 'quero_ler';
+        }
+      }
 
       maxId++;
       importedBooks.push({
@@ -451,7 +700,8 @@ export const BookStorage = {
         anoLeitura: year,
         mesLeitura: month,
         nota: isNaN(parsedRating as number) ? null : parsedRating,
-        status,
+        tenho_fisico,
+        status_leitura,
         paginas: isNaN(pages as number) ? null : pages,
         generos: [],
         dataCadastro: Date.now(),
@@ -460,7 +710,16 @@ export const BookStorage = {
     }
 
     if (importedBooks.length > 0) {
-      const updated = [...importedBooks, ...currentBooks];
+      let updated = [...currentBooks];
+      for (const item of importedBooks) {
+        const existingIdx = updated.findIndex((b) => areBooksDuplicate(b, item));
+        if (existingIdx >= 0) {
+          updated[existingIdx] = mergeDuplicateBooks(updated[existingIdx], item);
+        } else {
+          updated.push(item);
+        }
+      }
+
       this.saveAllBooks(updated);
       return { count: importedBooks.length, updatedBooks: updated };
     }
@@ -468,7 +727,7 @@ export const BookStorage = {
     return { count: 0, updatedBooks: currentBooks };
   },
 
-  // Settings
+  // Configurações
   loadTheme(): boolean {
     return localStorage.getItem(STORAGE_KEY_THEME) === 'true';
   },

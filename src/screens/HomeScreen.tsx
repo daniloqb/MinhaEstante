@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Book, BookStatus, ViewMode, GroupByMode, SortOption } from '../types/book';
+import { Book, ShelfTab, ViewMode, GroupByMode, SortOption } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodShelf } from '../components/WoodShelf';
 import { BookCoverView } from '../components/BookCoverView';
@@ -14,13 +14,17 @@ import {
   List as ListIcon,
   X,
   BookOpen,
+  Library,
+  Check,
+  Bookmark,
 } from 'lucide-react';
 
 interface HomeScreenProps {
   palette: WoodPalette;
   books: Book[];
-  statusTab: BookStatus;
-  onStatusTabChange: (status: BookStatus) => void;
+  allBooks: Book[];
+  statusTab: ShelfTab;
+  onStatusTabChange: (status: ShelfTab) => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   groupBy: GroupByMode;
@@ -45,12 +49,12 @@ interface HomeScreenProps {
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   palette,
   books,
+  allBooks,
   statusTab,
   onStatusTabChange,
   viewMode,
   onViewModeChange,
   groupBy,
-  sortOption: _sortOption,
   searchQuery,
   onSearchQueryChange,
   selectedYear,
@@ -67,16 +71,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 }) => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
-  // Group books for Shelves View
+  // Contadores reais de cada aba segundo a consulta independente
+  const tabCounts = useMemo(() => {
+    return {
+      meus_livros: allBooks.filter((b) => b.tenho_fisico).length,
+      lido: allBooks.filter((b) => b.status_leitura === 'lido').length,
+      quero_ler: allBooks.filter((b) => b.status_leitura === 'quero_ler').length,
+    };
+  }, [allBooks]);
+
+  // Agrupamento para a estante de capas
   const groupedShelves = useMemo(() => {
     if (groupBy === 'ANO') {
       const map = new Map<number | null, Book[]>();
       books.forEach((book) => {
-        const year = book.anoLeitura ?? null;
+        const year =
+          statusTab === 'lido'
+            ? book.anoLeitura ?? null
+            : (book.anoLeitura || book.anoPublicacao) ?? null;
         if (!map.has(year)) map.set(year, []);
         map.get(year)!.push(book);
       });
-      // Sort years descending, null (Sem data) at the end
+
       return Array.from(map.entries()).sort((a, b) => {
         if (a[0] == null) return 1;
         if (b[0] == null) return -1;
@@ -102,13 +118,77 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       map.get(genre)!.push(book);
     });
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [books, groupBy]);
+  }, [books, groupBy, statusTab]);
 
   const hasActiveFilters =
     Boolean(searchQuery.trim()) ||
     selectedYear != null ||
     Boolean(selectedGenre) ||
     selectedRatingMin != null;
+
+  /**
+   * Renderiza o selo adequado para a capa na visualização de prateleiras
+   */
+  const renderCoverBadge = (book: Book) => {
+    // Nas abas Lidos e Quero ler: selo dourado de posse caso o livro esteja em casa
+    if (statusTab === 'lido' || statusTab === 'quero_ler') {
+      if (book.tenho_fisico) {
+        return (
+          <span
+            className="p-1 rounded-full shadow-lg flex items-center justify-center border"
+            style={{
+              backgroundColor: palette.goldPrimary,
+              color: palette.textOnGold,
+              borderColor: '#FFFFFF60',
+            }}
+            title="Tenho este exemplar em casa"
+          >
+            <Library size={12} />
+          </span>
+        );
+      }
+      return null;
+    }
+
+    // Na aba Meus Livros: selo de leitura se estiver Lido ou Quero Ler; sem selo quando nenhum
+    if (statusTab === 'meus_livros') {
+      if (book.status_leitura === 'lido') {
+        return (
+          <span
+            className="px-1.5 py-0.5 rounded-full text-[10px] font-serif font-bold shadow-lg flex items-center gap-0.5 border"
+            style={{
+              backgroundColor: '#10b981',
+              color: '#FFFFFF',
+              borderColor: '#FFFFFF60',
+            }}
+            title={`Lido ${book.nota != null ? `(★ ${book.nota})` : ''}`}
+          >
+            <Check size={10} strokeWidth={3} />
+            {book.nota != null ? `★${book.nota}` : 'Lido'}
+          </span>
+        );
+      }
+
+      if (book.status_leitura === 'quero_ler') {
+        return (
+          <span
+            className="px-1.5 py-0.5 rounded-full text-[10px] font-serif font-bold shadow-lg flex items-center gap-0.5 border"
+            style={{
+              backgroundColor: '#3b82f6',
+              color: '#FFFFFF',
+              borderColor: '#FFFFFF60',
+            }}
+            title="Na lista Quero Ler"
+          >
+            <Bookmark size={10} />
+            Quero
+          </span>
+        );
+      }
+    }
+
+    return null;
+  };
 
   return (
     <div className="flex flex-col w-full flex-1">
@@ -137,7 +217,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <FilterIcon size={20} color={palette.goldPrimary} />
               {hasActiveFilters && (
                 <span
-                  className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
+                  className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full ring-2 ring-stone-900"
                   style={{ backgroundColor: palette.goldPrimary }}
                 />
               )}
@@ -182,17 +262,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
       )}
 
-      {/* Barra de Controles: "Lidos | Quero Ler" e "Capas | Lista" */}
+      {/* Barra de Controles: Abas com contadores e alternador Capas | Lista */}
       <div
-        className="w-full px-4 py-2 flex items-center justify-between border-b"
+        className="w-full px-4 py-2 flex items-center justify-between border-b gap-2"
         style={{
           backgroundColor: `${palette.woodDark}cc`,
           borderColor: `${palette.woodBorder}30`,
         }}
       >
-        {/* Segmented Button: Lidos | Quero Ler */}
+        {/* Segmented Button com contadores: Meus Livros | Lidos | Quero Ler */}
         <div
-          className="flex items-center p-0.5 rounded-lg border"
+          className="flex items-center p-0.5 rounded-lg border overflow-x-auto scrollbar-none"
           style={{
             backgroundColor: palette.woodDark,
             borderColor: `${palette.woodBorder}60`,
@@ -200,31 +280,71 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         >
           <button
             type="button"
+            onClick={() => onStatusTabChange('meus_livros')}
+            className="px-2.5 sm:px-4 py-1.5 rounded-md font-serif font-bold text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+            style={{
+              backgroundColor: statusTab === 'meus_livros' ? palette.goldPrimary : 'transparent',
+              color: statusTab === 'meus_livros' ? palette.textOnGold : palette.textOnWood,
+            }}
+          >
+            Meus Livros
+            <span
+              className="px-1.5 py-0.2 rounded-full text-[10px] font-sans"
+              style={{
+                backgroundColor: statusTab === 'meus_livros' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.15)',
+                color: statusTab === 'meus_livros' ? palette.textOnGold : palette.textOnWood,
+              }}
+            >
+              {tabCounts.meus_livros}
+            </span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => onStatusTabChange('lido')}
-            className="px-3.5 py-1.5 rounded-md font-serif font-bold text-xs sm:text-sm transition-all cursor-pointer"
+            className="px-2.5 sm:px-4 py-1.5 rounded-md font-serif font-bold text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
             style={{
               backgroundColor: statusTab === 'lido' ? palette.goldPrimary : 'transparent',
               color: statusTab === 'lido' ? palette.textOnGold : palette.textOnWood,
             }}
           >
             Lidos
+            <span
+              className="px-1.5 py-0.2 rounded-full text-[10px] font-sans"
+              style={{
+                backgroundColor: statusTab === 'lido' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.15)',
+                color: statusTab === 'lido' ? palette.textOnGold : palette.textOnWood,
+              }}
+            >
+              {tabCounts.lido}
+            </span>
           </button>
+
           <button
             type="button"
             onClick={() => onStatusTabChange('quero_ler')}
-            className="px-3.5 py-1.5 rounded-md font-serif font-bold text-xs sm:text-sm transition-all cursor-pointer"
+            className="px-2.5 sm:px-4 py-1.5 rounded-md font-serif font-bold text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
             style={{
               backgroundColor: statusTab === 'quero_ler' ? palette.goldPrimary : 'transparent',
               color: statusTab === 'quero_ler' ? palette.textOnGold : palette.textOnWood,
             }}
           >
             Quero Ler
+            <span
+              className="px-1.5 py-0.2 rounded-full text-[10px] font-sans"
+              style={{
+                backgroundColor: statusTab === 'quero_ler' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.15)',
+                color: statusTab === 'quero_ler' ? palette.textOnGold : palette.textOnWood,
+              }}
+            >
+              {tabCounts.quero_ler}
+            </span>
           </button>
         </div>
 
         {/* Alternar Modo: Capas | Lista */}
         <div
-          className="flex items-center p-0.5 rounded-lg border"
+          className="flex items-center p-0.5 rounded-lg border shrink-0"
           style={{
             backgroundColor: palette.woodDark,
             borderColor: `${palette.woodBorder}60`,
@@ -263,13 +383,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           className="w-full px-4 py-1.5 flex items-center gap-1.5 overflow-x-auto text-xs"
           style={{ backgroundColor: `${palette.woodDark}80` }}
         >
-          <span className="font-serif text-xs opacity-75" style={{ color: palette.textSecondaryOnWood }}>
-            Filtros:
+          <span className="font-serif text-xs opacity-75 shrink-0" style={{ color: palette.textSecondaryOnWood }}>
+            Filtros ativos:
           </span>
 
           {searchQuery && (
             <span
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px]"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] shrink-0"
               style={{
                 backgroundColor: `${palette.goldPrimary}20`,
                 borderColor: palette.goldPrimary,
@@ -283,17 +403,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </span>
           )}
 
+          {/* Chip de Ano de Leitura */}
           {selectedYear != null && (
             <span
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px]"
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px] font-sans font-semibold shrink-0"
               style={{
-                backgroundColor: `${palette.goldPrimary}20`,
+                backgroundColor: `${palette.goldPrimary}25`,
                 borderColor: palette.goldPrimary,
                 color: palette.goldPrimary,
               }}
             >
-              Ano: {selectedYear === -1 ? 'Sem data' : selectedYear}
-              <button onClick={() => onYearFilterChange(null)} className="cursor-pointer">
+              Ano: {selectedYear}
+              <button
+                onClick={() => onYearFilterChange(null)}
+                className="cursor-pointer hover:opacity-80 p-0.5"
+                title="Remover filtro de ano"
+              >
                 <X size={12} />
               </button>
             </span>
@@ -301,7 +426,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
           {selectedGenre && (
             <span
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px]"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] shrink-0"
               style={{
                 backgroundColor: `${palette.goldPrimary}20`,
                 borderColor: palette.goldPrimary,
@@ -317,7 +442,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
           {selectedRatingMin != null && (
             <span
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px]"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] shrink-0"
               style={{
                 backgroundColor: `${palette.goldPrimary}20`,
                 borderColor: palette.goldPrimary,
@@ -333,10 +458,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
           <button
             onClick={onClearFilters}
-            className="text-[11px] font-serif font-bold underline cursor-pointer ml-auto whitespace-nowrap"
+            className="text-[11px] font-serif font-bold underline cursor-pointer ml-auto whitespace-nowrap hover:opacity-80"
             style={{ color: palette.goldPrimary }}
           >
-            Limpar
+            Limpar filtros
           </button>
         </div>
       )}
@@ -361,9 +486,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               className="font-serif text-lg leading-relaxed mb-6"
               style={{ color: palette.textOnWood }}
             >
-              {statusTab === 'lido'
-                ? 'Sua estante de livros lidos está aguardando as primeiras obras.'
-                : 'Sua lista de interesse está vazia. Adicione livros que planeja ler.'}
+              {statusTab === 'meus_livros'
+                ? 'Nenhum livro físico registrado em casa com os filtros atuais.'
+                : statusTab === 'lido'
+                ? 'Nenhum livro lido correspondente aos filtros atuais.'
+                : 'Nenhum livro na lista Quero Ler com os filtros atuais.'}
             </p>
 
             <WoodShelf palette={palette} className="mb-6" />
@@ -378,7 +505,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               }}
             >
               <Plus size={20} />
-              Adicionar meu primeiro livro
+              {statusTab === 'meus_livros'
+                ? 'Adicionar livro que tenho em casa'
+                : statusTab === 'lido'
+                ? 'Adicionar livro lido'
+                : 'Adicionar à lista Quero Ler'}
             </button>
           </div>
         ) : viewMode === 'CAPAS' ? (
@@ -388,7 +519,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               const label =
                 groupBy === 'ANO'
                   ? groupKey == null
-                    ? 'Sem data de leitura'
+                    ? 'Sem data registrada'
                     : String(groupKey)
                   : String(groupKey);
 
@@ -400,7 +531,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   {/* Livros em pé sobre a prateleira */}
                   <div className="w-full overflow-x-auto px-6 flex items-end gap-5 pb-0 pt-3 scrollbar-thin">
                     {shelfBooks.map((book) => {
-                      // Altura ligeiramente orgânica para efeito de biblioteca real (140 a 164px)
+                      // Altura orgânica simulando biblioteca real (140 a 164px)
                       let hash = 0;
                       for (let i = 0; i < book.titulo.length; i++) {
                         hash = (hash << 5) - hash + book.titulo.charCodeAt(i);
@@ -420,6 +551,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                             coverUrl={book.capaUrl}
                             width={100}
                             height={dynamicHeight}
+                            badge={renderCoverBadge(book)}
                             onClick={() => onSelectBook(book)}
                             onContextMenu={(e) => {
                               e.preventDefault();
@@ -458,15 +590,35 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     coverUrl={book.capaUrl}
                     width={56}
                     height={84}
+                    badge={renderCoverBadge(book)}
                   />
 
                   <div className="flex-1 min-w-0">
-                    <h3
-                      className="font-serif font-bold text-base sm:text-lg leading-tight line-clamp-2"
-                      style={{ color: palette.textOnPaper }}
-                    >
-                      {book.titulo}
-                    </h3>
+                    <div className="flex items-start justify-between gap-2">
+                      <h3
+                        className="font-serif font-bold text-base sm:text-lg leading-tight line-clamp-2"
+                        style={{ color: palette.textOnPaper }}
+                      >
+                        {book.titulo}
+                      </h3>
+
+                      {/* Selo de posse em abas externas */}
+                      {(statusTab === 'lido' || statusTab === 'quero_ler') && book.tenho_fisico && (
+                        <span
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 flex items-center gap-1"
+                          style={{
+                            backgroundColor: `${palette.goldPrimary}20`,
+                            borderColor: palette.goldPrimary,
+                            color: palette.woodBorder,
+                          }}
+                          title="Exemplar físico em casa"
+                        >
+                          <Library size={10} />
+                          Tenho
+                        </span>
+                      )}
+                    </div>
+
                     <p
                       className="text-xs truncate mt-0.5"
                       style={{ color: palette.textSecondaryOnPaper }}
@@ -476,7 +628,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     </p>
 
                     <div className="flex items-center justify-between mt-2 pt-1 border-t border-black/5">
-                      {book.status === 'lido' ? (
+                      {statusTab === 'lido' ? (
                         <>
                           <StarRatingBar
                             palette={palette}
@@ -493,16 +645,80 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                               : 'Sem data'}
                           </span>
                         </>
+                      ) : statusTab === 'meus_livros' ? (
+                        <div className="w-full flex items-center justify-between">
+                          <span
+                            className="font-serif font-semibold text-xs px-2.5 py-0.5 rounded-full border flex items-center gap-1"
+                            style={{
+                              backgroundColor:
+                                book.status_leitura === 'lido'
+                                  ? '#10b98115'
+                                  : book.status_leitura === 'quero_ler'
+                                  ? '#3b82f615'
+                                  : `${palette.goldPrimary}15`,
+                              borderColor:
+                                book.status_leitura === 'lido'
+                                  ? '#10b98160'
+                                  : book.status_leitura === 'quero_ler'
+                                  ? '#3b82f660'
+                                  : `${palette.goldPrimary}60`,
+                              color:
+                                book.status_leitura === 'lido'
+                                  ? '#065f46'
+                                  : book.status_leitura === 'quero_ler'
+                                  ? '#1e40af'
+                                  : palette.woodBorder,
+                            }}
+                          >
+                            {book.status_leitura === 'lido' ? (
+                              <>
+                                <Check size={11} /> Lido {book.nota != null ? `(★ ${book.nota})` : ''}
+                              </>
+                            ) : book.status_leitura === 'quero_ler' ? (
+                              <>
+                                <Bookmark size={11} /> Quero Ler
+                              </>
+                            ) : (
+                              'No acervo (sem leitura)'
+                            )}
+                          </span>
+
+                          <button
+                            type="button"
+                            className="font-serif font-bold text-xs hover:underline cursor-pointer"
+                            style={{ color: palette.woodBorder }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenQuickAction(book);
+                            }}
+                          >
+                            Ações →
+                          </button>
+                        </div>
                       ) : (
-                        <span
-                          className="font-serif font-semibold text-xs px-2 py-0.5 rounded-full border"
-                          style={{
-                            borderColor: palette.woodBorder,
-                            color: palette.woodBorder,
-                          }}
-                        >
-                          Quero Ler
-                        </span>
+                        <div className="w-full flex items-center justify-between">
+                          <span
+                            className="font-serif font-semibold text-xs px-2 py-0.5 rounded-full border flex items-center gap-1"
+                            style={{
+                              borderColor: `${palette.woodBorder}60`,
+                              color: palette.woodBorder,
+                            }}
+                          >
+                            <Bookmark size={11} />
+                            Quero Ler
+                          </span>
+                          <button
+                            type="button"
+                            className="font-serif font-bold text-xs hover:underline cursor-pointer"
+                            style={{ color: palette.woodBorder }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenQuickAction(book);
+                            }}
+                          >
+                            Ações →
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>

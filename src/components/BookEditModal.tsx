@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Book, BookStatus } from '../types/book';
+import { Book, ReadingStatus } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { StarRatingBar } from './StarRatingBar';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Library, AlertTriangle } from 'lucide-react';
 
 interface BookEditModalProps {
   palette: WoodPalette;
@@ -10,6 +10,7 @@ interface BookEditModalProps {
   isOpen: boolean;
   onDismiss: () => void;
   onSave: (updatedBook: Book) => void;
+  onDelete?: (book: Book) => void;
 }
 
 export const BookEditModal: React.FC<BookEditModalProps> = ({
@@ -18,13 +19,19 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
   isOpen,
   onDismiss,
   onSave,
+  onDelete,
 }) => {
   if (!isOpen || !book) return null;
 
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
-  const [status, setStatus] = useState<BookStatus>(book.status || 'lido');
+  // Controles independentes
+  const [tenhoFisico, setTenhoFisico] = useState<boolean>(Boolean(book.tenho_fisico));
+  const [statusLeitura, setStatusLeitura] = useState<ReadingStatus>(
+    book.status_leitura || (book.status === 'lido' ? 'lido' : book.status === 'quero_ler' ? 'quero_ler' : 'nenhum')
+  );
+
   const [selectedRating, setSelectedRating] = useState<number | null>(book.nota ?? null);
   const [isSemData, setIsSemData] = useState<boolean>(book.anoLeitura == null && Boolean(book.id));
   const [anoText, setAnoText] = useState<string>(
@@ -36,6 +43,9 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
   const [genresList, setGenresList] = useState<string[]>(book.generos || []);
   const [newGenreInput, setNewGenreInput] = useState<string>('');
   const [observations, setObservations] = useState<string>(book.observacoes || '');
+
+  // Confirmação para livro órfão (sem posse e sem leitura)
+  const [showOrphanPrompt, setShowOrphanPrompt] = useState(false);
 
   const months = [
     { num: 1, name: 'Jan' },
@@ -64,7 +74,7 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
     setGenresList(genresList.filter((g) => g !== genreToRemove));
   };
 
-  const handleSave = () => {
+  const executeSave = (finalTenho: boolean, finalStatus: ReadingStatus) => {
     const parsedAno = isSemData ? null : parseInt(anoText, 10) || null;
     const parsedMes = isSemData
       ? null
@@ -72,10 +82,11 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
 
     const updated: Book = {
       ...book,
-      status,
-      nota: status === 'lido' ? selectedRating : null,
-      anoLeitura: status === 'lido' ? parsedAno : null,
-      mesLeitura: status === 'lido' ? parsedMes : null,
+      tenho_fisico: finalTenho,
+      status_leitura: finalStatus,
+      nota: finalStatus === 'lido' ? selectedRating : book.nota,
+      anoLeitura: finalStatus === 'lido' ? parsedAno : book.anoLeitura,
+      mesLeitura: finalStatus === 'lido' ? parsedMes : book.mesLeitura,
       generos: genresList,
       observacoes: observations.trim() ? observations.trim() : null,
       dataAtualizacao: Date.now(),
@@ -84,11 +95,82 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
     onSave(updated);
   };
 
+  const handleSaveClick = () => {
+    // Se o livro ficar sem posse física E sem status de leitura: perguntar o que deseja fazer
+    if (!tenhoFisico && statusLeitura === 'nenhum') {
+      setShowOrphanPrompt(true);
+      return;
+    }
+
+    executeSave(tenhoFisico, statusLeitura);
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs"
       onClick={onDismiss}
     >
+      {/* Modal de confirmação quando o livro fica sem posse e sem status de leitura */}
+      {showOrphanPrompt && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs"
+          onClick={() => setShowOrphanPrompt(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl p-6 shadow-2xl border"
+            style={{
+              backgroundColor: palette.paperSurface,
+              borderColor: palette.woodBorder,
+              color: palette.textOnPaper,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2.5 mb-3 text-amber-700">
+              <AlertTriangle size={24} />
+              <h3 className="font-serif font-bold text-xl leading-tight">
+                Livro sem lista ativa
+              </h3>
+            </div>
+
+            <p className="text-sm leading-relaxed mb-6" style={{ color: palette.textOnPaper }}>
+              Este livro não está mais em nenhuma lista (não é posse física em casa e não possui status de leitura). Deseja excluí-lo do aplicativo?
+            </p>
+
+            <div className="flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOrphanPrompt(false);
+                  if (onDelete) {
+                    onDelete(book);
+                  } else {
+                    onDismiss();
+                  }
+                }}
+                className="w-full py-2.5 px-4 rounded-lg font-serif font-bold text-sm bg-red-700 text-white cursor-pointer hover:bg-red-800 active:scale-98 transition-colors"
+              >
+                Excluir livro definitivamente
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOrphanPrompt(false);
+                  executeSave(false, 'nenhum');
+                }}
+                className="w-full py-2.5 px-4 rounded-lg font-serif font-semibold text-sm border cursor-pointer hover:bg-black/5 active:scale-98"
+                style={{
+                  borderColor: palette.woodBorder,
+                  color: palette.textOnPaper,
+                }}
+              >
+                Manter oculto no arquivo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div
         className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl border max-h-[92vh] overflow-y-auto"
         style={{
@@ -104,7 +186,7 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
         <div className="flex items-start justify-between pb-3 border-b" style={{ borderColor: `${palette.woodBorder}40` }}>
           <div>
             <h2 className="font-serif font-bold text-2xl" style={{ color: palette.textOnPaper }}>
-              {status === 'lido' ? 'Registro de Leitura' : 'Quero Ler'}
+              Editar Obra & Leitura
             </h2>
             <p className="font-serif text-sm font-semibold line-clamp-1" style={{ color: palette.textSecondaryOnPaper }}>
               {book.titulo}
@@ -112,43 +194,103 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
           </div>
           <button
             onClick={onDismiss}
-            className="p-1 rounded-full hover:bg-black/10 transition-colors"
+            className="p-1 rounded-full hover:bg-black/10 transition-colors cursor-pointer"
           >
             <X size={20} />
           </button>
         </div>
 
         <div className="flex flex-col gap-5 py-4">
-          {/* Seletor de Status (Lido ou Quero Ler) */}
-          <div className="flex gap-2">
+          {/* Controle Independente 1: Switch de Posse Física */}
+          <div
+            className="p-3.5 rounded-xl border flex items-center justify-between transition-colors"
+            style={{
+              backgroundColor: tenhoFisico ? `${palette.goldPrimary}15` : palette.paperSurfaceElevated,
+              borderColor: tenhoFisico ? palette.goldPrimary : palette.paperBorder,
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="p-2 rounded-lg"
+                style={{
+                  backgroundColor: tenhoFisico ? palette.goldPrimary : `${palette.woodBorder}20`,
+                  color: tenhoFisico ? palette.textOnGold : palette.woodBorder,
+                }}
+              >
+                <Library size={20} />
+              </div>
+              <div>
+                <span className="font-serif font-bold text-base block" style={{ color: palette.textOnPaper }}>
+                  Tenho este livro em casa
+                </span>
+                <span className="text-xs" style={{ color: palette.textSecondaryOnPaper }}>
+                  {tenhoFisico ? 'Exemplar físico no acervo (Aba Meus Livros)' : 'Não possuo o exemplar físico no momento'}
+                </span>
+              </div>
+            </div>
+
+            {/* Switch Toggle */}
             <button
               type="button"
-              onClick={() => setStatus('lido')}
-              className="flex-1 py-2 rounded-lg font-serif font-bold text-sm transition-all border cursor-pointer"
+              role="switch"
+              aria-checked={tenhoFisico}
+              onClick={() => setTenhoFisico(!tenhoFisico)}
+              className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
               style={{
-                backgroundColor: status === 'lido' ? palette.goldPrimary : 'transparent',
-                color: status === 'lido' ? palette.textOnGold : palette.textOnPaper,
-                borderColor: palette.woodBorder,
+                backgroundColor: tenhoFisico ? palette.goldPrimary : '#9ca3af',
               }}
             >
-              Lido
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatus('quero_ler')}
-              className="flex-1 py-2 rounded-lg font-serif font-bold text-sm transition-all border cursor-pointer"
-              style={{
-                backgroundColor: status === 'quero_ler' ? palette.goldPrimary : 'transparent',
-                color: status === 'quero_ler' ? palette.textOnGold : palette.textOnPaper,
-                borderColor: palette.woodBorder,
-              }}
-            >
-              Quero Ler
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                  tenhoFisico ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
             </button>
           </div>
 
-          {status === 'lido' && (
-            <>
+          {/* Controle Independente 2: Status de Leitura (SegmentedButton) */}
+          <div>
+            <label className="font-serif font-bold text-base block mb-2" style={{ color: palette.textOnPaper }}>
+              Status de leitura:
+            </label>
+            <div className="flex gap-2">
+              {(['nenhum', 'quero_ler', 'lido'] as ReadingStatus[]).map((st) => {
+                const isSelected = statusLeitura === st;
+                const labels: Record<ReadingStatus, string> = {
+                  nenhum: 'Nenhum',
+                  quero_ler: 'Quero ler',
+                  lido: 'Lido',
+                };
+
+                return (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setStatusLeitura(st)}
+                    className="flex-1 py-2 rounded-lg font-serif font-bold text-xs sm:text-sm transition-all border cursor-pointer text-center"
+                    style={{
+                      backgroundColor: isSelected ? palette.goldPrimary : 'transparent',
+                      color: isSelected ? palette.textOnGold : palette.textOnPaper,
+                      borderColor: isSelected ? palette.goldPrimary : palette.woodBorder,
+                    }}
+                  >
+                    {labels[st]}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] font-serif italic mt-1.5" style={{ color: palette.textSecondaryOnPaper }}>
+              {statusLeitura === 'lido'
+                ? 'Obra lida. Aparece na aba Lidos.'
+                : statusLeitura === 'quero_ler'
+                ? 'Obra desejada para futuras leituras. Aparece na aba Quero Ler.'
+                : 'Sem plano de leitura registrado.'}
+            </p>
+          </div>
+
+          {/* Se status_leitura === 'lido': campos opcionais de mês/ano e nota 0-10 */}
+          {statusLeitura === 'lido' && (
+            <div className="flex flex-col gap-4 animate-in fade-in duration-200">
               {/* Avaliação 0 a 10 */}
               <div className="rounded-xl p-3 border" style={{ backgroundColor: palette.paperSurfaceElevated, borderColor: palette.paperBorder }}>
                 <div className="flex items-center justify-between mb-2">
@@ -170,7 +312,8 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
                   palette={palette}
                   rating={selectedRating}
                   onRatingChanged={setSelectedRating}
-                  starSize={22}
+                  starSize={24}
+                  showLabel={true}
                 />
               </div>
 
@@ -279,7 +422,7 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
                   </div>
                 )}
               </div>
-            </>
+            </div>
           )}
 
           {/* Gêneros */}
@@ -368,7 +511,7 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
           <button
             type="button"
             onClick={onDismiss}
-            className="flex-1 py-2.5 rounded-lg font-serif font-bold text-sm border cursor-pointer"
+            className="flex-1 py-2.5 rounded-lg font-serif font-bold text-sm border cursor-pointer hover:bg-black/5"
             style={{
               borderColor: palette.woodBorder,
               color: palette.textOnPaper,
@@ -378,8 +521,8 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
           </button>
           <button
             type="button"
-            onClick={handleSave}
-            className="flex-1 py-2.5 rounded-lg font-serif font-bold text-sm shadow-md cursor-pointer hover:brightness-105 active:scale-98"
+            onClick={handleSaveClick}
+            className="flex-1 py-2.5 rounded-lg font-serif font-bold text-sm shadow-md cursor-pointer hover:brightness-105 active:scale-98 transition-all"
             style={{
               backgroundColor: palette.goldPrimary,
               color: palette.textOnGold,

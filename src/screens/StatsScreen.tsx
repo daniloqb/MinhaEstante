@@ -26,6 +26,72 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
       <WoodTopAppBar palette={palette} title="Estatísticas de Leitura" />
 
       <div className="flex-1 w-full max-w-2xl mx-auto px-4 py-4 flex flex-col gap-4 pb-12">
+        {/* Distribuição do Acervo: Meus Livros | Lidos | Quero Ler */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <PaperCard palette={palette} className="flex flex-col text-center p-2.5 sm:p-3">
+            <span
+              className="text-[11px] sm:text-xs font-semibold"
+              style={{ color: palette.textSecondaryOnPaper }}
+            >
+              Meus Livros
+            </span>
+            <span
+              className="font-serif font-bold text-2xl sm:text-3xl my-0.5"
+              style={{ color: palette.goldPrimary }}
+            >
+              {stats.totalMeusLivros}
+            </span>
+            <span
+              className="text-[10px]"
+              style={{ color: palette.textSecondaryOnPaper }}
+            >
+              No acervo
+            </span>
+          </PaperCard>
+
+          <PaperCard palette={palette} className="flex flex-col text-center p-2.5 sm:p-3">
+            <span
+              className="text-[11px] sm:text-xs font-semibold"
+              style={{ color: palette.textSecondaryOnPaper }}
+            >
+              Lidos
+            </span>
+            <span
+              className="font-serif font-bold text-2xl sm:text-3xl my-0.5"
+              style={{ color: palette.woodBorder }}
+            >
+              {stats.totalLidos}
+            </span>
+            <span
+              className="text-[10px]"
+              style={{ color: palette.textSecondaryOnPaper }}
+            >
+              Concluídos
+            </span>
+          </PaperCard>
+
+          <PaperCard palette={palette} className="flex flex-col text-center p-2.5 sm:p-3">
+            <span
+              className="text-[11px] sm:text-xs font-semibold"
+              style={{ color: palette.textSecondaryOnPaper }}
+            >
+              Quero Ler
+            </span>
+            <span
+              className="font-serif font-bold text-2xl sm:text-3xl my-0.5"
+              style={{ color: palette.textSecondaryOnPaper }}
+            >
+              {stats.totalQueroLer}
+            </span>
+            <span
+              className="text-[10px]"
+              style={{ color: palette.textSecondaryOnPaper }}
+            >
+              Desejados
+            </span>
+          </PaperCard>
+        </div>
+
         {/* Grandes Números em Cormorant Garamond */}
         <div className="grid grid-cols-2 gap-3">
           <PaperCard palette={palette} className="flex flex-col">

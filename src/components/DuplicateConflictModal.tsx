@@ -21,7 +21,12 @@ export const DuplicateConflictModal: React.FC<DuplicateConflictModalProps> = ({
   if (!conflict) return null;
 
   const { newBook, existingBook } = conflict;
-  const statusLabel = existingBook.status === 'lido' ? 'Lido' : 'Quero Ler';
+  const statusLabel =
+    existingBook.status === 'meus_livros'
+      ? 'Meus Livros'
+      : existingBook.status === 'lido'
+      ? 'Lido'
+      : 'Quero Ler';
 
   return (
     <div
