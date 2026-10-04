@@ -83,6 +83,7 @@ export const INITIAL_SEED_BOOKS: Book[] = [
     generos: ['Ficção', 'Existencialismo', 'Clássico'],
     descricao: 'Gregor Samsa acorda certa manhã transformado em um inseto monstruoso.',
     capaUrl: 'https://covers.openlibrary.org/b/isbn/9788571646858-M.jpg',
+    formato: 'ebook',
     tenho_fisico: false,
     status_leitura: 'lido',
     mesLeitura: 8,
@@ -220,6 +221,7 @@ export function mergeDuplicateBooks(a: Book, b: Book): Book {
     generos: Array.from(generosSet),
     descricao: a.descricao || b.descricao || null,
     capaUrl: a.capaUrl || b.capaUrl || null,
+    formato: a.formato || b.formato || 'fisico',
     tenho_fisico: combinedTenhoFisico,
     status_leitura: combinedStatus,
     nota,
@@ -280,6 +282,7 @@ export function migrateLegacyBooks(rawBooks: any[]): Book[] {
       generos: Array.isArray(raw.generos) ? raw.generos : [],
       descricao: raw.descricao || null,
       capaUrl: raw.capaUrl || null,
+      formato: raw.formato === 'ebook' ? 'ebook' : 'fisico',
       tenho_fisico,
       status_leitura,
       mesLeitura: raw.mesLeitura != null ? parseInt(raw.mesLeitura, 10) || null : null,
@@ -467,6 +470,8 @@ export const BookStorage = {
       lidosPorAno: porAno,
       topAutores,
       topGeneros,
+      totalEbooks: books.filter((b) => b.formato === 'ebook').length,
+      totalFisicos: books.filter((b) => b.formato !== 'ebook').length,
     };
   },
 
@@ -508,6 +513,7 @@ export const BookStorage = {
       'generos',
       'descricao',
       'capa_url',
+      'formato',
       'tenho_fisico',
       'status_leitura',
       'mes_leitura',
@@ -530,6 +536,7 @@ export const BookStorage = {
       escapeCsv(b.generos?.join('; ')),
       escapeCsv(b.descricao),
       escapeCsv(b.capaUrl),
+      b.formato || 'fisico',
       b.tenho_fisico ? 'sim' : 'nao',
       escapeCsv(b.status_leitura),
       b.mesLeitura ?? '',
@@ -631,6 +638,7 @@ export const BookStorage = {
     const monthIdx = headers.findIndex((h) => h.includes('mes_leitura') || h.includes('mês') || h.includes('mes'));
     const ratingIdx = headers.findIndex((h) => h.includes('nota') || h.includes('rating') || h.includes('estrelas'));
     const pagesIdx = headers.findIndex((h) => h.includes('pagina') || h.includes('pages'));
+    const formatoIdx = headers.findIndex((h) => h.includes('formato') || h.includes('format') || h.includes('ebook'));
     const tenhoFisicoIdx = headers.findIndex((h) => h.includes('tenho') || h.includes('posse') || h.includes('fisico') || h.includes('own'));
     const statusLeituraIdx = headers.findIndex((h) => h.includes('status_leitura') || h.includes('leitura'));
     const legacyStatusIdx = headers.findIndex((h) => h === 'status');
@@ -691,12 +699,21 @@ export const BookStorage = {
         }
       }
 
+      let formato: 'fisico' | 'ebook' = 'fisico';
+      if (formatoIdx >= 0 && formatoIdx < cols.length) {
+        const val = cols[formatoIdx].toLowerCase().trim();
+        if (val.includes('ebook') || val.includes('e-book') || val.includes('digital')) {
+          formato = 'ebook';
+        }
+      }
+
       maxId++;
       importedBooks.push({
         id: maxId,
         origem: 'manual',
         titulo: title,
         autores: authors,
+        formato,
         anoLeitura: year,
         mesLeitura: month,
         nota: isNaN(parsedRating as number) ? null : parsedRating,

@@ -8,6 +8,10 @@ import path from 'node:path';
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
+  define: {
+    'import.meta.env.VITE_GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || ''),
+    'import.meta.env.VITE_APP_URL': JSON.stringify(process.env.APP_URL || ''),
+  },
   plugins: [
     {
       name: 'serve-apk',

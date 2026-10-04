@@ -469,4 +469,32 @@ describe('4. Teste do filtro de Ano de Leitura', () => {
     expect(isValidYear(1899)).toBe(false); // Abaixo de 1900
     expect(isValidYear(currentYear + 1)).toBe(false); // Ano no futuro
   });
+
+  it('Edição e tradução de título e autor de idioma estrangeiro para o português', () => {
+    const originalBook: Book = {
+      id: 50,
+      origem: 'google',
+      titulo: 'The Catcher in the Rye',
+      subtitulo: null,
+      autores: ['J. D. Salinger'],
+      tenho_fisico: true,
+      status_leitura: 'lido',
+      generos: ['Ficção'],
+      dataCadastro: 1000,
+      dataAtualizacao: 1000,
+    };
+
+    // Usuário altera para o título em português
+    const novoTitulo = 'O Apanhador no Campo de Centeio';
+    const updatedBook: Book = {
+      ...originalBook,
+      titulo: novoTitulo.trim(),
+      subtitulo: 'Edição de Bolso',
+      dataAtualizacao: 2000,
+    };
+
+    expect(updatedBook.titulo).toBe('O Apanhador no Campo de Centeio');
+    expect(updatedBook.subtitulo).toBe('Edição de Bolso');
+    expect(updatedBook.dataAtualizacao).toBeGreaterThan(originalBook.dataAtualizacao);
+  });
 });

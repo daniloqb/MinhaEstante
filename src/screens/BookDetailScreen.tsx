@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Book, ReadingStatus } from '../types/book';
+import { Book, ReadingStatus, BookFormat } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
 import { WoodShelf } from '../components/WoodShelf';
 import { BookCoverView } from '../components/BookCoverView';
 import { PaperCard } from '../components/PaperCard';
 import { StarRatingBar } from '../components/StarRatingBar';
+import { BookSummaryAiModal } from '../components/BookSummaryAiModal';
+import { BookShoppingModal } from '../components/BookShoppingModal';
+import { cacheImageLocally, isDataUrl } from '../services/imageService';
 import {
   ArrowLeft,
   Edit,
@@ -18,6 +21,13 @@ import {
   Check,
   MinusCircle,
   AlertTriangle,
+  Sparkles,
+  ShoppingBag,
+  Tablet,
+  BookOpen,
+  Download,
+  CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 
 interface BookDetailScreenProps {
@@ -28,6 +38,7 @@ interface BookDetailScreenProps {
   onDelete: () => void;
   onTogglePosse: () => void;
   onSetStatusLeitura: (status: ReadingStatus) => void;
+  onUpdateBook?: (book: Book) => void;
 }
 
 export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
@@ -38,9 +49,14 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
   onDelete,
   onTogglePosse,
   onSetStatusLeitura,
+  onUpdateBook,
 }) => {
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isAiSummaryOpen, setIsAiSummaryOpen] = useState(false);
+  const [isShoppingOpen, setIsShoppingOpen] = useState(false);
+  const [isCachingCover, setIsCachingCover] = useState(false);
+  const [cacheSuccessMessage, setCacheSuccessMessage] = useState<string | null>(null);
 
   const readingDateFormatted =
     book.anoLeitura != null
@@ -48,9 +64,45 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
       : 'Sem data';
 
   const isbn = book.isbn13 || book.isbn10;
+  const isEbook = book.formato === 'ebook';
+  const hasLocalCover = isDataUrl(book.capaUrl);
+
+  const handleDownloadCoverLocally = async () => {
+    if (!book.capaUrl || hasLocalCover || isCachingCover) return;
+    setIsCachingCover(true);
+    setCacheSuccessMessage(null);
+    try {
+      const dataUrl = await cacheImageLocally(book.capaUrl);
+      if (dataUrl && onUpdateBook) {
+        onUpdateBook({
+          ...book,
+          capaUrl: dataUrl,
+          dataAtualizacao: Date.now(),
+        });
+        setCacheSuccessMessage('Capa salva no armazenamento local com sucesso!');
+        setTimeout(() => setCacheSuccessMessage(null), 3500);
+      }
+    } catch {
+      // Ignora erro
+    } finally {
+      setIsCachingCover(false);
+    }
+  };
+
+  const handleToggleFormat = (newFormat: BookFormat) => {
+    if (newFormat === book.formato || !onUpdateBook) return;
+    onUpdateBook({
+      ...book,
+      formato: newFormat,
+      tenho_fisico: newFormat === 'fisico' ? book.tenho_fisico : false,
+      dataAtualizacao: Date.now(),
+    });
+  };
 
   const originLabel =
-    book.origem === 'google'
+    book.origem === 'brasilapi'
+      ? '🇧🇷 BrasilAPI (Câmara Brasileira do Livro)'
+      : book.origem === 'google'
       ? 'Google Books'
       : book.origem === 'openlibrary'
       ? 'Open Library'
@@ -151,26 +203,98 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
               title={book.titulo}
               author={book.autores[0]}
               coverUrl={book.capaUrl}
-              width={160}
-              height={240}
+              width={170}
+              height={255}
               className="shadow-2xl"
               badge={
-                book.tenho_fisico ? (
+                isEbook ? (
                   <span
-                    className="p-1 rounded-full shadow-md flex items-center justify-center border"
+                    className="p-1.5 rounded-full shadow-md flex items-center justify-center border"
+                    style={{
+                      backgroundColor: '#7c3aed',
+                      color: '#ffffff',
+                      borderColor: '#FFFFFF70',
+                    }}
+                    title="E-book Digital"
+                  >
+                    <Tablet size={14} />
+                  </span>
+                ) : book.tenho_fisico ? (
+                  <span
+                    className="p-1.5 rounded-full shadow-md flex items-center justify-center border"
                     style={{
                       backgroundColor: palette.goldPrimary,
                       color: palette.textOnGold,
                       borderColor: '#FFFFFF60',
                     }}
-                    title="Tenho este exemplar em casa"
+                    title="Tenho este exemplar físico"
                   >
-                    <Library size={13} />
+                    <Library size={14} />
                   </span>
                 ) : null
               }
             />
           </div>
+
+          {/* Seletor Rápido de Formato: Físico vs E-book */}
+          <div className="mt-3 flex items-center gap-2 p-1 rounded-xl bg-black/25 border border-white/10 backdrop-blur-sm">
+            <button
+              type="button"
+              onClick={() => handleToggleFormat('fisico')}
+              className={`px-3 py-1.5 rounded-lg font-serif text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                !isEbook ? 'shadow-md' : 'opacity-65 hover:opacity-90'
+              }`}
+              style={{
+                backgroundColor: !isEbook ? palette.goldPrimary : 'transparent',
+                color: !isEbook ? palette.textOnGold : palette.textOnWood,
+              }}
+            >
+              <BookOpen size={15} />
+              Livro Físico
+            </button>
+            <button
+              type="button"
+              onClick={() => handleToggleFormat('ebook')}
+              className={`px-3 py-1.5 rounded-lg font-serif text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                isEbook ? 'shadow-md' : 'opacity-65 hover:opacity-90'
+              }`}
+              style={{
+                backgroundColor: isEbook ? '#7c3aed' : 'transparent',
+                color: '#ffffff',
+              }}
+            >
+              <Tablet size={15} />
+              E-book Digital
+            </button>
+          </div>
+
+          {/* Status de Armazenamento Local da Capa */}
+          {book.capaUrl && (
+            <div className="mt-2 flex flex-col items-center">
+              {hasLocalCover ? (
+                <span className="inline-flex items-center gap-1.5 text-xs font-serif px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/40 text-emerald-300">
+                  <CheckCircle2 size={13} />
+                  Capa guardada no aparelho (salva no backup)
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleDownloadCoverLocally}
+                  disabled={isCachingCover}
+                  className="inline-flex items-center gap-1.5 text-xs font-serif px-3 py-1 rounded-full border bg-black/30 hover:bg-black/45 text-amber-200 border-amber-400/40 transition-colors cursor-pointer"
+                  title="Baixar a imagem da capa para não depender de link de internet externo"
+                >
+                  {isCachingCover ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                  Salvar capa no aparelho (garantir no backup)
+                </button>
+              )}
+              {cacheSuccessMessage && (
+                <span className="text-xs text-emerald-300 mt-1 font-serif">
+                  {cacheSuccessMessage}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Prateleira com detalhes em latão sob o livro */}
           <WoodShelf
@@ -181,9 +305,91 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
           />
         </div>
 
+        {/* 2 Novos Cards Inteligentes: Resumo IA & Onde Comprar */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Ação 1: Resumo com Inteligência Artificial */}
+          <button
+            type="button"
+            onClick={() => setIsAiSummaryOpen(true)}
+            className="p-4 rounded-2xl border text-left flex items-start gap-3.5 shadow-lg cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99]"
+            style={{
+              backgroundColor: palette.paperSurface,
+              borderColor: palette.goldPrimary,
+            }}
+          >
+            <div
+              className="p-2.5 rounded-xl shrink-0"
+              style={{
+                backgroundColor: `${palette.goldPrimary}25`,
+                color: palette.goldPrimary,
+              }}
+            >
+              <Sparkles size={22} />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-serif font-bold text-base" style={{ color: palette.textOnPaper }}>
+                  Resumo da Obra (IA)
+                </span>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700">
+                  Online
+                </span>
+              </div>
+              <p className="text-xs leading-relaxed mt-1" style={{ color: palette.textSecondaryOnPaper }}>
+                Relembre o enredo, personagens e pontos centrais sem spoilers.
+              </p>
+            </div>
+          </button>
+
+          {/* Ação 2: Pesquisar Onde Comprar na Internet */}
+          <button
+            type="button"
+            onClick={() => setIsShoppingOpen(true)}
+            className="p-4 rounded-2xl border text-left flex items-start gap-3.5 shadow-lg cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99]"
+            style={{
+              backgroundColor: palette.paperSurface,
+              borderColor: palette.woodBorder,
+            }}
+          >
+            <div
+              className="p-2.5 rounded-xl shrink-0"
+              style={{
+                backgroundColor: `${palette.woodBorder}20`,
+                color: palette.woodBorder,
+              }}
+            >
+              <ShoppingBag size={22} />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-serif font-bold text-base" style={{ color: palette.textOnPaper }}>
+                  Onde Comprar
+                </span>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-700">
+                  Lojas
+                </span>
+              </div>
+              <p className="text-xs leading-relaxed mt-1" style={{ color: palette.textSecondaryOnPaper }}>
+                Buscar preços na Amazon, Estante Virtual, Google Shopping e mais.
+              </p>
+            </div>
+          </button>
+        </div>
+
         {/* Informações Bibliográficas em Cartão de Papel Envelhecido */}
         <PaperCard palette={palette} elevated className="flex flex-col gap-4">
           <div>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span
+                className="text-xs font-serif font-bold uppercase tracking-wider px-2 py-0.5 rounded-md"
+                style={{
+                  backgroundColor: isEbook ? '#7c3aed20' : `${palette.goldPrimary}20`,
+                  color: isEbook ? '#7c3aed' : palette.goldPrimary,
+                }}
+              >
+                {isEbook ? '📱 E-book Digital' : '📖 Livro Físico'}
+              </span>
+            </div>
             <h2
               className="font-serif font-bold text-2xl sm:text-3xl leading-snug"
               style={{ color: palette.textOnPaper }}
@@ -199,7 +405,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
               </p>
             )}
             <p
-              className="font-serif font-semibold text-base mt-2"
+              className="font-serif font-semibold text-lg mt-2"
               style={{ color: palette.woodBorder }}
             >
               {book.autores.join(', ') || 'Autor desconhecido'}
@@ -222,15 +428,15 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                   color: book.tenho_fisico ? palette.textOnGold : palette.woodBorder,
                 }}
               >
-                <Library size={18} />
+                <Library size={19} />
               </div>
               <div>
-                <span className="font-serif font-bold text-sm sm:text-base block" style={{ color: palette.textOnPaper }}>
-                  Tenho este livro em casa
+                <span className="font-serif font-bold text-base block" style={{ color: palette.textOnPaper }}>
+                  Tenho este exemplar em casa
                 </span>
-                <span className="text-xs" style={{ color: palette.textSecondaryOnPaper }}>
+                <span className="text-xs sm:text-sm" style={{ color: palette.textSecondaryOnPaper }}>
                   {book.tenho_fisico
-                    ? 'Exemplar físico no acervo pessoal (Aba Meus Livros)'
+                    ? 'Exemplar físico no acervo pessoal (Aba Livros Físicos)'
                     : 'Não possuo o exemplar físico no momento'}
                 </span>
               </div>
@@ -245,7 +451,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
               style={{
                 backgroundColor: book.tenho_fisico ? palette.goldPrimary : '#9ca3af',
               }}
-              title={book.tenho_fisico ? 'Remover de Meus Livros' : 'Adicionar a Meus Livros'}
+              title={book.tenho_fisico ? 'Remover de Livros Físicos' : 'Adicionar a Livros Físicos'}
             >
               <span
                 className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
@@ -506,6 +712,22 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Modal de Resumo com Inteligência Artificial */}
+      <BookSummaryAiModal
+        isOpen={isAiSummaryOpen}
+        onClose={() => setIsAiSummaryOpen(false)}
+        book={book}
+        palette={palette}
+      />
+
+      {/* Modal de Pesquisa de Lojas / Onde Comprar */}
+      <BookShoppingModal
+        isOpen={isShoppingOpen}
+        onClose={() => setIsShoppingOpen(false)}
+        book={book}
+        palette={palette}
+      />
     </div>
   );
 };

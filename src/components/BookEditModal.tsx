@@ -1,8 +1,25 @@
-import React, { useState } from 'react';
-import { Book, ReadingStatus } from '../types/book';
+import React, { useState, useEffect, useRef } from 'react';
+import { Book, ReadingStatus, BookFormat } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { StarRatingBar } from './StarRatingBar';
-import { X, Plus, Library, AlertTriangle } from 'lucide-react';
+import { BookCoverView } from './BookCoverView';
+import { BookSummaryAiModal } from './BookSummaryAiModal';
+import { ImageService } from '../services/imageService';
+import {
+  X,
+  Plus,
+  Library,
+  AlertTriangle,
+  Image,
+  Globe,
+  Trash2,
+  Edit3,
+  Tablet,
+  BookOpen,
+  DownloadCloud,
+  Sparkles,
+  Upload,
+} from 'lucide-react';
 
 interface BookEditModalProps {
   palette: WoodPalette;
@@ -26,6 +43,12 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
+  // Campos de texto bibliográficos editáveis (título em português, subtítulo, autor)
+  const [titulo, setTitulo] = useState<string>(book.titulo || '');
+  const [subtitulo, setSubtitulo] = useState<string>(book.subtitulo || '');
+  const [autoresText, setAutoresText] = useState<string>((book.autores || []).join(', '));
+  const [formato, setFormato] = useState<BookFormat>(book.formato || 'fisico');
+
   // Controles independentes
   const [tenhoFisico, setTenhoFisico] = useState<boolean>(Boolean(book.tenho_fisico));
   const [statusLeitura, setStatusLeitura] = useState<ReadingStatus>(
@@ -43,9 +66,66 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
   const [genresList, setGenresList] = useState<string[]>(book.generos || []);
   const [newGenreInput, setNewGenreInput] = useState<string>('');
   const [observations, setObservations] = useState<string>(book.observacoes || '');
+  const [capaUrl, setCapaUrl] = useState<string>(book.capaUrl || '');
+  const [isSavingCoverLocal, setIsSavingCoverLocal] = useState<boolean>(false);
+  const [coverSaveMessage, setCoverSaveMessage] = useState<string | null>(null);
+
+  // Sincronizar com mudanças do livro selecionado
+  useEffect(() => {
+    if (book) {
+      setTitulo(book.titulo || '');
+      setSubtitulo(book.subtitulo || '');
+      setAutoresText((book.autores || []).join(', '));
+      setFormato(book.formato || 'fisico');
+      setCapaUrl(book.capaUrl || '');
+      setTenhoFisico(Boolean(book.tenho_fisico));
+      setStatusLeitura(
+        book.status_leitura || (book.status === 'lido' ? 'lido' : book.status === 'quero_ler' ? 'quero_ler' : 'nenhum')
+      );
+      setSelectedRating(book.nota ?? null);
+      setGenresList(book.generos || []);
+      setObservations(book.observacoes || '');
+      setIsSemData(book.anoLeitura == null && Boolean(book.id));
+      if (book.anoLeitura != null) setAnoText(String(book.anoLeitura));
+      if (book.mesLeitura != null) setMesText(String(book.mesLeitura));
+    }
+  }, [book]);
+
+  const handleSaveCoverLocal = async () => {
+    if (!capaUrl || ImageService.isLocalImage(capaUrl)) return;
+    setIsSavingCoverLocal(true);
+    setCoverSaveMessage(null);
+    try {
+      const localDataUrl = await ImageService.downloadAndSaveCover(capaUrl);
+      setCapaUrl(localDataUrl);
+      setCoverSaveMessage('✓ Capa salva localmente no aparelho!');
+      setTimeout(() => setCoverSaveMessage(null), 3500);
+    } catch {
+      setCoverSaveMessage('Não foi possível baixar esta capa.');
+      setTimeout(() => setCoverSaveMessage(null), 3000);
+    } finally {
+      setIsSavingCoverLocal(false);
+    }
+  };
 
   // Confirmação para livro órfão (sem posse e sem leitura)
   const [showOrphanPrompt, setShowOrphanPrompt] = useState(false);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await ImageService.fileToDataUrl(file);
+      setCapaUrl(compressed);
+      setCoverSaveMessage('✓ Foto da capa carregada com sucesso!');
+      setTimeout(() => setCoverSaveMessage(null), 3500);
+    } catch {
+      setCoverSaveMessage('Erro ao carregar foto.');
+      setTimeout(() => setCoverSaveMessage(null), 3000);
+    }
+  };
 
   const months = [
     { num: 1, name: 'Jan' },
@@ -74,15 +154,37 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
     setGenresList(genresList.filter((g) => g !== genreToRemove));
   };
 
-  const executeSave = (finalTenho: boolean, finalStatus: ReadingStatus) => {
+  const executeSave = async (finalTenho: boolean, finalStatus: ReadingStatus) => {
     const parsedAno = isSemData ? null : parseInt(anoText, 10) || null;
     const parsedMes = isSemData
       ? null
       : Math.min(12, Math.max(1, parseInt(mesText, 10) || 0)) || null;
 
+    const trimmedTitle = titulo.trim() || book.titulo;
+    const trimmedSubtitle = subtitulo.trim() ? subtitulo.trim() : null;
+    const parsedAuthors = autoresText
+      .split(',')
+      .map((a) => a.trim())
+      .filter(Boolean);
+    const finalAuthors = parsedAuthors.length > 0 ? parsedAuthors : book.autores;
+
+    let finalCapaUrl = capaUrl.trim() ? capaUrl.trim() : null;
+    if (finalCapaUrl && !ImageService.isLocalImage(finalCapaUrl)) {
+      try {
+        finalCapaUrl = await ImageService.downloadAndSaveCover(finalCapaUrl);
+      } catch {
+        // mantém a remota caso não consiga baixar agora
+      }
+    }
+
     const updated: Book = {
       ...book,
-      tenho_fisico: finalTenho,
+      titulo: trimmedTitle,
+      subtitulo: trimmedSubtitle,
+      autores: finalAuthors,
+      formato,
+      capaUrl: finalCapaUrl,
+      tenho_fisico: formato === 'ebook' ? false : finalTenho,
       status_leitura: finalStatus,
       nota: finalStatus === 'lido' ? selectedRating : book.nota,
       anoLeitura: finalStatus === 'lido' ? parsedAno : book.anoLeitura,
@@ -97,7 +199,7 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
 
   const handleSaveClick = () => {
     // Se o livro ficar sem posse física E sem status de leitura: perguntar o que deseja fazer
-    if (!tenhoFisico && statusLeitura === 'nenhum') {
+    if (formato === 'fisico' && !tenhoFisico && statusLeitura === 'nenhum') {
       setShowOrphanPrompt(true);
       return;
     }
@@ -183,70 +285,369 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
         {/* Handle visual no mobile */}
         <div className="w-12 h-1.5 rounded-full mx-auto mb-4 bg-black/20 sm:hidden" />
 
+        {/* Modal de Resumo com IA */}
+        <BookSummaryAiModal
+          palette={palette}
+          book={{
+            ...book,
+            titulo: titulo.trim() || book.titulo,
+            subtitulo: subtitulo.trim() || null,
+            autores: autoresText.split(',').map((a) => a.trim()).filter(Boolean),
+            formato,
+            observacoes: observations,
+          }}
+          isOpen={isAiModalOpen}
+          onDismiss={() => setIsAiModalOpen(false)}
+          onSaveToNotes={(summary: string) => {
+            setObservations((prev) => (prev ? `${prev}\n\n${summary}` : summary));
+            setIsAiModalOpen(false);
+          }}
+        />
+
         <div className="flex items-start justify-between pb-3 border-b" style={{ borderColor: `${palette.woodBorder}40` }}>
           <div>
             <h2 className="font-serif font-bold text-2xl" style={{ color: palette.textOnPaper }}>
               Editar Obra & Leitura
             </h2>
             <p className="font-serif text-sm font-semibold line-clamp-1" style={{ color: palette.textSecondaryOnPaper }}>
-              {book.titulo}
+              {titulo || book.titulo}
             </p>
           </div>
-          <button
-            onClick={onDismiss}
-            className="p-1 rounded-full hover:bg-black/10 transition-colors cursor-pointer"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setIsAiModalOpen(true)}
+              className="py-1 px-2.5 rounded-lg border font-serif font-bold text-xs flex items-center gap-1 shadow-xs cursor-pointer hover:brightness-105"
+              style={{
+                backgroundColor: `${palette.goldPrimary}20`,
+                borderColor: palette.goldPrimary,
+                color: palette.woodBorder,
+              }}
+              title="Solicitar resumo literário à IA"
+            >
+              <Sparkles size={13} />
+              <span>Resumo IA</span>
+            </button>
+            <button
+              onClick={onDismiss}
+              className="p-1 rounded-full hover:bg-black/10 transition-colors cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-5 py-4">
-          {/* Controle Independente 1: Switch de Posse Física */}
+          {/* Seletor de Formato: Livro Físico vs E-book Digital */}
           <div
-            className="p-3.5 rounded-xl border flex items-center justify-between transition-colors"
+            className="p-3.5 rounded-xl border flex flex-col gap-2.5"
             style={{
-              backgroundColor: tenhoFisico ? `${palette.goldPrimary}15` : palette.paperSurfaceElevated,
-              borderColor: tenhoFisico ? palette.goldPrimary : palette.paperBorder,
+              backgroundColor: palette.paperSurfaceElevated,
+              borderColor: `${palette.woodBorder}40`,
             }}
           >
-            <div className="flex items-center gap-3">
-              <div
-                className="p-2 rounded-lg"
+            <label
+              className="text-xs font-serif font-bold uppercase tracking-wider"
+              style={{ color: palette.woodBorder }}
+            >
+              Formato da Obra na Estante
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setFormato('fisico');
+                  setTenhoFisico(true);
+                }}
+                className="py-2.5 px-3 rounded-lg border flex items-center justify-center gap-2 font-serif font-bold text-sm cursor-pointer transition-all shadow-xs"
                 style={{
-                  backgroundColor: tenhoFisico ? palette.goldPrimary : `${palette.woodBorder}20`,
-                  color: tenhoFisico ? palette.textOnGold : palette.woodBorder,
+                  backgroundColor: formato === 'fisico' ? palette.goldPrimary : 'transparent',
+                  color: formato === 'fisico' ? palette.textOnGold : palette.textOnPaper,
+                  borderColor: formato === 'fisico' ? palette.goldPrimary : palette.woodBorder,
                 }}
               >
-                <Library size={20} />
-              </div>
+                <BookOpen size={16} />
+                <span>Livro Físico</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFormato('ebook');
+                  setTenhoFisico(false);
+                }}
+                className="py-2.5 px-3 rounded-lg border flex items-center justify-center gap-2 font-serif font-bold text-sm cursor-pointer transition-all shadow-xs"
+                style={{
+                  backgroundColor: formato === 'ebook' ? palette.goldPrimary : 'transparent',
+                  color: formato === 'ebook' ? palette.textOnGold : palette.textOnPaper,
+                  borderColor: formato === 'ebook' ? palette.goldPrimary : palette.woodBorder,
+                }}
+              >
+                <Tablet size={16} />
+                <span>E-book Digital</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-stone-600 font-serif italic">
+              {formato === 'ebook'
+                ? '📱 Obra organizada na aba dedicada de E-books da sua estante.'
+                : '📚 Obra organizada na estante física.'}
+            </p>
+          </div>
+
+          {/* Edição do Título & Dados da Obra (Permite traduzir ou ajustar para português) */}
+          <div
+            className="p-3.5 rounded-xl border flex flex-col gap-3"
+            style={{
+              backgroundColor: palette.paperSurfaceElevated,
+              borderColor: `${palette.woodBorder}40`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <label
+                className="text-xs font-serif font-bold uppercase tracking-wider flex items-center gap-1.5"
+                style={{ color: palette.woodBorder }}
+              >
+                <Edit3 size={15} />
+                Título & Identificação da Obra
+              </label>
+              <span className="text-[11px] font-serif text-stone-500 italic">
+                Ajuste ou traduza para o português
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-2.5">
               <div>
-                <span className="font-serif font-bold text-base block" style={{ color: palette.textOnPaper }}>
-                  Tenho este livro em casa
+                <label className="text-xs font-serif font-bold block mb-1" style={{ color: palette.textOnPaper }}>
+                  Título do Livro <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={titulo}
+                  onChange={(e) => setTitulo(e.target.value)}
+                  placeholder="Título do livro (ex: O Pequeno Príncipe)"
+                  className="w-full px-3 py-2 rounded-lg border text-base font-serif font-bold focus:outline-none focus:ring-1"
+                  style={{
+                    backgroundColor: palette.paperSurface,
+                    borderColor: palette.woodBorder,
+                    color: palette.textOnPaper,
+                  }}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-xs font-serif font-bold block mb-1" style={{ color: palette.textOnPaper }}>
+                    Subtítulo (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={subtitulo}
+                    onChange={(e) => setSubtitulo(e.target.value)}
+                    placeholder="Ex: Edição Especial"
+                    className="w-full px-3 py-1.5 rounded-lg border text-sm font-serif focus:outline-none focus:ring-1"
+                    style={{
+                      backgroundColor: palette.paperSurface,
+                      borderColor: palette.woodBorder,
+                      color: palette.textOnPaper,
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-serif font-bold block mb-1" style={{ color: palette.textOnPaper }}>
+                    Autor(es)
+                  </label>
+                  <input
+                    type="text"
+                    value={autoresText}
+                    onChange={(e) => setAutoresText(e.target.value)}
+                    placeholder="Ex: Gabriel García Márquez"
+                    className="w-full px-3 py-1.5 rounded-lg border text-sm font-serif focus:outline-none focus:ring-1"
+                    style={{
+                      backgroundColor: palette.paperSurface,
+                      borderColor: palette.woodBorder,
+                      color: palette.textOnPaper,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Gestão da Capa / Thumbnail da Estante com Armazenamento Local */}
+          <div
+            className="p-3.5 rounded-xl border flex flex-col gap-3"
+            style={{
+              backgroundColor: palette.paperSurfaceElevated,
+              borderColor: `${palette.woodBorder}40`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <label
+                className="text-xs font-serif font-bold uppercase tracking-wider flex items-center gap-1.5"
+                style={{ color: palette.woodBorder }}
+              >
+                <Image size={15} />
+                Capa da Estante (Armazenamento Local)
+              </label>
+              <a
+                href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(
+                  (titulo.trim() || book.titulo) + ' ' + (autoresText.split(',')[0]?.trim() || book.autores[0] || '') + ' capa livro'
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-serif font-semibold underline flex items-center gap-1 hover:opacity-80"
+                style={{ color: palette.goldPrimary }}
+                title="Buscar imagens da capa no Google em nova aba"
+              >
+                <Globe size={13} /> Buscar no Google
+              </a>
+            </div>
+
+            <div className="flex items-start gap-3">
+              {/* Pré-visualização da capa */}
+              <div className="shrink-0 shadow-md rounded overflow-hidden">
+                <BookCoverView
+                  palette={palette}
+                  title={titulo.trim() || book.titulo}
+                  author={autoresText.split(',')[0]?.trim() || book.autores[0] || ''}
+                  coverUrl={capaUrl.trim() || null}
+                  width={64}
+                  height={94}
+                />
+              </div>
+
+              <div className="flex-1 flex flex-col gap-1.5">
+                <input
+                  type="url"
+                  value={capaUrl}
+                  onChange={(e) => setCapaUrl(e.target.value)}
+                  placeholder="Cole o link da imagem (ex: https://.../capa.jpg)"
+                  className="w-full px-3 py-2 rounded-lg border text-xs font-mono focus:outline-none focus:ring-1"
+                  style={{
+                    backgroundColor: palette.paperSurface,
+                    borderColor: palette.woodBorder,
+                    color: palette.textOnPaper,
+                  }}
+                />
+
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  className="hidden"
+                />
+
+                <div className="flex items-center gap-2 pt-1 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="py-1 px-2.5 rounded-lg border text-xs font-serif font-bold flex items-center gap-1 cursor-pointer hover:bg-black/5"
+                    style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
+                  >
+                    <Upload size={13} />
+                    Foto do celular
+                  </button>
+
+                  {capaUrl.trim() && !ImageService.isLocalImage(capaUrl) && (
+                    <button
+                      type="button"
+                      onClick={handleSaveCoverLocal}
+                      disabled={isSavingCoverLocal}
+                      className="py-1 px-2.5 rounded-lg font-serif font-bold text-xs shadow-xs flex items-center gap-1 cursor-pointer hover:brightness-105"
+                      style={{
+                        backgroundColor: palette.goldPrimary,
+                        color: palette.textOnGold,
+                      }}
+                      title="Salva a imagem localmente no aparelho"
+                    >
+                      <DownloadCloud size={13} />
+                      {isSavingCoverLocal ? 'Salvando...' : 'Salvar no aparelho'}
+                    </button>
+                  )}
+
+                  {capaUrl.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => setCapaUrl('')}
+                      className="text-xs font-serif font-semibold flex items-center gap-1 text-red-600 hover:text-red-800 cursor-pointer"
+                    >
+                      <Trash2 size={13} /> Remover
+                    </button>
+                  )}
+                </div>
+
+                {coverSaveMessage && (
+                  <span className="text-xs font-serif font-bold text-emerald-800">
+                    {coverSaveMessage}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Controle Independente 1: Switch de Posse Física (apenas se formato físico) */}
+          {formato === 'fisico' ? (
+            <div
+              className="p-3.5 rounded-xl border flex items-center justify-between transition-colors"
+              style={{
+                backgroundColor: tenhoFisico ? `${palette.goldPrimary}15` : palette.paperSurfaceElevated,
+                borderColor: tenhoFisico ? palette.goldPrimary : palette.paperBorder,
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="p-2 rounded-lg"
+                  style={{
+                    backgroundColor: tenhoFisico ? palette.goldPrimary : `${palette.woodBorder}20`,
+                    color: tenhoFisico ? palette.textOnGold : palette.woodBorder,
+                  }}
+                >
+                  <Library size={20} />
+                </div>
+                <div>
+                  <span className="font-serif font-bold text-base block" style={{ color: palette.textOnPaper }}>
+                    Tenho este livro físico em casa
+                  </span>
+                  <span className="text-xs" style={{ color: palette.textSecondaryOnPaper }}>
+                    {tenhoFisico ? 'Exemplar físico no acervo (Aba Físicos)' : 'Não possuo o exemplar físico no momento'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Switch Toggle */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={tenhoFisico}
+                onClick={() => setTenhoFisico(!tenhoFisico)}
+                className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                style={{
+                  backgroundColor: tenhoFisico ? palette.goldPrimary : '#9ca3af',
+                }}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                    tenhoFisico ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-xl border flex items-center gap-3 bg-blue-50/40 border-blue-200">
+              <Tablet size={22} className="text-blue-700" />
+              <div>
+                <span className="font-serif font-bold text-base block text-blue-900">
+                  E-book Digital na Estante
                 </span>
-                <span className="text-xs" style={{ color: palette.textSecondaryOnPaper }}>
-                  {tenhoFisico ? 'Exemplar físico no acervo (Aba Meus Livros)' : 'Não possuo o exemplar físico no momento'}
+                <span className="text-xs text-blue-800">
+                  Gerenciado na aba E-books, separado dos livros físicos.
                 </span>
               </div>
             </div>
-
-            {/* Switch Toggle */}
-            <button
-              type="button"
-              role="switch"
-              aria-checked={tenhoFisico}
-              onClick={() => setTenhoFisico(!tenhoFisico)}
-              className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-              style={{
-                backgroundColor: tenhoFisico ? palette.goldPrimary : '#9ca3af',
-              }}
-            >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                  tenhoFisico ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
+          )}
 
           {/* Controle Independente 2: Status de Leitura (SegmentedButton) */}
           <div>

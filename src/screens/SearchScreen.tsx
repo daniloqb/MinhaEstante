@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { SearchResultBook, ShelfTab, Book } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
@@ -6,7 +6,20 @@ import { WoodShelf } from '../components/WoodShelf';
 import { BookCoverView } from '../components/BookCoverView';
 import { PaperCard } from '../components/PaperCard';
 import { areBooksDuplicate } from '../services/storage';
-import { Search, X, Loader2, BookOpen, Plus, Check, Library, Bookmark } from 'lucide-react';
+import {
+  Search,
+  X,
+  Loader2,
+  BookOpen,
+  Plus,
+  Check,
+  Library,
+  Bookmark,
+  Camera,
+  ScanBarcode,
+  Tablet,
+} from 'lucide-react';
+import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 
 interface SearchScreenProps {
   palette: WoodPalette;
@@ -33,6 +46,8 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
   onOpenManualRegister,
   userBooks = [],
 }) => {
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -40,20 +55,35 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
     }
   };
 
+  const handleBarcodeDetected = (barcode: string) => {
+    onQueryChange(barcode);
+    setTimeout(() => {
+      onSearch(barcode);
+    }, 50);
+  };
+
   return (
     <div className="flex flex-col w-full flex-1">
       <WoodTopAppBar palette={palette} title="Buscar Livros" />
 
+      {/* Modal Leitor de Código de Barras */}
+      <BarcodeScannerModal
+        palette={palette}
+        isOpen={isScannerOpen}
+        onDismiss={() => setIsScannerOpen(false)}
+        onDetected={handleBarcodeDetected}
+      />
+
       <div className="flex-1 w-full max-w-2xl mx-auto px-4 py-4 flex flex-col">
         {/* Campo de Busca em Papel Envelhecido */}
-        <form onSubmit={handleSubmit} className="w-full flex flex-col gap-2">
+        <form onSubmit={handleSubmit} className="w-full flex flex-col gap-2.5">
           <div className="relative w-full">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => onQueryChange(e.target.value)}
-              placeholder="Digite título, autor ou ISBN..."
-              className="w-full pl-10 pr-9 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 shadow-sm font-sans"
+              placeholder="Digite título, autor ou código de barras/ISBN..."
+              className="w-full pl-10 pr-20 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 shadow-sm font-sans"
               style={{
                 backgroundColor: palette.paperSurface,
                 borderColor: palette.woodBorder,
@@ -65,36 +95,71 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               className="absolute left-3.5 top-3"
               style={{ color: palette.woodBorder }}
             />
-            {searchQuery && (
+
+            <div className="absolute right-2 top-2 flex items-center gap-1">
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => onQueryChange('')}
+                  className="p-1 rounded-full hover:bg-black/10 cursor-pointer"
+                  title="Limpar busca"
+                >
+                  <X size={15} />
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => onQueryChange('')}
-                className="absolute right-3 top-3 p-0.5 rounded-full hover:bg-black/10 cursor-pointer"
+                onClick={() => setIsScannerOpen(true)}
+                className="p-1.5 rounded-lg border flex items-center justify-center cursor-pointer hover:brightness-105 active:scale-95 transition-all"
+                style={{
+                  backgroundColor: `${palette.goldPrimary}25`,
+                  borderColor: `${palette.goldPrimary}80`,
+                  color: palette.woodBorder,
+                }}
+                title="Escanear código de barras com a câmera"
               >
-                <X size={16} />
+                <ScanBarcode size={16} />
               </button>
-            )}
+            </div>
           </div>
 
-          <div className="flex items-center justify-between text-xs px-1">
-            <span
-              className="font-serif italic text-[11px] sm:text-xs"
-              style={{ color: palette.textSecondaryOnWood }}
-            >
-              Busca simultânea no Google Books e Open Library
-            </span>
+          <div className="flex items-center justify-between text-xs px-1 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsScannerOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-serif font-bold text-xs border shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all"
+                style={{
+                  backgroundColor: `${palette.goldPrimary}20`,
+                  borderColor: palette.goldPrimary,
+                  color: palette.woodBorder,
+                }}
+              >
+                <Camera size={14} />
+                <span>Escanear Código de Barras</span>
+              </button>
+            </div>
 
-            <button
-              type="submit"
-              disabled={Boolean(isLoading) || !searchQuery.trim()}
-              className="px-4 py-1.5 rounded-lg font-serif font-bold text-xs shadow-sm cursor-pointer disabled:opacity-50 hover:brightness-105 active:scale-95 transition-all"
-              style={{
-                backgroundColor: palette.goldPrimary,
-                color: palette.textOnGold,
-              }}
-            >
-              Buscar
-            </button>
+            <div className="flex items-center gap-2">
+              <span
+                className="font-serif italic text-[11px] hidden sm:inline"
+                style={{ color: palette.textSecondaryOnWood }}
+              >
+                BrasilAPI (CBL), Google e Open Library
+              </span>
+
+              <button
+                type="submit"
+                disabled={Boolean(isLoading) || !searchQuery.trim()}
+                className="px-4 py-1.5 rounded-lg font-serif font-bold text-xs shadow-sm cursor-pointer disabled:opacity-50 hover:brightness-105 active:scale-95 transition-all"
+                style={{
+                  backgroundColor: palette.goldPrimary,
+                  color: palette.textOnGold,
+                }}
+              >
+                Buscar
+              </button>
+            </div>
           </div>
         </form>
 
@@ -185,7 +250,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               </div>
 
               {results.map((item, idx) => {
-                const existingInLibrary = userBooks.find((b) => areBooksDuplicate(b, item));
+                const existingInLibrary = (userBooks || []).find((b) => areBooksDuplicate(b, item));
 
                 return (
                   <PaperCard
@@ -197,8 +262,8 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                     <div className="flex gap-3">
                       <BookCoverView
                         palette={palette}
-                        title={item.titulo}
-                        author={item.autores[0]}
+                        title={item.titulo || 'Sem título'}
+                        author={(Array.isArray(item.autores) && item.autores[0]) || ''}
                         coverUrl={item.capaUrl}
                         width={64}
                         height={96}
@@ -214,7 +279,11 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                                 color: palette.woodBorder,
                               }}
                             >
-                              {item.origem === 'google' ? 'Google Books' : 'Open Library'}
+                              {item.origem === 'brasilapi'
+                                ? '🇧🇷 BrasilAPI (CBL)'
+                                : item.origem === 'google'
+                                ? 'Google Books'
+                                : 'Open Library'}
                             </span>
 
                             {existingInLibrary ? (
@@ -278,7 +347,9 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                             className="font-serif text-xs font-medium mt-1 truncate"
                             style={{ color: palette.woodBorder }}
                           >
-                            {item.autores.join(', ') || 'Autor desconhecido'}
+                            {Array.isArray(item.autores) && item.autores.length > 0
+                              ? item.autores.join(', ')
+                              : 'Autor desconhecido'}
                           </p>
                         </div>
 
@@ -287,8 +358,8 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                             {item.paginas ? `${item.paginas} págs` : ''}
                           </span>
 
-                          <div className="flex items-center gap-1.5">
-                            {/* Botão Tenho (Posse física independente) */}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {/* Botão Tenho Físico */}
                             <button
                               type="button"
                               onClick={(e) => {
@@ -302,10 +373,33 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                                   : palette.goldPrimary,
                                 color: palette.textOnGold,
                               }}
-                              title="Adicionar exemplar físico em casa (Aba Meus Livros)"
+                              title="Adicionar à estante de Livros Físicos"
                             >
                               <Library size={12} strokeWidth={2.5} />
-                              {existingInLibrary?.tenho_fisico ? 'Tenho ✓' : 'Tenho'}
+                              {existingInLibrary?.tenho_fisico ? 'Físico ✓' : '+ Físico'}
+                            </button>
+
+                            {/* Botão E-book (Nova Estante de Livros Digitais) */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectBookToAdd(item, 'ebook');
+                              }}
+                              className="px-2.5 py-1 rounded-md font-serif font-bold text-xs flex items-center gap-1 border shadow-sm cursor-pointer hover:brightness-105 active:scale-95 transition-all"
+                              style={{
+                                backgroundColor: existingInLibrary?.formato === 'ebook'
+                                  ? '#7c3aed'
+                                  : '#7c3aed15',
+                                borderColor: '#7c3aed80',
+                                color: existingInLibrary?.formato === 'ebook'
+                                  ? '#ffffff'
+                                  : '#7c3aed',
+                              }}
+                              title="Adicionar à estante de E-books"
+                            >
+                              <Tablet size={12} strokeWidth={2.5} />
+                              {existingInLibrary?.formato === 'ebook' ? 'E-book ✓' : '+ E-book'}
                             </button>
 
                             {/* Botão Lido (Status de leitura independente) */}

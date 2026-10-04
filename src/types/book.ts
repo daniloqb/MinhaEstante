@@ -1,12 +1,15 @@
 export type ReadingStatus = 'nenhum' | 'lido' | 'quero_ler';
 
-// As 3 abas de consulta da estante
-export type ShelfTab = 'meus_livros' | 'lido' | 'quero_ler';
+// Formato do livro: Físico ou E-book digital
+export type BookFormat = 'fisico' | 'ebook';
+
+// As 4 abas de consulta da estante: Livros Físicos, E-books, Lidos, Quero Ler
+export type ShelfTab = 'meus_livros' | 'ebook' | 'lido' | 'quero_ler';
 
 // Legado para compatibilidade retroativa com código existente
-export type BookStatus = 'meus_livros' | 'lido' | 'quero_ler';
+export type BookStatus = 'meus_livros' | 'ebook' | 'lido' | 'quero_ler';
 
-export type BookOrigin = 'google' | 'openlibrary' | 'manual';
+export type BookOrigin = 'google' | 'openlibrary' | 'brasilapi' | 'manual';
 
 export interface Book {
   id: number;
@@ -25,7 +28,10 @@ export interface Book {
   capaUrl?: string | null;
   capaLocalPath?: string | null;
 
-  // Nova regra de negócio: posse e status de leitura independentes
+  // Formato da obra (Físico ou E-book)
+  formato?: BookFormat;
+
+  // Posse e status de leitura independentes
   tenho_fisico: boolean;
   status_leitura: ReadingStatus;
 
@@ -58,6 +64,7 @@ export interface SearchResultBook {
   generos: string[];
   descricao?: string | null;
   capaUrl?: string | null;
+  formato?: BookFormat;
 }
 
 export interface EstanteStats {
@@ -71,24 +78,44 @@ export interface EstanteStats {
   lidosPorAno: Record<number, number>;
   topAutores: [string, number][];
   topGeneros: [string, number][];
+  totalEbooks?: number;
+  totalFisicos?: number;
 }
 
 /**
  * Consulta de pertencimento à aba:
- * - Meus Livros: tenho_fisico === true
+ * - Meus Livros (Físicos): formato !== 'ebook' && tenho_fisico === true
+ * - E-books: formato === 'ebook'
  * - Lidos: status_leitura === 'lido'
  * - Quero ler: status_leitura === 'quero_ler'
  */
 export function isBookInTab(book: Book, tab: ShelfTab): boolean {
   switch (tab) {
     case 'meus_livros':
-      return Boolean(book.tenho_fisico);
+      return Boolean(book.tenho_fisico) && book.formato !== 'ebook';
+    case 'ebook':
+      return book.formato === 'ebook';
     case 'lido':
       return book.status_leitura === 'lido';
     case 'quero_ler':
       return book.status_leitura === 'quero_ler';
     default:
       return false;
+  }
+}
+
+export function getShelfTabLabel(tab: ShelfTab): string {
+  switch (tab) {
+    case 'meus_livros':
+      return 'Livros Físicos';
+    case 'ebook':
+      return 'E-books';
+    case 'lido':
+      return 'Lidos';
+    case 'quero_ler':
+      return 'Quero Ler';
+    default:
+      return 'Estante';
   }
 }
 
@@ -108,7 +135,9 @@ export function getReadingStatusLabel(status: ReadingStatus): string {
 export function getStatusLabel(status: BookStatus | ReadingStatus): string {
   switch (status) {
     case 'meus_livros':
-      return 'Meus Livros';
+      return 'Livros Físicos';
+    case 'ebook':
+      return 'E-books';
     case 'lido':
       return 'Lido';
     case 'quero_ler':
@@ -116,7 +145,7 @@ export function getStatusLabel(status: BookStatus | ReadingStatus): string {
     case 'nenhum':
       return 'Sem leitura';
     default:
-      return 'Meus Livros';
+      return 'Estante';
   }
 }
 

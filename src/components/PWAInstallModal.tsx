@@ -389,6 +389,16 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
                   </button>
                 </div>
 
+                <div className="p-2 rounded border bg-amber-500/10 border-amber-500/25 flex flex-col gap-0.5 text-[10.5px] text-amber-950">
+                  <span className="font-bold">⚠️ Erro INSTALL_PARSE_FAILED_NOT_APK?</span>
+                  <span className="text-[10px] leading-tight">
+                    Desinstale a versão anterior conflitante e reinstale:
+                  </span>
+                  <code className="p-1 rounded bg-black/80 text-emerald-400 font-mono text-[10px] select-all break-all mt-0.5">
+                    adb uninstall com.aistudio.minhaestante.vbrkxp &amp;&amp; adb install minha-estante.apk
+                  </code>
+                </div>
+
                 <p className="text-[10px] text-stone-500 italic">
                   Dica: Você também pode usar ferramentas WebUSB direto pelo navegador Google Chrome (como o{' '}
                   <a

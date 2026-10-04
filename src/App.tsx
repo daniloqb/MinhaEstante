@@ -137,13 +137,37 @@ export const App: React.FC = () => {
     [books, selectedBookDetail]
   );
 
+  // Alternar formato: Físico vs E-book
+  const handleToggleFormato = useCallback(
+    (book: Book) => {
+      const nextFormat = book.formato === 'ebook' ? 'fisico' : 'ebook';
+      const updated: Book = {
+        ...book,
+        formato: nextFormat,
+        tenho_fisico: nextFormat === 'fisico' ? (book.tenho_fisico ?? true) : false,
+        dataAtualizacao: Date.now(),
+      };
+      handleSaveBook(updated);
+      if (selectedBookDetail && selectedBookDetail.id === book.id) {
+        setSelectedBookDetail(updated);
+      }
+      setQuickActionBook(null);
+      setToastMessage(
+        nextFormat === 'ebook'
+          ? `"${book.titulo}" movido para a estante de E-books!`
+          : `"${book.titulo}" movido para Livros Físicos!`
+      );
+    },
+    [handleSaveBook, selectedBookDetail]
+  );
+
   // Regra de negócio: Posse independente
   const handleTogglePosse = useCallback(
     (book: Book) => {
       const nextTenho = !book.tenho_fisico;
 
-      // Se desmarcar posse e não tem status de leitura: alerta de livro órfão
-      if (!nextTenho && book.status_leitura === 'nenhum') {
+      // Se desmarcar posse e não tem status de leitura e não é ebook: alerta de livro órfão
+      if (!nextTenho && book.status_leitura === 'nenhum' && book.formato !== 'ebook') {
         setOrphanConflictBook(book);
         return;
       }
@@ -162,8 +186,8 @@ export const App: React.FC = () => {
       setQuickActionBook(null);
       setToastMessage(
         nextTenho
-          ? `"${book.titulo}" adicionado a Meus Livros (tenho em casa)!`
-          : `"${book.titulo}" removido de Meus Livros!`
+          ? `"${book.titulo}" adicionado a Livros Físicos (tenho em casa)!`
+          : `"${book.titulo}" removido de Livros Físicos!`
       );
     },
     [handleSaveBook, selectedBookDetail]
@@ -245,11 +269,23 @@ export const App: React.FC = () => {
         if (targetAction === 'meus_livros') {
           const updated: Book = {
             ...existing,
+            formato: 'fisico',
             tenho_fisico: true,
             dataAtualizacao: Date.now(),
           };
           handleSaveBook(updated);
-          setToastMessage(`"${existing.titulo}" já constava na biblioteca e foi marcado como posse física (Meus Livros)!`);
+          setToastMessage(`"${existing.titulo}" já constava na biblioteca e foi marcado como posse física (Livros Físicos)!`);
+          return;
+        }
+
+        if (targetAction === 'ebook') {
+          const updated: Book = {
+            ...existing,
+            formato: 'ebook',
+            dataAtualizacao: Date.now(),
+          };
+          handleSaveBook(updated);
+          setToastMessage(`"${existing.titulo}" atualizado na estante de E-books!`);
           return;
         }
 
@@ -294,6 +330,7 @@ export const App: React.FC = () => {
         generos: searchedBook.generos,
         descricao: searchedBook.descricao,
         capaUrl: searchedBook.capaUrl,
+        formato: targetAction === 'ebook' ? 'ebook' : 'fisico',
         tenho_fisico: targetAction === 'meus_livros',
         status_leitura: targetAction === 'lido' ? 'lido' : targetAction === 'quero_ler' ? 'quero_ler' : 'nenhum',
         anoLeitura: targetAction === 'lido' ? new Date().getFullYear() : null,
@@ -310,7 +347,9 @@ export const App: React.FC = () => {
         setBooks(updatedBooks);
         setToastMessage(
           targetAction === 'meus_livros'
-            ? `"${searchedBook.titulo}" adicionado a Meus Livros!`
+            ? `"${searchedBook.titulo}" adicionado a Livros Físicos!`
+            : targetAction === 'ebook'
+            ? `"${searchedBook.titulo}" adicionado a E-books!`
             : `"${searchedBook.titulo}" adicionado a Quero Ler!`
         );
       }
@@ -387,6 +426,30 @@ export const App: React.FC = () => {
 
   // Estatísticas calculadas
   const stats = useMemo(() => BookStorage.calculateStats(books), [books]);
+
+  // Contagens para a barra inferior de navegação
+  const physicalCount = useMemo(
+    () => books.filter((b) => b.tenho_fisico && b.formato !== 'ebook').length,
+    [books]
+  );
+  const ebookCount = useMemo(
+    () => books.filter((b) => b.formato === 'ebook').length,
+    [books]
+  );
+
+  const handleBottomTabChange = (tab: MainTab) => {
+    if (tab === 'EBOOKS') {
+      setStatusTab('ebook');
+      setCurrentTab('EBOOKS');
+    } else if (tab === 'ESTANTE') {
+      if (statusTab === 'ebook') {
+        setStatusTab('meus_livros');
+      }
+      setCurrentTab('ESTANTE');
+    } else {
+      setCurrentTab(tab);
+    }
+  };
 
   // Limpar filtros
   const clearFilters = () => {
@@ -527,6 +590,7 @@ export const App: React.FC = () => {
         onTogglePosse={handleTogglePosse}
         onSetStatusLeitura={handleSetStatusLeitura}
         onDelete={handleDeleteBook}
+        onToggleFormato={handleToggleFormato}
       />
 
       {/* Modal de Filtros com Ano de Leitura */}
@@ -547,6 +611,7 @@ export const App: React.FC = () => {
 
       {/* Modal de Registro & Edição com controles independentes */}
       <BookEditModal
+        key={editingBookInModal?.id ?? 'modal'}
         palette={palette}
         book={editingBookInModal}
         isOpen={Boolean(editingBookInModal)}
@@ -565,6 +630,7 @@ export const App: React.FC = () => {
           onDelete={() => handleDeleteBook(selectedBookDetail)}
           onTogglePosse={() => handleTogglePosse(selectedBookDetail)}
           onSetStatusLeitura={(status) => handleSetStatusLeitura(selectedBookDetail, status)}
+          onUpdateBook={handleSaveBook}
         />
       ) : isManualRegisterOpen ? (
         <ManualBookScreen
@@ -580,13 +646,20 @@ export const App: React.FC = () => {
         />
       ) : (
         <>
-          {currentTab === 'ESTANTE' && (
+          {(currentTab === 'ESTANTE' || currentTab === 'EBOOKS') && (
             <HomeScreen
               palette={palette}
               books={filteredBooks}
               allBooks={books}
               statusTab={statusTab}
-              onStatusTabChange={setStatusTab}
+              onStatusTabChange={(tab) => {
+                setStatusTab(tab);
+                if (tab === 'ebook') {
+                  setCurrentTab('EBOOKS');
+                } else {
+                  setCurrentTab('ESTANTE');
+                }
+              }}
               viewMode={viewMode}
               onViewModeChange={handleViewModeChange}
               groupBy={groupBy}
@@ -653,14 +726,27 @@ export const App: React.FC = () => {
                 setToastMessage(`${res.count} livros importados com sucesso!`);
                 return { count: res.count };
               }}
+              books={books}
+              onUpdateAllBooks={(updated) => {
+                BookStorage.saveAllBooks(updated);
+                setBooks(updated);
+              }}
             />
           )}
 
           {/* Barra de Navegação Inferior Clássica */}
           <NavigationBottomBar
             palette={palette}
-            currentTab={currentTab}
-            onTabChange={(tab) => setCurrentTab(tab)}
+            currentTab={
+              currentTab === 'ESTANTE' || currentTab === 'EBOOKS'
+                ? statusTab === 'ebook'
+                  ? 'EBOOKS'
+                  : 'ESTANTE'
+                : currentTab
+            }
+            onTabChange={handleBottomTabChange}
+            physicalCount={physicalCount}
+            ebookCount={ebookCount}
           />
         </>
       )}

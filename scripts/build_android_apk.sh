@@ -4,6 +4,16 @@ set -e
 APP_ROOT="$(pwd)"
 WORKDIR="/tmp/android_pkg"
 
+ANDROID_JAR="/usr/lib/android-sdk/platforms/android-23/android.jar"
+if [ ! -f "$ANDROID_JAR" ]; then
+    ANDROID_JAR="/usr/share/java/com.android.android-23.jar"
+fi
+
+if ! command -v aapt &> /dev/null || ! command -v javac &> /dev/null || [ ! -f "$ANDROID_JAR" ]; then
+    echo "Aviso: aapt, javac ou android.jar não encontrados no PATH. Mantendo APK existente."
+    exit 0
+fi
+
 echo "=== INICIANDO COMPILAÇÃO DO ZERO DO APK ==="
 
 # 1. Limpar artefatos anteriores
@@ -46,12 +56,17 @@ cat << 'XML' > "$WORKDIR/AndroidManifest.xml"
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.aistudio.minhaestante.vbrkxp"
-    android:versionCode="100"
-    android:versionName="2.2">
+    android:versionCode="105"
+    android:versionName="3.0">
 
-    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
+    <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
     <application
         android:label="@string/app_name"
@@ -70,21 +85,11 @@ cat << 'XML' > "$WORKDIR/AndroidManifest.xml"
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity-alias
-            android:name="com.example.MainActivity"
-            android:targetActivity=".MainActivity"
-            android:label="@string/app_name"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
     </application>
 </manifest>
 XML
 
-# 7. MainActivity.java com suporte a shouldInterceptRequest e interceptação local https://appassets/
+# 7. MainActivity.java com suporte a shouldInterceptRequest, file chooser e bridge de compartilhamento
 cat << 'JAVA' > "$WORKDIR/src/com/aistudio/minhaestante/vbrkxp/MainActivity.java"
 package com.aistudio.minhaestante.vbrkxp;
 
@@ -97,12 +102,49 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceResponse;
+import android.webkit.PermissionRequest;
+import android.webkit.ValueCallback;
+import android.webkit.JavascriptInterface;
+import android.content.pm.PackageManager;
+import android.content.Intent;
+import android.content.ActivityNotFoundException;
+import android.net.Uri;
+import android.Manifest;
 import android.graphics.Color;
 import java.io.InputStream;
 import java.net.URLConnection;
 
 public class MainActivity extends Activity {
     private WebView webView;
+    private ValueCallback<Uri[]> mUploadMessage;
+    private static final int FILE_CHOOSER_RESULT_CODE = 1001;
+
+    public class AndroidBridge {
+        @JavascriptInterface
+        public void saveOrShareFile(final String content, final String filename, final String mimeType) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Intent sendIntent = new Intent();
+                        sendIntent.setAction(Intent.ACTION_SEND);
+                        sendIntent.putExtra(Intent.EXTRA_TEXT, content);
+                        sendIntent.putExtra(Intent.EXTRA_TITLE, filename);
+                        sendIntent.putExtra(Intent.EXTRA_SUBJECT, filename);
+                        sendIntent.setType("text/plain");
+                        startActivity(Intent.createChooser(sendIntent, "Salvar ou compartilhar: " + filename));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public boolean isAndroidApp() {
+            return true;
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -129,8 +171,47 @@ public class MainActivity extends Activity {
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 
-        webView.setWebChromeClient(new WebChromeClient());
+        webView.addJavascriptInterface(new AndroidBridge(), "AndroidApp");
+
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onPermissionRequest(final PermissionRequest request) {
+                request.grant(request.getResources());
+            }
+
+            @Override
+            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, WebChromeClient.FileChooserParams fileChooserParams) {
+                if (mUploadMessage != null) {
+                    mUploadMessage.onReceiveValue(null);
+                    mUploadMessage = null;
+                }
+                mUploadMessage = filePathCallback;
+
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("*/*");
+                String[] mimetypes = {"application/json", "text/csv", "text/plain"};
+                intent.putExtra(Intent.EXTRA_MIME_TYPES, mimetypes);
+
+                try {
+                    startActivityForResult(Intent.createChooser(intent, "Selecionar Arquivo de Backup"), FILE_CHOOSER_RESULT_CODE);
+                } catch (ActivityNotFoundException e) {
+                    mUploadMessage = null;
+                    return false;
+                }
+                return true;
+            }
+        });
+
+        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{
+                Manifest.permission.CAMERA,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            }, 101);
+        }
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
@@ -163,6 +244,23 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == FILE_CHOOSER_RESULT_CODE) {
+            if (mUploadMessage == null) return;
+            Uri[] results = null;
+            if (resultCode == RESULT_OK && data != null) {
+                String dataString = data.getDataString();
+                if (dataString != null) {
+                    results = new Uri[]{Uri.parse(dataString)};
+                }
+            }
+            mUploadMessage.onReceiveValue(results);
+            mUploadMessage = null;
+        }
+    }
+
+    @Override
     public void onBackPressed() {
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
@@ -174,28 +272,44 @@ public class MainActivity extends Activity {
 JAVA
 
 echo "4. Gerando R.java..."
-aapt package -f -m -J "$WORKDIR/src" -M "$WORKDIR/AndroidManifest.xml" -S "$WORKDIR/res" -I /usr/share/java/com.android.android-23.jar
+aapt package -f -m -J "$WORKDIR/src" -M "$WORKDIR/AndroidManifest.xml" -S "$WORKDIR/res" -I "$ANDROID_JAR"
 
 echo "5. Compilando Java com javac (compatível com Android 8+)..."
-javac -source 1.8 -target 1.8 -cp /usr/share/java/com.android.android-23.jar -d "$WORKDIR/bin" "$WORKDIR/src/com/aistudio/minhaestante/vbrkxp/"*.java
+javac -source 1.8 -target 1.8 -cp "$ANDROID_JAR" -d "$WORKDIR/bin" "$WORKDIR/src/com/aistudio/minhaestante/vbrkxp/"*.java
 
 echo "6. Gerando Dalvik DEX (classes.dex)..."
-java -jar /usr/share/java/com.android.dx.jar --dex --output="$WORKDIR/bin/classes.dex" "$WORKDIR/bin"
+if command -v dx &> /dev/null; then
+    dx --dex --output="$WORKDIR/bin/classes.dex" "$WORKDIR/bin"
+elif command -v dalvik-exchange &> /dev/null; then
+    dalvik-exchange --dex --output="$WORKDIR/bin/classes.dex" "$WORKDIR/bin"
+else
+    java -jar /usr/share/java/com.android.dx.jar --dex --output="$WORKDIR/bin/classes.dex" "$WORKDIR/bin"
+fi
 
 echo "7. Empacotando APK com aapt..."
-aapt package -f -M "$WORKDIR/AndroidManifest.xml" -S "$WORKDIR/res" -A "$WORKDIR/assets" -I /usr/share/java/com.android.android-23.jar -F "$WORKDIR/unsigned_base.apk"
+aapt package -f -0 arsc -M "$WORKDIR/AndroidManifest.xml" -S "$WORKDIR/res" -A "$WORKDIR/assets" -I "$ANDROID_JAR" -F "$WORKDIR/unsigned_base.apk"
 
 cd "$WORKDIR"
 cp bin/classes.dex .
 aapt add unsigned_base.apk classes.dex
 
-echo "8. Alinhando APK com zipalign..."
-zipalign -f -p 4 unsigned_base.apk aligned.apk
+echo "8. Alinhando APK com zipalign (alinhamento de 4 bytes)..."
+zipalign -f 4 unsigned_base.apk aligned.apk
 
-echo "9. Assinando APK com apksigner (v2/v3, sem idsig)..."
+echo "9. Assinando APK com apksigner (v1 JAR, v2 APK Scheme, v3 Scheme)..."
 if [ -f "$APP_ROOT/debug.keystore.base64" ]; then
     base64 -d "$APP_ROOT/debug.keystore.base64" > /tmp/debug.keystore
-    apksigner sign --v4-signing-enabled false --ks /tmp/debug.keystore --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --out "$APP_ROOT/minha-estante.apk" aligned.apk
+    apksigner sign \
+        --min-sdk-version 21 \
+        --v1-signing-enabled true \
+        --v2-signing-enabled true \
+        --v3-signing-enabled true \
+        --v4-signing-enabled false \
+        --ks /tmp/debug.keystore \
+        --ks-pass pass:android \
+        --ks-key-alias androiddebugkey \
+        --key-pass pass:android \
+        --out "$APP_ROOT/minha-estante.apk" aligned.apk
 else
     cp aligned.apk "$APP_ROOT/minha-estante.apk"
 fi
@@ -203,9 +317,16 @@ fi
 # Limpar eventuais arquivos .idsig
 rm -f "$APP_ROOT"/*.idsig /minha-estante.apk.idsig /app/applet/*.idsig 2>/dev/null || true
 
-# 10. Copiar para todas as localizações esperadas
+echo "10. Validando assinatura e alinhamento do APK final..."
+apksigner verify --verbose --min-sdk-version 21 "$APP_ROOT/minha-estante.apk"
+zipalign -c 4 "$APP_ROOT/minha-estante.apk"
+
+# 11. Copiar para todas as localizações esperadas
 cp "$APP_ROOT/minha-estante.apk" "$APP_ROOT/app-debug.apk"
 cp "$APP_ROOT/minha-estante.apk" "$APP_ROOT/public/minha-estante.apk"
+mkdir -p "$APP_ROOT/dist"
+cp "$APP_ROOT/minha-estante.apk" "$APP_ROOT/dist/minha-estante.apk"
+cp "$APP_ROOT/minha-estante.apk" "$APP_ROOT/dist/app-debug.apk"
 mkdir -p "$APP_ROOT/.build-outputs"
 cp "$APP_ROOT/minha-estante.apk" "$APP_ROOT/.build-outputs/app-debug.apk"
 cp "$APP_ROOT/minha-estante.apk" /minha-estante.apk 2>/dev/null || true

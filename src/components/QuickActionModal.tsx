@@ -12,6 +12,7 @@ import {
   MinusCircle,
   Check,
   AlertTriangle,
+  Tablet,
 } from 'lucide-react';
 
 interface QuickActionModalProps {
@@ -23,6 +24,7 @@ interface QuickActionModalProps {
   onTogglePosse: (book: Book) => void;
   onSetStatusLeitura: (book: Book, status: ReadingStatus) => void;
   onDelete: (book: Book) => void;
+  onToggleFormato?: (book: Book) => void;
 }
 
 export const QuickActionModal: React.FC<QuickActionModalProps> = ({
@@ -34,10 +36,12 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
   onTogglePosse,
   onSetStatusLeitura,
   onDelete,
+  onToggleFormato,
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   if (!book) return null;
+  const isEbook = book.formato === 'ebook';
 
   return (
     <div
@@ -66,7 +70,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
               </h3>
             </div>
 
-            <p className="text-sm leading-relaxed mb-6" style={{ color: palette.textOnPaper }}>
+            <p className="text-base leading-relaxed mb-6" style={{ color: palette.textOnPaper }}>
               Tem certeza de que deseja excluir <strong>&ldquo;{book.titulo}&rdquo;</strong>? Esta ação apagará todos os dados, avaliações e registros deste livro.
             </p>
 
@@ -74,7 +78,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-2 px-3 rounded-lg font-serif font-semibold text-sm border cursor-pointer hover:bg-black/5"
+                className="flex-1 py-2.5 px-3 rounded-lg font-serif font-semibold text-base border cursor-pointer hover:bg-black/5"
                 style={{ borderColor: palette.woodBorder }}
               >
                 Cancelar
@@ -86,7 +90,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
                   onDismiss();
                   onDelete(book);
                 }}
-                className="flex-1 py-2 px-3 rounded-lg font-serif font-bold text-sm bg-red-700 text-white cursor-pointer hover:bg-red-800"
+                className="flex-1 py-2.5 px-3 rounded-lg font-serif font-bold text-base bg-red-700 text-white cursor-pointer hover:bg-red-800"
               >
                 Sim, excluir
               </button>
@@ -107,12 +111,12 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
         <div className="flex items-start justify-between mb-2">
           <div>
             <h3
-              className="font-serif font-bold text-xl leading-snug line-clamp-2"
+              className="font-serif font-bold text-xl sm:text-2xl leading-snug line-clamp-2"
               style={{ color: palette.textOnPaper }}
             >
               {book.titulo}
             </h3>
-            <p className="font-serif text-sm italic" style={{ color: palette.textSecondaryOnPaper }}>
+            <p className="font-serif text-base italic mt-0.5" style={{ color: palette.textSecondaryOnPaper }}>
               {book.autores.join(', ') || 'Autor desconhecido'}
             </p>
           </div>
@@ -120,26 +124,40 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
             onClick={onDismiss}
             className="p-1 rounded-full hover:bg-black/10 transition-colors cursor-pointer"
           >
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
 
         {/* Indicadores atuais do livro */}
-        <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+        <div className="flex items-center gap-1.5 mb-3.5 flex-wrap">
           <span
-            className="text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1"
+            className="text-xs font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1"
             style={{
-              backgroundColor: book.tenho_fisico ? `${palette.goldPrimary}20` : '#00000008',
-              borderColor: book.tenho_fisico ? palette.goldPrimary : `${palette.woodBorder}40`,
-              color: book.tenho_fisico ? palette.woodBorder : palette.textSecondaryOnPaper,
+              backgroundColor: isEbook ? '#7c3aed20' : `${palette.goldPrimary}20`,
+              borderColor: isEbook ? '#7c3aed80' : palette.goldPrimary,
+              color: isEbook ? '#7c3aed' : palette.woodBorder,
             }}
           >
-            <Library size={11} />
-            {book.tenho_fisico ? 'Tenho em casa' : 'Não tenho físico'}
+            {isEbook ? <Tablet size={12} /> : <BookOpen size={12} />}
+            {isEbook ? 'E-book Digital' : 'Livro Físico'}
           </span>
 
+          {!isEbook && (
+            <span
+              className="text-xs font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1"
+              style={{
+                backgroundColor: book.tenho_fisico ? `${palette.goldPrimary}20` : '#00000008',
+                borderColor: book.tenho_fisico ? palette.goldPrimary : `${palette.woodBorder}40`,
+                color: book.tenho_fisico ? palette.woodBorder : palette.textSecondaryOnPaper,
+              }}
+            >
+              <Library size={12} />
+              {book.tenho_fisico ? 'Tenho em casa' : 'Sem posse física'}
+            </span>
+          )}
+
           <span
-            className="text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1"
+            className="text-xs font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1"
             style={{
               backgroundColor:
                 book.status_leitura === 'lido'
@@ -163,11 +181,11 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
           >
             {book.status_leitura === 'lido' ? (
               <>
-                <Check size={11} /> Lido {book.nota != null ? `(★ ${book.nota})` : ''}
+                <Check size={12} /> Lido {book.nota != null ? `(★ ${book.nota})` : ''}
               </>
             ) : book.status_leitura === 'quero_ler' ? (
               <>
-                <Bookmark size={11} /> Quero ler
+                <Bookmark size={12} /> Quero ler
               </>
             ) : (
               'Sem leitura'
@@ -182,40 +200,66 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
               onDismiss();
               onViewDetails(book);
             }}
-            className="w-full py-2.5 px-4 rounded-lg font-serif font-bold text-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer hover:brightness-105 active:scale-98 transition-all"
+            className="w-full py-3 px-4 rounded-xl font-serif font-bold text-base flex items-center justify-center gap-2 shadow-sm cursor-pointer hover:brightness-105 active:scale-98 transition-all"
             style={{
               backgroundColor: palette.goldPrimary,
               color: palette.textOnGold,
             }}
           >
-            <BookOpen size={16} />
-            Ver Detalhes da Obra
+            <BookOpen size={18} />
+            Ver Detalhes, IA & Preços
           </button>
 
-          {/* Ação de Posse Física */}
-          <button
-            onClick={() => {
-              onDismiss();
-              onTogglePosse(book);
-            }}
-            className="w-full py-2 px-4 rounded-lg font-serif font-semibold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
-            style={{
-              borderColor: palette.woodBorder,
-              color: palette.textOnPaper,
-            }}
-          >
-            {book.tenho_fisico ? (
-              <>
-                <MinusCircle size={15} />
-                Remover de Meus Livros (não tenho mais)
-              </>
-            ) : (
-              <>
-                <Library size={15} />
-                Adicionar a Meus Livros (tenho físico)
-              </>
-            )}
-          </button>
+          {/* Trocar entre Físico e E-book */}
+          {onToggleFormato && (
+            <button
+              onClick={() => {
+                onToggleFormato(book);
+              }}
+              className="w-full py-2 px-4 rounded-xl font-serif font-medium text-xs sm:text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+              style={{
+                borderColor: `${palette.woodBorder}70`,
+                color: palette.textOnPaper,
+              }}
+            >
+              {isEbook ? (
+                <>
+                  <BookOpen size={14} /> Mudar para Livro Físico
+                </>
+              ) : (
+                <>
+                  <Tablet size={14} /> Mudar para E-book Digital
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Ação de Posse Física (se for livro físico) */}
+          {!isEbook && (
+            <button
+              onClick={() => {
+                onDismiss();
+                onTogglePosse(book);
+              }}
+              className="w-full py-2 px-4 rounded-xl font-serif font-semibold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+              style={{
+                borderColor: palette.woodBorder,
+                color: palette.textOnPaper,
+              }}
+            >
+              {book.tenho_fisico ? (
+                <>
+                  <MinusCircle size={16} />
+                  Remover de Meus Livros (não tenho mais)
+                </>
+              ) : (
+                <>
+                  <Library size={16} />
+                  Adicionar a Meus Livros (tenho físico)
+                </>
+              )}
+            </button>
+          )}
 
           {/* Ação: Marcar como Lido */}
           {book.status_leitura !== 'lido' && (
@@ -224,13 +268,13 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
                 onDismiss();
                 onSetStatusLeitura(book, 'lido');
               }}
-              className="w-full py-2 px-4 rounded-lg font-serif font-semibold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+              className="w-full py-2 px-4 rounded-xl font-serif font-semibold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
               style={{
                 borderColor: palette.woodBorder,
                 color: palette.textOnPaper,
               }}
             >
-              <CheckCircle size={15} />
+              <CheckCircle size={16} />
               Marcar como Lido
             </button>
           )}
@@ -242,13 +286,13 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
                 onDismiss();
                 onSetStatusLeitura(book, 'quero_ler');
               }}
-              className="w-full py-2 px-4 rounded-lg font-serif font-semibold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+              className="w-full py-2 px-4 rounded-xl font-serif font-semibold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
               style={{
                 borderColor: palette.woodBorder,
                 color: palette.textOnPaper,
               }}
             >
-              <Bookmark size={15} />
+              <Bookmark size={16} />
               Marcar como Quero Ler
             </button>
           )}
@@ -260,7 +304,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
                 onDismiss();
                 onSetStatusLeitura(book, 'nenhum');
               }}
-              className="w-full py-2 px-4 rounded-lg font-serif text-xs flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+              className="w-full py-2 px-4 rounded-xl font-serif text-xs flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
               style={{
                 borderColor: `${palette.woodBorder}60`,
                 color: palette.textSecondaryOnPaper,
@@ -276,21 +320,22 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
               onDismiss();
               onEdit(book);
             }}
-            className="w-full py-2 px-4 rounded-lg font-serif font-semibold text-xs flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 text-stone-700"
+            className="w-full py-2 px-4 rounded-xl font-serif font-semibold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98"
             style={{
               borderColor: `${palette.woodBorder}80`,
+              color: palette.textOnPaper,
             }}
           >
-            <Edit size={14} />
+            <Edit size={15} />
             Editar Dados / Avaliação
           </button>
 
           {/* Excluir da Estante */}
           <button
             onClick={() => setShowDeleteConfirm(true)}
-            className="w-full py-2 px-4 rounded-lg font-serif font-medium text-xs flex items-center justify-center gap-2 transition-colors hover:bg-red-50 text-red-700 cursor-pointer mt-1"
+            className="w-full py-2 px-4 rounded-xl font-serif font-medium text-xs flex items-center justify-center gap-2 transition-colors hover:bg-red-50 text-red-700 cursor-pointer mt-1"
           >
-            <Trash2 size={14} />
+            <Trash2 size={15} />
             Excluir da Estante
           </button>
         </div>
