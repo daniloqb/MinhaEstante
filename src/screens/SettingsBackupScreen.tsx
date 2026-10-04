@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ViewMode, GroupByMode, Book } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
@@ -73,6 +73,45 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [hasStoragePerm, setHasStoragePerm] = useState<boolean>(() => {
+    const win = window as any;
+    if (win.AndroidApp && typeof win.AndroidApp.hasStoragePermission === 'function') {
+      return Boolean(win.AndroidApp.hasStoragePermission());
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    const win = window as any;
+    win.onAndroidFileSaved = (success: boolean, name: string) => {
+      if (success) {
+        setStatusMessage(`✓ Arquivo "${name || 'backup'}" salvo com sucesso no aparelho!`);
+        setTimeout(() => setStatusMessage(null), 4000);
+      }
+    };
+    win.onAndroidPermissionUpdated = (granted: boolean) => {
+      setHasStoragePerm(granted);
+      if (granted) {
+        setStatusMessage('✓ Permissão para criar e salvar arquivos concedida!');
+        setTimeout(() => setStatusMessage(null), 4000);
+      }
+    };
+    return () => {
+      delete win.onAndroidFileSaved;
+      delete win.onAndroidPermissionUpdated;
+    };
+  }, []);
+
+  const handleRequestStoragePermission = () => {
+    const win = window as any;
+    if (win.AndroidApp && typeof win.AndroidApp.requestStoragePermission === 'function') {
+      win.AndroidApp.requestStoragePermission();
+    } else {
+      setStatusMessage('No navegador web, as permissões de download são automáticas.');
+      setTimeout(() => setStatusMessage(null), 3500);
+    }
+  };
+
   const localCoversCount = books.filter((b) => b.capaUrl && isDataUrl(b.capaUrl)).length;
   const remoteCoversCount = books.filter((b) => b.capaUrl && !isDataUrl(b.capaUrl)).length;
 
@@ -116,26 +155,35 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
 
   const handleDownloadApk = () => {
     const a = document.createElement('a');
-    a.href = '/minha-estante.apk?v=3.0.' + Date.now();
+    a.href = '/minha-estante.apk?v=3.1.' + Date.now();
     a.download = 'minha-estante.apk';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    setStatusMessage('Download do .APK v3.0 iniciado!');
+    setStatusMessage('Download do .APK v3.1 iniciado!');
     setTimeout(() => setStatusMessage(null), 3500);
   };
 
   const downloadFile = async (content: string, filename: string, mimeType: string) => {
-    // 1. Android Native App Bridge (dentro do APK compilado)
+    // 1. Android Native App Bridge (com suporte nativo ao Storage Access Framework)
     const win = window as any;
-    if (win.AndroidApp && typeof win.AndroidApp.saveOrShareFile === 'function') {
-      try {
-        win.AndroidApp.saveOrShareFile(content, filename, mimeType);
-        setStatusMessage(`Abrindo opções de salvamento para "${filename}"...`);
-        setTimeout(() => setStatusMessage(null), 3500);
-        return;
-      } catch (err) {
-        console.warn('Erro ao invocar bridge Android:', err);
+    if (win.AndroidApp) {
+      if (typeof win.AndroidApp.createFile === 'function') {
+        try {
+          win.AndroidApp.createFile(content, filename, mimeType);
+          setStatusMessage(`Escolha onde salvar "${filename}" no seu celular...`);
+          return;
+        } catch (err) {
+          console.warn('Erro ao invocar createFile na bridge Android:', err);
+        }
+      } else if (typeof win.AndroidApp.saveOrShareFile === 'function') {
+        try {
+          win.AndroidApp.saveOrShareFile(content, filename, mimeType);
+          setStatusMessage(`Salvando "${filename}"...`);
+          return;
+        } catch (err) {
+          console.warn('Erro ao invocar bridge Android:', err);
+        }
       }
     }
 
@@ -412,7 +460,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                   Instalar no Android (.APK & Via USB)
                 </h3>
                 <p className="text-xs font-serif" style={{ color: palette.textSecondaryOnPaper }}>
-                  Versão 3.0 compilada com E-books, Texturas, Resumos com IA e Onde Comprar
+                  Versão 3.1 com Permissão Nativa para Criar Arquivos de Backup no Celular
                 </p>
               </div>
             </div>
@@ -425,13 +473,58 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                 border: `1px solid ${palette.goldPrimary}40`,
               }}
             >
-              v3.0 Atualizado .apk
+              v3.1 Atualizado .apk
             </span>
           </div>
 
           <p className="text-xs leading-relaxed" style={{ color: palette.textOnPaper }}>
             Você pode baixar o arquivo <strong>.apk</strong> diretamente para instalar no celular ou conectar o aparelho via cabo USB ao computador e instalar com depuração USB (ADB).
           </p>
+
+          {/* Permissão para Criar e Gravar Arquivos no Smartphone */}
+          <div
+            className="p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+            style={{
+              backgroundColor: palette.paperSurfaceElevated,
+              borderColor: `${palette.woodBorder}30`,
+            }}
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div
+                className="p-2 rounded-lg shrink-0 flex items-center justify-center shadow-xs"
+                style={{
+                  backgroundColor: hasStoragePerm ? '#16653420' : '#854d0e20',
+                  color: hasStoragePerm ? '#16a34a' : palette.goldPrimary,
+                }}
+              >
+                <ShieldCheck size={18} />
+              </div>
+              <div className="min-w-0">
+                <p className="font-serif font-bold text-xs" style={{ color: palette.textOnPaper }}>
+                  Permissão para Criar e Salvar Arquivos
+                </p>
+                <p className="text-[11px] opacity-80 font-serif">
+                  {hasStoragePerm
+                    ? '✓ Permissão ativada para gravar backups e capas na memória'
+                    : 'Toque ao lado para ativar a permissão de salvar backups'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleRequestStoragePermission}
+              className="py-1.5 px-3 rounded-lg font-serif font-bold text-xs border shrink-0 flex items-center justify-center gap-1.5 cursor-pointer hover:brightness-105 active:scale-98 transition-all shadow-xs"
+              style={{
+                backgroundColor: hasStoragePerm ? `${palette.goldPrimary}15` : palette.goldPrimary,
+                borderColor: palette.goldPrimary,
+                color: hasStoragePerm ? palette.textOnPaper : palette.textOnGold,
+              }}
+            >
+              <ShieldCheck size={14} />
+              <span>{hasStoragePerm ? 'Permissão Ativada' : 'Ativar Permissão'}</span>
+            </button>
+          </div>
 
           <div className="flex flex-wrap items-center gap-2.5 pt-1">
             <button
@@ -833,6 +926,19 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
           <p className="text-xs leading-relaxed" style={{ color: palette.textSecondaryOnPaper }}>
             Salve ou restaure sua biblioteca inteira quando quiser. Funciona diretamente no seu aparelho, sem depender de nuvem de terceiros.
           </p>
+
+          <div
+            className="p-2.5 rounded-lg border text-[11px] leading-relaxed flex items-center gap-2"
+            style={{
+              backgroundColor: palette.paperSurfaceElevated,
+              borderColor: `${palette.woodBorder}35`,
+            }}
+          >
+            <ShieldCheck size={16} className="shrink-0 text-emerald-600" />
+            <span>
+              <strong>Dica no celular:</strong> ao tocar em <em>Salvar Backup JSON</em>, o Android abrirá a janela para você escolher onde deseja salvar o arquivo (Downloads, Documentos ou Google Drive).
+            </span>
+          </div>
 
           {/* Opções de Exportação e Backup */}
           <div className="flex flex-col gap-2.5 pt-1">

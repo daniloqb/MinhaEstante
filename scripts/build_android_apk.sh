@@ -56,8 +56,8 @@ cat << 'XML' > "$WORKDIR/AndroidManifest.xml"
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.aistudio.minhaestante.vbrkxp"
-    android:versionCode="105"
-    android:versionName="3.0">
+    android:versionCode="106"
+    android:versionName="3.1">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -89,12 +89,13 @@ cat << 'XML' > "$WORKDIR/AndroidManifest.xml"
 </manifest>
 XML
 
-# 7. MainActivity.java com suporte a shouldInterceptRequest, file chooser e bridge de compartilhamento
+# 7. MainActivity.java com suporte a shouldInterceptRequest, file chooser e bridge de criação/salvamento de arquivos
 cat << 'JAVA' > "$WORKDIR/src/com/aistudio/minhaestante/vbrkxp/MainActivity.java"
 package com.aistudio.minhaestante.vbrkxp;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.WebSettings;
@@ -111,17 +112,53 @@ import android.content.ActivityNotFoundException;
 import android.net.Uri;
 import android.Manifest;
 import android.graphics.Color;
+import android.widget.Toast;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.net.URLConnection;
 
 public class MainActivity extends Activity {
     private WebView webView;
     private ValueCallback<Uri[]> mUploadMessage;
     private static final int FILE_CHOOSER_RESULT_CODE = 1001;
+    private static final int CREATE_FILE_RESULT_CODE = 1002;
+    private static final int STORAGE_PERMISSION_CODE = 1003;
+    private String pendingFileContent = null;
+    private String pendingFileName = null;
 
     public class AndroidBridge {
         @JavascriptInterface
+        public void createFile(final String content, final String filename, final String mimeType) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        pendingFileContent = content;
+                        pendingFileName = filename;
+
+                        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                        intent.addCategory(Intent.CATEGORY_OPENABLE);
+                        String type = (mimeType != null && !mimeType.isEmpty()) ? mimeType : "*/*";
+                        intent.setType(type);
+                        intent.putExtra(Intent.EXTRA_TITLE, filename);
+                        startActivityForResult(intent, CREATE_FILE_RESULT_CODE);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        saveToDownloadsDirect(content, filename);
+                    }
+                }
+            });
+        }
+
+        @JavascriptInterface
         public void saveOrShareFile(final String content, final String filename, final String mimeType) {
+            createFile(content, filename, mimeType);
+        }
+
+        @JavascriptInterface
+        public void shareFileText(final String content, final String filename) {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -132,7 +169,7 @@ public class MainActivity extends Activity {
                         sendIntent.putExtra(Intent.EXTRA_TITLE, filename);
                         sendIntent.putExtra(Intent.EXTRA_SUBJECT, filename);
                         sendIntent.setType("text/plain");
-                        startActivity(Intent.createChooser(sendIntent, "Salvar ou compartilhar: " + filename));
+                        startActivity(Intent.createChooser(sendIntent, "Salvar backup: " + filename));
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -141,8 +178,61 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void requestStoragePermission() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                        requestPermissions(new String[]{
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                            Manifest.permission.READ_EXTERNAL_STORAGE
+                        }, STORAGE_PERMISSION_CODE);
+                    } else {
+                        Toast.makeText(MainActivity.this, "Permissão para salvar arquivos já está ativada!", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public boolean hasStoragePermission() {
+            return checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+        }
+
+        @JavascriptInterface
         public boolean isAndroidApp() {
             return true;
+        }
+    }
+
+    private void saveToDownloadsDirect(String content, String filename) {
+        try {
+            File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            if (!downloadsDir.exists()) {
+                downloadsDir.mkdirs();
+            }
+            File file = new File(downloadsDir, filename);
+            FileOutputStream fos = new FileOutputStream(file);
+            fos.write(content.getBytes("UTF-8"));
+            fos.flush();
+            fos.close();
+
+            Toast.makeText(MainActivity.this, "✓ Backup salvo em Downloads: " + filename, Toast.LENGTH_LONG).show();
+            if (webView != null) {
+                webView.evaluateJavascript("window.onAndroidFileSaved && window.onAndroidFileSaved(true, '" + filename + "');", null);
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            try {
+                Intent sendIntent = new Intent();
+                sendIntent.setAction(Intent.ACTION_SEND);
+                sendIntent.putExtra(Intent.EXTRA_TEXT, content);
+                sendIntent.putExtra(Intent.EXTRA_TITLE, filename);
+                sendIntent.setType("text/plain");
+                startActivity(Intent.createChooser(sendIntent, "Salvar backup: " + filename));
+            } catch (Exception ignored) {
+                Toast.makeText(MainActivity.this, "Erro ao gravar arquivo. Conceda permissão nas configurações.", Toast.LENGTH_LONG).show();
+            }
         }
     }
 
@@ -205,13 +295,14 @@ public class MainActivity extends Activity {
             }
         });
 
-        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{
-                Manifest.permission.CAMERA,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
                 Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
+                Manifest.permission.CAMERA
             }, 101);
         }
+
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
@@ -244,6 +335,20 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == STORAGE_PERMISSION_CODE || requestCode == 101) {
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            if (granted) {
+                Toast.makeText(this, "✓ Permissão de arquivos ativada!", Toast.LENGTH_SHORT).show();
+            }
+            if (webView != null) {
+                webView.evaluateJavascript("window.onAndroidPermissionUpdated && window.onAndroidPermissionUpdated(" + granted + ");", null);
+            }
+        }
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == FILE_CHOOSER_RESULT_CODE) {
@@ -257,6 +362,27 @@ public class MainActivity extends Activity {
             }
             mUploadMessage.onReceiveValue(results);
             mUploadMessage = null;
+        } else if (requestCode == CREATE_FILE_RESULT_CODE) {
+            if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+                Uri uri = data.getData();
+                try {
+                    OutputStream os = getContentResolver().openOutputStream(uri);
+                    if (os != null && pendingFileContent != null) {
+                        os.write(pendingFileContent.getBytes("UTF-8"));
+                        os.flush();
+                        os.close();
+                        Toast.makeText(MainActivity.this, "✓ Backup salvo com sucesso no celular!", Toast.LENGTH_LONG).show();
+                        if (webView != null) {
+                            webView.evaluateJavascript("window.onAndroidFileSaved && window.onAndroidFileSaved(true, '" + (pendingFileName != null ? pendingFileName : "") + "');", null);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Toast.makeText(MainActivity.this, "Erro ao gravar arquivo: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                }
+            }
+            pendingFileContent = null;
+            pendingFileName = null;
         }
     }
 
