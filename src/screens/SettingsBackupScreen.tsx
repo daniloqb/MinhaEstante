@@ -24,8 +24,11 @@ import {
   Image as ImageIcon,
   CheckCircle2,
   Loader2,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { PWAInstallButton } from '../components/PWAInstallButton';
+import { GoogleDriveSyncCard } from '../components/GoogleDriveSyncCard';
 
 interface SettingsBackupScreenProps {
   palette: WoodPalette;
@@ -67,6 +70,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isUsbGuideOpen, setIsUsbGuideOpen] = useState(false);
   const [isPermissionGuideOpen, setIsPermissionGuideOpen] = useState(false);
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
   const [copiedAdb, setCopiedAdb] = useState(false);
   const [copiedJson, setCopiedJson] = useState(false);
   const [isBatchCaching, setIsBatchCaching] = useState(false);
@@ -155,12 +159,12 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
 
   const handleDownloadApk = () => {
     const a = document.createElement('a');
-    a.href = '/minha-estante.apk?v=3.1.' + Date.now();
+    a.href = '/minha-estante.apk?v=3.4.' + Date.now();
     a.download = 'minha-estante.apk';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    setStatusMessage('Download do .APK v3.1 iniciado!');
+    setStatusMessage('Download do .APK v3.4 iniciado!');
     setTimeout(() => setStatusMessage(null), 3500);
   };
 
@@ -254,6 +258,15 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
     } catch {
       setStatusMessage('Erro ao acessar a área de transferência.');
     }
+  };
+
+  const handleConfirmClearAll = () => {
+    if (onUpdateAllBooks) {
+      onUpdateAllBooks([]);
+    }
+    setIsClearModalOpen(false);
+    setStatusMessage('Todos os livros foram apagados. Sua estante está limpa!');
+    setTimeout(() => setStatusMessage(null), 4000);
   };
 
   const handlePasteFromClipboard = async () => {
@@ -446,6 +459,75 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
         </div>
       )}
 
+      {/* Modal de Confirmação para Limpar Tudo */}
+      {isClearModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div
+            className="w-full max-w-md p-5 rounded-2xl border shadow-2xl flex flex-col gap-4 animate-in zoom-in-95 duration-150"
+            style={{
+              backgroundColor: palette.paperSurface,
+              borderColor: palette.woodBorder,
+              color: palette.textOnPaper,
+            }}
+          >
+            <div className="flex items-center gap-2.5 font-serif font-bold text-base text-red-900">
+              <span className="p-2 rounded-xl bg-red-100 text-red-600 flex items-center justify-center">
+                <Trash2 size={20} />
+              </span>
+              <div>
+                <h4 className="leading-tight">Atenção: Limpar todos os livros?</h4>
+                <p className="text-[11px] font-sans font-normal opacity-70" style={{ color: palette.textSecondaryOnPaper }}>
+                  Ação destrutiva irreversível sem backup
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs leading-relaxed" style={{ color: palette.textOnPaper }}>
+              Você está prestes a apagar permanentemente todos os <strong>{books.length} {books.length === 1 ? 'livro' : 'livros'}</strong> da sua estante neste dispositivo.
+            </p>
+
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-950 text-xs flex flex-col gap-2">
+              <span className="font-bold flex items-center gap-1.5 text-amber-900">
+                <AlertTriangle size={15} className="text-amber-700 shrink-0" />
+                Deseja salvar um backup antes?
+              </span>
+              <p className="text-[11px] opacity-90 leading-relaxed">
+                Você pode baixar um arquivo JSON agora para não perder sua coleção caso queira restaurá-la mais tarde.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  handleExportJson();
+                }}
+                className="mt-0.5 py-2 px-3 rounded-lg font-serif font-bold text-xs border border-amber-400/80 bg-amber-100 hover:bg-amber-200 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer text-amber-950 shadow-xs"
+              >
+                <Download size={14} />
+                <span>Salvar Backup JSON de Segurança Agora</span>
+              </button>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-black/10">
+              <button
+                type="button"
+                onClick={() => setIsClearModalOpen(false)}
+                className="px-4 py-2 rounded-lg font-serif text-xs border cursor-pointer hover:bg-black/5"
+                style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmClearAll}
+                className="px-4 py-2 rounded-lg font-serif font-bold text-xs bg-red-600 hover:bg-red-700 text-white shadow-sm cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <Trash2 size={14} />
+                <span>Sim, Limpar Tudo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Conteúdo Principal */}
       <div className="flex-1 w-full max-w-2xl mx-auto px-4 py-6 flex flex-col gap-5 pb-16">
         {/* Instalação no Android (.APK / Cabo USB) */}
@@ -460,7 +542,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                   Instalar no Android (.APK & Via USB)
                 </h3>
                 <p className="text-xs font-serif" style={{ color: palette.textSecondaryOnPaper }}>
-                  Versão 3.1 com Permissão Nativa para Criar Arquivos de Backup no Celular
+                  Versão 3.4 com Botão Limpar Tudo, Aba Config e Google Drive Seguro
                 </p>
               </div>
             </div>
@@ -473,7 +555,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                 border: `1px solid ${palette.goldPrimary}40`,
               }}
             >
-              v3.1 Atualizado .apk
+              v3.4 Atualizado .apk
             </span>
           </div>
 
@@ -740,23 +822,23 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
           </div>
         </PaperCard>
 
-        {/* Chave da API Google Books */}
+        {/* Chave da API Google Gemini & Google Books */}
         <PaperCard palette={palette} elevated className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <Key size={20} color={palette.woodBorder} />
             <h3 className="font-serif font-bold text-xl" style={{ color: palette.textOnPaper }}>
-              Chave da API Google Books (Opcional)
+              Chave da API Google Gemini & Books (Opcional)
             </h3>
           </div>
           <p className="text-xs leading-relaxed" style={{ color: palette.textSecondaryOnPaper }}>
-            A busca já funciona gratuitamente sem chave. Adicione sua chave pessoal caso atinja o limite público de requisições.
+            O aplicativo já conta com inteligência artificial e busca integradas gratuitamente. Se desejar prioridade máxima e resumos literários sem filas ou limites compartilhados de cota, você pode inserir sua própria chave gratuita gerada em <strong>aistudio.google.com</strong>.
           </p>
 
           <input
             type="text"
             value={apiKey}
             onChange={(e) => onApiKeyChange(e.target.value)}
-            placeholder="AIzaSy..."
+            placeholder="AIzaSy... (Chave gratuita do Google AI Studio)"
             className="w-full px-3 py-2 rounded-lg border text-sm font-mono focus:outline-none focus:ring-1 mt-1"
             style={{
               backgroundColor: palette.paperSurfaceElevated,
@@ -902,8 +984,21 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
           )}
         </PaperCard>
 
+        {/* Sincronização Direta pelo Google Drive */}
+        <GoogleDriveSyncCard
+          palette={palette}
+          books={books}
+          onUpdateAllBooks={onUpdateAllBooks || (() => {})}
+          onShowToast={(msg) => {
+            setStatusMessage(msg);
+            setTimeout(() => setStatusMessage(null), 3500);
+          }}
+          onTriggerLocalBackup={handleExportJson}
+        />
+
         {/* Backup e Sincronização Local */}
-        <PaperCard palette={palette} elevated className="flex flex-col gap-3">
+        <div id="sec-backup-local">
+          <PaperCard palette={palette} elevated className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Share2 size={20} color={palette.woodBorder} />
@@ -995,6 +1090,44 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                 Importar CSV
               </button>
             </div>
+
+            {/* Gerenciamento / Limpar Tudo */}
+            <div className="pt-2.5 mt-1 border-t border-black/10 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-serif font-bold text-red-900">
+                  <Trash2 size={14} className="text-red-600" />
+                  <span>Gerenciamento da Estante</span>
+                </div>
+                <span className="text-[11px] font-mono opacity-70" style={{ color: palette.textSecondaryOnPaper }}>
+                  {books.length} {books.length === 1 ? 'livro salvo' : 'livros salvos'}
+                </span>
+              </div>
+
+              <div
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border"
+                style={{
+                  backgroundColor: '#ef44440a',
+                  borderColor: '#ef444430',
+                }}
+              >
+                <div className="text-xs font-serif flex flex-col gap-0.5">
+                  <span className="font-bold text-red-950">Limpar Tudo</span>
+                  <span className="text-[11px] opacity-80" style={{ color: palette.textOnPaper }}>
+                    Apaga todos os livros locais da estante para recomeçar sua biblioteca do zero.
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsClearModalOpen(true)}
+                  disabled={books.length === 0}
+                  className="px-3.5 py-2 rounded-lg font-serif font-bold text-xs flex items-center justify-center gap-1.5 border border-red-300 bg-red-100/90 text-red-900 hover:bg-red-200 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs"
+                >
+                  <Trash2 size={14} className="text-red-700" />
+                  <span>Limpar Tudo</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Dúvidas e Ajuda com Permissões no Celular */}
@@ -1047,6 +1180,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
             )}
           </div>
         </PaperCard>
+        </div>
 
         {/* Sobre o App */}
         <div className="text-center py-4 flex flex-col items-center">

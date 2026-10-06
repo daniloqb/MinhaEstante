@@ -90,7 +90,7 @@ Qual a mensagem central, reflexão atemporal ou impacto que a obra deixa no leit
 
 Use formatação Markdown limpa com tópicos legíveis e parágrafos fluidos. Seja fiel à obra.`;
 
-  const models = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-2.0-flash'];
+  const models = ['gemini-3.8-flash', 'gemini-3.1-flash-lite'];
   let lastError: Error | null = null;
 
   for (const model of models) {
@@ -116,8 +116,21 @@ Use formatação Markdown limpa com tópicos legíveis e parágrafos fluidos. Se
 
       if (!res.ok) {
         const errorBody = await res.json().catch(() => ({}));
-        const errMsg = errorBody?.error?.message || `Erro HTTP ${res.status}`;
-        throw new Error(errMsg);
+        const rawMsg = errorBody?.error?.message || '';
+        const status = errorBody?.error?.status || '';
+
+        if (
+          res.status === 429 ||
+          status === 'RESOURCE_EXHAUSTED' ||
+          rawMsg.toLowerCase().includes('quota') ||
+          rawMsg.toLowerCase().includes('exceeded')
+        ) {
+          throw new Error(
+            'Limite temporário de requisições gratuitas atingido. A cota da IA do Google renova-se automaticamente a cada minuto. Por favor, aguarde 1 a 2 minutos e tente novamente, ou insira sua chave gratuita pessoal do Gemini em Configurações para acesso prioritário.'
+          );
+        }
+
+        throw new Error(rawMsg || `Erro HTTP ${res.status}`);
       }
 
       const data = await res.json();

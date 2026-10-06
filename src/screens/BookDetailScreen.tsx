@@ -378,6 +378,53 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
 
         {/* Informações Bibliográficas em Cartão de Papel Envelhecido */}
         <PaperCard palette={palette} elevated className="flex flex-col gap-4">
+          {/* Banner de Obra Pesquisada (Ainda não salva na estante) */}
+          {book.id === 0 && (
+            <div
+              className="p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in"
+              style={{
+                backgroundColor: `${palette.goldPrimary}15`,
+                borderColor: palette.goldPrimary,
+              }}
+            >
+              <div>
+                <span className="font-serif font-bold text-xs block text-amber-950">
+                  🔍 Obra Encontrada na Pesquisa
+                </span>
+                <span className="text-[11px] opacity-85" style={{ color: palette.textOnPaper }}>
+                  Esta obra ainda não foi adicionada. Escolha como deseja salvá-la na sua estante:
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={onTogglePosse}
+                  className="px-3 py-1.5 rounded-lg font-serif font-bold text-xs shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all flex items-center gap-1"
+                  style={{ backgroundColor: palette.goldPrimary, color: palette.textOnGold }}
+                >
+                  <Library size={13} />
+                  <span>+ Livro Físico</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleFormat('ebook')}
+                  className="px-3 py-1.5 rounded-lg font-serif font-bold text-xs shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all flex items-center gap-1 bg-purple-700 text-white"
+                >
+                  <Tablet size={13} />
+                  <span>+ E-book</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSetStatusLeitura('quero_ler')}
+                  className="px-3 py-1.5 rounded-lg font-serif font-bold text-xs shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all flex items-center gap-1 bg-blue-700 text-white"
+                >
+                  <Bookmark size={13} />
+                  <span>+ Quero Ler</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           <div>
             <div className="flex items-center justify-between gap-2 mb-1">
               <span

@@ -692,6 +692,7 @@ export const App: React.FC = () => {
               results={searchResults}
               errorMessage={searchError}
               onSelectBookToAdd={handleSelectBookToAdd}
+              onSelectBookDetail={(book) => setSelectedBookDetail(book)}
               onOpenManualRegister={() => setIsManualRegisterOpen(true)}
               userBooks={books}
             />

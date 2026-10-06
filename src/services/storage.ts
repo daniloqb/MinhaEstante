@@ -772,4 +772,34 @@ export const BookStorage = {
   saveApiKey(key: string): void {
     localStorage.setItem(STORAGE_KEY_API_KEY, key);
   },
+
+  loadLastSyncTime(): number | null {
+    try {
+      const v = localStorage.getItem('minha_estante_last_drive_sync');
+      return v ? parseInt(v, 10) : null;
+    } catch {
+      return null;
+    }
+  },
+  saveLastSyncTime(timestamp: number): void {
+    try {
+      localStorage.setItem('minha_estante_last_drive_sync', timestamp.toString());
+    } catch {}
+  },
+  loadDriveFileId(): string | null {
+    try {
+      return localStorage.getItem('minha_estante_drive_file_id');
+    } catch {
+      return null;
+    }
+  },
+  saveDriveFileId(id: string | null): void {
+    try {
+      if (id) {
+        localStorage.setItem('minha_estante_drive_file_id', id);
+      } else {
+        localStorage.removeItem('minha_estante_drive_file_id');
+      }
+    } catch {}
+  },
 };

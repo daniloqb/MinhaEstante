@@ -8,6 +8,7 @@ interface PaperCardProps {
   onContextMenu?: (e: React.MouseEvent) => void;
   className?: string;
   elevated?: boolean;
+  title?: string;
 }
 
 export const PaperCard: React.FC<PaperCardProps> = ({
@@ -17,9 +18,11 @@ export const PaperCard: React.FC<PaperCardProps> = ({
   onContextMenu,
   className = '',
   elevated = false,
+  title,
 }) => {
   return (
     <div
+      title={title}
       onClick={onClick}
       onContextMenu={onContextMenu}
       className={`rounded-xl p-3.5 transition-all duration-200 border ${

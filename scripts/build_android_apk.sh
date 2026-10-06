@@ -56,8 +56,8 @@ cat << 'XML' > "$WORKDIR/AndroidManifest.xml"
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.aistudio.minhaestante.vbrkxp"
-    android:versionCode="106"
-    android:versionName="3.1">
+    android:versionCode="109"
+    android:versionName="3.4">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -108,6 +108,7 @@ import android.webkit.ValueCallback;
 import android.webkit.JavascriptInterface;
 import android.content.pm.PackageManager;
 import android.content.Intent;
+import android.content.DialogInterface;
 import android.content.ActivityNotFoundException;
 import android.net.Uri;
 import android.Manifest;
@@ -262,6 +263,8 @@ public class MainActivity extends Activity {
         settings.setLoadWithOverviewMode(true);
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        settings.setSupportMultipleWindows(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
 
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidApp");
 
@@ -269,6 +272,49 @@ public class MainActivity extends Activity {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
                 request.grant(request.getResources());
+            }
+
+            @Override
+            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) {
+                WebView popupWebView = new WebView(MainActivity.this);
+                popupWebView.getSettings().setJavaScriptEnabled(true);
+                popupWebView.getSettings().setDomStorageEnabled(true);
+                popupWebView.getSettings().setSupportMultipleWindows(true);
+                popupWebView.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
+
+                final android.app.Dialog popupDialog = new android.app.Dialog(MainActivity.this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+                popupDialog.setCancelable(true);
+                popupDialog.setCanceledOnTouchOutside(true);
+                popupDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                    @Override
+                    public void onCancel(DialogInterface dialog) {
+                        try { popupWebView.destroy(); } catch (Exception ignored) {}
+                    }
+                });
+                popupDialog.setContentView(popupWebView);
+                popupDialog.show();
+
+                popupWebView.setWebChromeClient(new WebChromeClient() {
+                    @Override
+                    public void onCloseWindow(WebView window) {
+                        try {
+                            popupDialog.dismiss();
+                            window.destroy();
+                        } catch (Exception ignored) {}
+                    }
+                });
+
+                popupWebView.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                        return false;
+                    }
+                });
+
+                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+                transport.setWebView(popupWebView);
+                resultMsg.sendToTarget();
+                return true;
             }
 
             @Override

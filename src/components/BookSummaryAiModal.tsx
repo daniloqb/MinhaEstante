@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, X, Copy, Check, BookmarkPlus, RefreshCw, AlertCircle, BookOpen, Tablet } from 'lucide-react';
 import { Book } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
@@ -28,6 +28,24 @@ export const BookSummaryAiModal: React.FC<BookSummaryAiModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const [savedToNotes, setSavedToNotes] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isOpen || !book) {
+      setSummary(null);
+      setErrorMessage(null);
+      return;
+    }
+
+    // Se o livro já possui um resumo gravado em suas anotações, carrega instantaneamente
+    if (book.observacoes && book.observacoes.includes('=== RESUMO DA IA')) {
+      const parts = book.observacoes.split(/=== RESUMO DA IA[^\n]*===\n\n/);
+      if (parts.length > 1) {
+        setSummary(parts[1].trim());
+        setSavedToNotes(true);
+        return;
+      }
+    }
+  }, [isOpen, book]);
 
   if (!isOpen || !book) return null;
 

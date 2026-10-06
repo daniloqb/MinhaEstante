@@ -30,6 +30,7 @@ interface SearchScreenProps {
   results: SearchResultBook[];
   errorMessage: string | null;
   onSelectBookToAdd: (book: SearchResultBook, targetAction?: ShelfTab) => void;
+  onSelectBookDetail: (book: Book) => void;
   onOpenManualRegister: () => void;
   userBooks?: Book[];
 }
@@ -43,10 +44,44 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
   results,
   errorMessage,
   onSelectBookToAdd,
+  onSelectBookDetail,
   onOpenManualRegister,
   userBooks = [],
 }) => {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+  const handleCardClick = (item: SearchResultBook) => {
+    const existingInLibrary = (userBooks || []).find((b) => areBooksDuplicate(b, item));
+    if (existingInLibrary) {
+      onSelectBookDetail(existingInLibrary);
+    } else {
+      const previewBook: Book = {
+        id: 0,
+        origem: item.origem,
+        idExterno: item.idExterno,
+        titulo: item.titulo,
+        subtitulo: item.subtitulo,
+        autores: item.autores,
+        editora: item.editora,
+        anoPublicacao: item.anoPublicacao,
+        paginas: item.paginas,
+        isbn10: item.isbn10,
+        isbn13: item.isbn13,
+        generos: item.generos,
+        descricao: item.descricao,
+        capaUrl: item.capaUrl,
+        formato: 'fisico',
+        tenho_fisico: false,
+        status_leitura: 'nenhum',
+        anoLeitura: null,
+        mesLeitura: null,
+        nota: null,
+        dataCadastro: Date.now(),
+        dataAtualizacao: Date.now(),
+      };
+      onSelectBookDetail(previewBook);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -256,8 +291,9 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                   <PaperCard
                     key={`${item.idExterno || item.isbn13 || idx}`}
                     palette={palette}
-                    onClick={() => onSelectBookToAdd(item, 'meus_livros')}
-                    className="group"
+                    onClick={() => handleCardClick(item)}
+                    className="group cursor-pointer hover:shadow-md transition-all hover:scale-[1.005]"
+                    title="Toque para ver os detalhes da obra, resumo com IA e opções"
                   >
                     <div className="flex gap-3">
                       <BookCoverView

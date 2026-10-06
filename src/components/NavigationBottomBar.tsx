@@ -29,7 +29,7 @@ export const NavigationBottomBar: React.FC<NavigationBottomBarProps> = ({
     { id: 'EBOOKS', label: 'E-books', icon: Tablet, count: ebookCount },
     { id: 'BUSCAR', label: 'Buscar', icon: Search },
     { id: 'ESTATISTICAS', label: 'Estatísticas', icon: BarChart3 },
-    { id: 'CONFIG', label: 'Backup', icon: Settings },
+    { id: 'CONFIG', label: 'Config', icon: Settings },
   ];
 
   return (
