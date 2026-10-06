@@ -28,6 +28,11 @@ import {
   Download,
   CheckCircle2,
   Loader2,
+  Handshake,
+  User,
+  Mail,
+  Calendar,
+  Clock,
 } from 'lucide-react';
 
 interface BookDetailScreenProps {
@@ -39,6 +44,8 @@ interface BookDetailScreenProps {
   onTogglePosse: () => void;
   onSetStatusLeitura: (status: ReadingStatus) => void;
   onUpdateBook?: (book: Book) => void;
+  onOpenLoanModal?: (book: Book) => void;
+  onReturnBook?: (book: Book) => void;
 }
 
 export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
@@ -50,6 +57,8 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
   onTogglePosse,
   onSetStatusLeitura,
   onUpdateBook,
+  onOpenLoanModal,
+  onReturnBook,
 }) => {
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -679,8 +688,115 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
           )}
         </PaperCard>
 
+        {/* Card de Empréstimo Ativo */}
+        {book.emprestimo && !book.emprestimo.devolvido && (
+          <PaperCard palette={palette} elevated className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div
+                  className="p-2 rounded-xl"
+                  style={{ backgroundColor: `${palette.goldPrimary}25`, color: palette.woodBorder }}
+                >
+                  <Handshake size={20} />
+                </div>
+                <div>
+                  <h4 className="font-serif font-bold text-base leading-tight" style={{ color: palette.textOnPaper }}>
+                    Livro Emprestado
+                  </h4>
+                  <p className="text-[11px] opacity-75 font-serif" style={{ color: palette.textSecondaryOnPaper }}>
+                    Este exemplar está com outra pessoa
+                  </p>
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-900 border border-amber-400/50">
+                Ativo
+              </span>
+            </div>
+
+            <div
+              className="p-3 rounded-xl border flex flex-col gap-1.5 text-xs"
+              style={{ backgroundColor: palette.paperSurfaceElevated, borderColor: palette.paperBorder }}
+            >
+              <div className="flex items-center gap-1.5 font-bold" style={{ color: palette.textOnPaper }}>
+                <User size={14} className="opacity-70 text-amber-900 shrink-0" />
+                <span>Emprestado para: <strong className="underline decoration-amber-500/50">{book.emprestimo.nomePessoa}</strong></span>
+              </div>
+
+              {book.emprestimo.emailPessoa && (
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <Mail size={13} className="opacity-70 shrink-0" />
+                  <a
+                    href={`mailto:${book.emprestimo.emailPessoa}?subject=Livro Emprestado: ${encodeURIComponent(book.titulo)}`}
+                    className="hover:underline text-blue-700"
+                  >
+                    {book.emprestimo.emailPessoa}
+                  </a>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 flex-wrap text-[11px] pt-0.5">
+                <span className="flex items-center gap-1 opacity-75">
+                  <Calendar size={12} />
+                  <span>Desde: {book.emprestimo.dataEmprestimo}</span>
+                </span>
+                <span className="flex items-center gap-1 font-semibold">
+                  <Clock size={12} />
+                  <span>Devolução prevista: {book.emprestimo.dataDevolucao}</span>
+                </span>
+              </div>
+
+              {book.emprestimo.observacoes && (
+                <p className="text-[11px] italic opacity-80 mt-0.5 border-l-2 pl-2 border-amber-600/40">
+                  &ldquo;{book.emprestimo.observacoes}&rdquo;
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              {onReturnBook && (
+                <button
+                  type="button"
+                  onClick={() => onReturnBook(book)}
+                  className="flex-1 py-2.5 px-3 rounded-xl font-serif font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-98 transition-all"
+                >
+                  <CheckCircle2 size={15} />
+                  <span>Marcar como Devolvido</span>
+                </button>
+              )}
+              {onOpenLoanModal && (
+                <button
+                  type="button"
+                  onClick={() => onOpenLoanModal(book)}
+                  className="py-2.5 px-3.5 rounded-xl font-serif font-semibold text-xs border flex items-center justify-center gap-1.5 cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+                  style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
+                >
+                  <Edit size={14} />
+                  <span>Editar Empréstimo</span>
+                </button>
+              )}
+            </div>
+          </PaperCard>
+        )}
+
         {/* Botões de Ação na Estante */}
         <div className="flex flex-col gap-2.5 pb-8">
+          {/* Ação: Emprestar Livro (se não estiver com empréstimo ativo) */}
+          {(!book.emprestimo || book.emprestimo.devolvido) && onOpenLoanModal && (
+            <button
+              type="button"
+              onClick={() => onOpenLoanModal(book)}
+              className="w-full py-3 rounded-xl font-serif font-bold text-sm shadow-md flex items-center justify-center gap-2 border cursor-pointer hover:brightness-105 active:scale-98 transition-all"
+              style={{
+                backgroundColor: `${palette.goldPrimary}15`,
+                borderColor: palette.goldPrimary,
+                color: palette.goldPrimary,
+              }}
+            >
+              <Handshake size={17} />
+              <span>Emprestar este Livro</span>
+            </button>
+          )}
+
           {/* Se não estiver lido: ação de Marcar como Lido */}
           {book.status_leitura !== 'lido' && (
             <button

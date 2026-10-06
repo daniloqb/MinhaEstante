@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GroupByMode, SortOption } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
-import { X, Filter } from 'lucide-react';
+import { X, Filter, BookOpen, Tablet } from 'lucide-react';
 
 interface FilterModalProps {
   palette: WoodPalette;
@@ -15,6 +15,8 @@ interface FilterModalProps {
   onRatingFilterChange: (min: number | null) => void;
   selectedYear: number | null;
   onYearFilterChange: (year: number | null) => void;
+  selectedFormat?: 'fisico' | 'ebook' | null;
+  onFormatFilterChange?: (format: 'fisico' | 'ebook' | null) => void;
   onClearFilters: () => void;
 }
 
@@ -30,6 +32,8 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   onRatingFilterChange,
   selectedYear,
   onYearFilterChange,
+  selectedFormat = null,
+  onFormatFilterChange,
   onClearFilters,
 }) => {
   const currentYear = new Date().getFullYear();
@@ -130,6 +134,39 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                     }}
                   >
                     {labels[mode]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Formato do Livro (Físicos vs E-books) */}
+          <div>
+            <label className="block text-xs uppercase font-bold tracking-wider mb-2 font-sans" style={{ color: palette.woodBorder }}>
+              Formato da Obra
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { val: null, label: 'Todos os Formatos', icon: null },
+                { val: 'fisico', label: 'Livros Físicos', icon: BookOpen },
+                { val: 'ebook', label: 'E-books Digitais', icon: Tablet },
+              ].map((fmt) => {
+                const isSelected = selectedFormat === fmt.val;
+                const IconComp = fmt.icon;
+                return (
+                  <button
+                    key={fmt.label}
+                    type="button"
+                    onClick={() => onFormatFilterChange && onFormatFilterChange(fmt.val as any)}
+                    className="px-3.5 py-1.5 rounded-full text-xs font-serif font-bold transition-all border cursor-pointer flex items-center gap-1.5"
+                    style={{
+                      backgroundColor: isSelected ? palette.goldPrimary : 'transparent',
+                      color: isSelected ? palette.textOnGold : palette.textOnPaper,
+                      borderColor: palette.woodBorder,
+                    }}
+                  >
+                    {IconComp && <IconComp size={13} />}
+                    <span>{fmt.label}</span>
                   </button>
                 );
               })}

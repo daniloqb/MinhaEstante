@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Book, isBookInTab } from '../types/book';
+import { Book, BookLoan, isBookInTab, isBookBorrowed } from '../types/book';
 import {
   migrateLegacyBooks,
   areBooksDuplicate,
@@ -496,5 +496,100 @@ describe('4. Teste do filtro de Ano de Leitura', () => {
     expect(updatedBook.titulo).toBe('O Apanhador no Campo de Centeio');
     expect(updatedBook.subtitulo).toBe('Edição de Bolso');
     expect(updatedBook.dataAtualizacao).toBeGreaterThan(originalBook.dataAtualizacao);
+  });
+});
+
+describe('5. Testes da Estante Unificada, Filtro de Formato e Empréstimos', () => {
+  const livroFisico: Book = {
+    id: 101,
+    origem: 'manual',
+    titulo: 'Livro Físico de Estante',
+    autores: ['Autor Físico'],
+    formato: 'fisico',
+    tenho_fisico: true,
+    status_leitura: 'nenhum',
+    generos: ['Ficção'],
+    dataCadastro: 1000,
+    dataAtualizacao: 1000,
+  };
+
+  const livroEbook: Book = {
+    id: 102,
+    origem: 'manual',
+    titulo: 'E-book Digital de Estante',
+    autores: ['Autor Digital'],
+    formato: 'ebook',
+    tenho_fisico: false,
+    status_leitura: 'quero_ler',
+    generos: ['Tecnologia'],
+    dataCadastro: 2000,
+    dataAtualizacao: 2000,
+  };
+
+  it('Estante Unificada: a aba "todos" exibe tanto livros físicos quanto e-books', () => {
+    expect(isBookInTab(livroFisico, 'todos')).toBe(true);
+    expect(isBookInTab(livroEbook, 'todos')).toBe(true);
+  });
+
+  it('Filtro de Formato: filtra entre livros físicos e e-books corretamente', () => {
+    const acervo = [livroFisico, livroEbook];
+
+    const apenasFisicos = acervo.filter((b) => b.formato !== 'ebook');
+    expect(apenasFisicos).toHaveLength(1);
+    expect(apenasFisicos[0].id).toBe(101);
+
+    const apenasEbooks = acervo.filter((b) => b.formato === 'ebook');
+    expect(apenasEbooks).toHaveLength(1);
+    expect(apenasEbooks[0].id).toBe(102);
+  });
+
+  it('Empréstimo de Livro: salva nome, email opcional, data de empréstimo e devolução', () => {
+    const loan: BookLoan = {
+      nomePessoa: 'Mariana Costa',
+      emailPessoa: 'mariana@exemplo.com',
+      dataEmprestimo: '2026-10-06',
+      dataDevolucao: '2026-11-06',
+      devolvido: false,
+      observacoes: 'Cuidar com carinho',
+    };
+
+    const livroEmprestado: Book = {
+      ...livroFisico,
+      emprestimo: loan,
+    };
+
+    expect(isBookBorrowed(livroEmprestado)).toBe(true);
+    expect(livroEmprestado.emprestimo?.nomePessoa).toBe('Mariana Costa');
+    expect(livroEmprestado.emprestimo?.emailPessoa).toBe('mariana@exemplo.com');
+    expect(livroEmprestado.emprestimo?.dataEmprestimo).toBe('2026-10-06');
+    expect(livroEmprestado.emprestimo?.dataDevolucao).toBe('2026-11-06');
+    expect(livroEmprestado.emprestimo?.devolvido).toBe(false);
+
+    // Devolução do livro
+    const livroDevolvido: Book = {
+      ...livroEmprestado,
+      emprestimo: {
+        ...loan,
+        devolvido: true,
+        dataDevolucaoEfetiva: '2026-10-20',
+      },
+    };
+
+    expect(isBookBorrowed(livroDevolvido)).toBe(false);
+    expect(livroDevolvido.emprestimo?.devolvido).toBe(true);
+  });
+
+  it('Empréstimo com email opcional omitido é aceito com sucesso', () => {
+    const loanSemEmail: BookLoan = {
+      nomePessoa: 'Carlos Silva',
+      emailPessoa: null,
+      dataEmprestimo: '2026-10-06',
+      dataDevolucao: '2026-11-06',
+      devolvido: false,
+    };
+
+    const livro = { ...livroEbook, emprestimo: loanSemEmail };
+    expect(isBookBorrowed(livro)).toBe(true);
+    expect(livro.emprestimo?.emailPessoa).toBeNull();
   });
 });

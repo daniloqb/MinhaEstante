@@ -159,12 +159,12 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
 
   const handleDownloadApk = () => {
     const a = document.createElement('a');
-    a.href = '/minha-estante.apk?v=3.4.' + Date.now();
+    a.href = '/minha-estante.apk?v=3.5.' + Date.now();
     a.download = 'minha-estante.apk';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    setStatusMessage('Download do .APK v3.4 iniciado!');
+    setStatusMessage('Download do .APK v3.5 iniciado!');
     setTimeout(() => setStatusMessage(null), 3500);
   };
 
@@ -542,7 +542,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                   Instalar no Android (.APK & Via USB)
                 </h3>
                 <p className="text-xs font-serif" style={{ color: palette.textSecondaryOnPaper }}>
-                  Versão 3.4 com Botão Limpar Tudo, Aba Config e Google Drive Seguro
+                  Versão 3.5 com Estante Unificada (Físicos + E-books) e Nova Aba Emprestados
                 </p>
               </div>
             </div>
@@ -555,7 +555,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                 border: `1px solid ${palette.goldPrimary}40`,
               }}
             >
-              v3.4 Atualizado .apk
+              v3.5 Atualizado .apk
             </span>
           </div>
 

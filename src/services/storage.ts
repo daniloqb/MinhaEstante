@@ -224,6 +224,7 @@ export function mergeDuplicateBooks(a: Book, b: Book): Book {
     formato: a.formato || b.formato || 'fisico',
     tenho_fisico: combinedTenhoFisico,
     status_leitura: combinedStatus,
+    emprestimo: a.emprestimo || b.emprestimo || null,
     nota,
     anoLeitura,
     mesLeitura,
@@ -285,6 +286,7 @@ export function migrateLegacyBooks(rawBooks: any[]): Book[] {
       formato: raw.formato === 'ebook' ? 'ebook' : 'fisico',
       tenho_fisico,
       status_leitura,
+      emprestimo: raw.emprestimo || null,
       mesLeitura: raw.mesLeitura != null ? parseInt(raw.mesLeitura, 10) || null : null,
       anoLeitura: raw.anoLeitura != null ? parseInt(raw.anoLeitura, 10) || null : null,
       nota: raw.nota != null ? parseInt(raw.nota, 10) || null : null,
@@ -520,6 +522,10 @@ export const BookStorage = {
       'ano_leitura',
       'nota',
       'observacoes',
+      'emprestado_para',
+      'email_emprestimo',
+      'data_emprestimo',
+      'data_devolucao',
     ];
 
     const rows = books.map((b) => [
@@ -543,6 +549,10 @@ export const BookStorage = {
       b.anoLeitura ?? '',
       b.nota ?? '',
       escapeCsv(b.observacoes),
+      escapeCsv(b.emprestimo?.nomePessoa),
+      escapeCsv(b.emprestimo?.emailPessoa),
+      escapeCsv(b.emprestimo?.dataEmprestimo),
+      escapeCsv(b.emprestimo?.dataDevolucao),
     ]);
 
     return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
@@ -642,6 +652,10 @@ export const BookStorage = {
     const tenhoFisicoIdx = headers.findIndex((h) => h.includes('tenho') || h.includes('posse') || h.includes('fisico') || h.includes('own'));
     const statusLeituraIdx = headers.findIndex((h) => h.includes('status_leitura') || h.includes('leitura'));
     const legacyStatusIdx = headers.findIndex((h) => h === 'status');
+    const emprestadoParaIdx = headers.findIndex((h) => h.includes('emprestado') || h.includes('emprestimo_nome'));
+    const emailEmprestimoIdx = headers.findIndex((h) => h.includes('email_emprestimo') || h.includes('email emprestimo'));
+    const dataEmprestimoIdx = headers.findIndex((h) => h.includes('data_emprestimo') || h.includes('data emprestimo'));
+    const dataDevolucaoIdx = headers.findIndex((h) => h.includes('data_devolucao') || h.includes('data devolucao'));
 
     let maxId = currentBooks.reduce((max, b) => Math.max(max, b.id || 0), 0);
     const importedBooks: Book[] = [];
@@ -707,6 +721,17 @@ export const BookStorage = {
         }
       }
 
+      let emprestimo = null;
+      if (emprestadoParaIdx >= 0 && emprestadoParaIdx < cols.length && cols[emprestadoParaIdx].trim()) {
+        emprestimo = {
+          nomePessoa: cols[emprestadoParaIdx].trim(),
+          emailPessoa: emailEmprestimoIdx >= 0 && emailEmprestimoIdx < cols.length ? cols[emailEmprestimoIdx].trim() || null : null,
+          dataEmprestimo: dataEmprestimoIdx >= 0 && dataEmprestimoIdx < cols.length && cols[dataEmprestimoIdx].trim() ? cols[dataEmprestimoIdx].trim() : new Date().toISOString().slice(0, 10),
+          dataDevolucao: dataDevolucaoIdx >= 0 && dataDevolucaoIdx < cols.length && cols[dataDevolucaoIdx].trim() ? cols[dataDevolucaoIdx].trim() : new Date().toISOString().slice(0, 10),
+          devolvido: false,
+        };
+      }
+
       maxId++;
       importedBooks.push({
         id: maxId,
@@ -719,6 +744,7 @@ export const BookStorage = {
         nota: isNaN(parsedRating as number) ? null : parsedRating,
         tenho_fisico,
         status_leitura,
+        emprestimo,
         paginas: isNaN(pages as number) ? null : pages,
         generos: [],
         dataCadastro: Date.now(),

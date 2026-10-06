@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Book, ShelfTab, ViewMode, GroupByMode, SortOption } from '../types/book';
+import { Book, ShelfTab, ViewMode, GroupByMode, SortOption, isBookBorrowed } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodShelf } from '../components/WoodShelf';
 import { BookCoverView } from '../components/BookCoverView';
@@ -18,6 +18,7 @@ import {
   Check,
   Bookmark,
   Tablet,
+  Handshake,
 } from 'lucide-react';
 
 interface HomeScreenProps {
@@ -40,6 +41,8 @@ interface HomeScreenProps {
   onGenreFilterChange: (genre: string | null) => void;
   selectedRatingMin: number | null;
   onRatingFilterChange: (min: number | null) => void;
+  selectedFormat?: 'fisico' | 'ebook' | null;
+  onFormatFilterChange?: (format: 'fisico' | 'ebook' | null) => void;
   onClearFilters: () => void;
   onSelectBook: (book: Book) => void;
   onOpenQuickAction: (book: Book) => void;
@@ -64,6 +67,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onGenreFilterChange,
   selectedRatingMin,
   onRatingFilterChange,
+  selectedFormat = null,
+  onFormatFilterChange,
   onClearFilters,
   onSelectBook,
   onOpenQuickAction,
@@ -72,11 +77,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 }) => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
-  // Contadores reais de cada aba segundo a consulta independente
+  // Contadores reais de cada aba da estante unificada
   const tabCounts = useMemo(() => {
     return {
-      meus_livros: allBooks.filter((b) => b.tenho_fisico && b.formato !== 'ebook').length,
-      ebook: allBooks.filter((b) => b.formato === 'ebook').length,
+      todos: allBooks.length,
       lido: allBooks.filter((b) => b.status_leitura === 'lido').length,
       quero_ler: allBooks.filter((b) => b.status_leitura === 'quero_ler').length,
     };
@@ -126,132 +130,63 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     Boolean(searchQuery.trim()) ||
     selectedYear != null ||
     Boolean(selectedGenre) ||
-    selectedRatingMin != null;
+    selectedRatingMin != null ||
+    Boolean(selectedFormat);
 
   /**
    * Renderiza o selo adequado para a capa na visualização de prateleiras
    */
   const renderCoverBadge = (book: Book) => {
-    // Na aba E-book: destacar status de leitura
-    if (statusTab === 'ebook') {
-      if (book.status_leitura === 'lido') {
-        return (
-          <span
-            className="px-2 py-0.5 rounded-full text-xs font-serif font-bold shadow-lg flex items-center gap-1 border"
-            style={{
-              backgroundColor: '#10b981',
-              color: '#FFFFFF',
-              borderColor: '#FFFFFF80',
-            }}
-            title={`E-book Lido ${book.nota != null ? `(★ ${book.nota})` : ''}`}
-          >
-            <Check size={12} strokeWidth={3} />
-            {book.nota != null ? `★${book.nota}` : 'Lido'}
-          </span>
-        );
-      }
-
-      if (book.status_leitura === 'quero_ler') {
-        return (
-          <span
-            className="px-2 py-0.5 rounded-full text-xs font-serif font-bold shadow-lg flex items-center gap-1 border"
-            style={{
-              backgroundColor: '#3b82f6',
-              color: '#FFFFFF',
-              borderColor: '#FFFFFF80',
-            }}
-            title="E-book Quero Ler"
-          >
-            <Bookmark size={12} />
-            Quero
-          </span>
-        );
-      }
-
+    // 1. Prioridade máxima: Livro atualmente emprestado
+    if (isBookBorrowed(book)) {
       return (
         <span
-          className="p-1.5 rounded-full shadow-lg flex items-center justify-center border"
-          style={{
-            backgroundColor: `${palette.goldPrimary}`,
-            color: palette.textOnGold,
-            borderColor: '#FFFFFF80',
-          }}
-          title="E-book digital no acervo"
+          className="px-2 py-0.5 rounded-full text-xs font-serif font-bold shadow-lg flex items-center gap-1 border bg-amber-500 text-stone-950 border-amber-200"
+          title={`Emprestado para ${book.emprestimo?.nomePessoa}`}
         >
-          <Tablet size={13} />
+          <Handshake size={12} strokeWidth={2.5} />
+          <span>Emprestado</span>
         </span>
       );
     }
 
-    // Nas abas Lidos e Quero ler: selo do formato (físico ou ebook)
-    if (statusTab === 'lido' || statusTab === 'quero_ler') {
-      if (book.formato === 'ebook') {
-        return (
-          <span
-            className="p-1.5 rounded-full shadow-lg flex items-center justify-center border bg-blue-600 text-white"
-            style={{
-              borderColor: '#FFFFFF80',
-            }}
-            title="E-book Digital"
-          >
-            <Tablet size={13} />
-          </span>
-        );
-      }
-
-      if (book.tenho_fisico) {
-        return (
-          <span
-            className="p-1.5 rounded-full shadow-lg flex items-center justify-center border"
-            style={{
-              backgroundColor: palette.goldPrimary,
-              color: palette.textOnGold,
-              borderColor: '#FFFFFF80',
-            }}
-            title="Tenho o exemplar físico em casa"
-          >
-            <Library size={13} />
-          </span>
-        );
-      }
-      return null;
+    // 2. Se for Lido
+    if (book.status_leitura === 'lido') {
+      return (
+        <span
+          className="px-2 py-0.5 rounded-full text-xs font-serif font-bold shadow-lg flex items-center gap-1 border bg-emerald-600 text-white border-white/60"
+          title={`Lido ${book.nota != null ? `(★ ${book.nota})` : ''}`}
+        >
+          <Check size={12} strokeWidth={3} />
+          {book.nota != null ? `★${book.nota}` : 'Lido'}
+        </span>
+      );
     }
 
-    // Na aba Físicos (Meus Livros): selo de leitura se estiver Lido ou Quero Ler
-    if (statusTab === 'meus_livros') {
-      if (book.status_leitura === 'lido') {
-        return (
-          <span
-            className="px-2 py-0.5 rounded-full text-xs font-serif font-bold shadow-lg flex items-center gap-1 border"
-            style={{
-              backgroundColor: '#10b981',
-              color: '#FFFFFF',
-              borderColor: '#FFFFFF80',
-            }}
-            title={`Lido ${book.nota != null ? `(★ ${book.nota})` : ''}`}
-          >
-            <Check size={12} strokeWidth={3} />
-            {book.nota != null ? `★${book.nota}` : 'Lido'}
-          </span>
-        );
-      }
+    // 3. Se for Quero Ler
+    if (book.status_leitura === 'quero_ler') {
+      return (
+        <span
+          className="px-2 py-0.5 rounded-full text-xs font-serif font-bold shadow-lg flex items-center gap-1 border bg-blue-600 text-white border-white/60"
+          title="Na lista Quero Ler"
+        >
+          <Bookmark size={12} />
+          Quero
+        </span>
+      );
+    }
 
-      if (book.status_leitura === 'quero_ler') {
-        return (
-          <span
-            className="px-2 py-0.5 rounded-full text-xs font-serif font-bold shadow-lg flex items-center gap-1 border"
-            style={{
-              backgroundColor: '#3b82f6',
-              color: '#FFFFFF',
-              borderColor: '#FFFFFF80',
-            }}
-            title="Na lista Quero Ler"
-          >
-            <Bookmark size={12} />
-            Quero
-          </span>
-        );
-      }
+    // 4. Se for E-book digital no acervo unificado
+    if (book.formato === 'ebook') {
+      return (
+        <span
+          className="px-2 py-0.5 rounded-full text-[10px] font-sans font-bold shadow-lg flex items-center gap-1 border bg-purple-900/90 text-purple-100 border-purple-400/50"
+          title="E-book digital no acervo"
+        >
+          <Tablet size={11} />
+          <span>E-book</span>
+        </span>
+      );
     }
 
     return null;
@@ -337,7 +272,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           borderColor: `${palette.woodBorder}40`,
         }}
       >
-        {/* Segmented Button com contadores: Físicos | E-books | Lidos | Quero Ler */}
+        {/* Segmented Button com contadores: Todos (Físicos + E-books) | Lidos | Quero Ler */}
         <div
           className="flex items-center p-0.5 rounded-xl border overflow-x-auto scrollbar-none gap-0.5"
           style={{
@@ -345,57 +280,46 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             borderColor: `${palette.woodBorder}70`,
           }}
         >
-          {/* Aba 1: Livros Físicos */}
+          {/* Aba 1: Todos os Livros (Estante Unificada: Físicos e E-books) */}
           <button
             type="button"
-            onClick={() => onStatusTabChange('meus_livros')}
-            className="px-3 sm:px-4 py-2 rounded-lg font-serif font-bold text-sm sm:text-base transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+            onClick={() => onStatusTabChange('todos')}
+            className="px-3.5 sm:px-4 py-2 rounded-lg font-serif font-bold text-sm sm:text-base transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
             style={{
-              backgroundColor: statusTab === 'meus_livros' ? palette.goldPrimary : 'transparent',
-              color: statusTab === 'meus_livros' ? palette.textOnGold : palette.textOnWood,
+              backgroundColor:
+                statusTab === 'todos' || statusTab === 'meus_livros'
+                  ? palette.goldPrimary
+                  : 'transparent',
+              color:
+                statusTab === 'todos' || statusTab === 'meus_livros'
+                  ? palette.textOnGold
+                  : palette.textOnWood,
             }}
           >
-            <Library size={16} />
-            <span>Físicos</span>
+            <BookOpen size={16} />
+            <span>Todos</span>
             <span
               className="px-2 py-0.5 rounded-full text-xs font-sans font-bold"
               style={{
-                backgroundColor: statusTab === 'meus_livros' ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.18)',
-                color: statusTab === 'meus_livros' ? palette.textOnGold : palette.textOnWood,
+                backgroundColor:
+                  statusTab === 'todos' || statusTab === 'meus_livros'
+                    ? 'rgba(0,0,0,0.25)'
+                    : 'rgba(255,255,255,0.18)',
+                color:
+                  statusTab === 'todos' || statusTab === 'meus_livros'
+                    ? palette.textOnGold
+                    : palette.textOnWood,
               }}
             >
-              {tabCounts.meus_livros}
+              {tabCounts.todos}
             </span>
           </button>
 
-          {/* Aba 2: E-books (separada, como solicitado) */}
-          <button
-            type="button"
-            onClick={() => onStatusTabChange('ebook')}
-            className="px-3 sm:px-4 py-2 rounded-lg font-serif font-bold text-sm sm:text-base transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
-            style={{
-              backgroundColor: statusTab === 'ebook' ? palette.goldPrimary : 'transparent',
-              color: statusTab === 'ebook' ? palette.textOnGold : palette.textOnWood,
-            }}
-          >
-            <Tablet size={16} />
-            <span>E-books</span>
-            <span
-              className="px-2 py-0.5 rounded-full text-xs font-sans font-bold"
-              style={{
-                backgroundColor: statusTab === 'ebook' ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.18)',
-                color: statusTab === 'ebook' ? palette.textOnGold : palette.textOnWood,
-              }}
-            >
-              {tabCounts.ebook}
-            </span>
-          </button>
-
-          {/* Aba 3: Lidos */}
+          {/* Aba 2: Lidos */}
           <button
             type="button"
             onClick={() => onStatusTabChange('lido')}
-            className="px-3 sm:px-4 py-2 rounded-lg font-serif font-bold text-sm sm:text-base transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+            className="px-3.5 sm:px-4 py-2 rounded-lg font-serif font-bold text-sm sm:text-base transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
             style={{
               backgroundColor: statusTab === 'lido' ? palette.goldPrimary : 'transparent',
               color: statusTab === 'lido' ? palette.textOnGold : palette.textOnWood,
@@ -414,11 +338,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </span>
           </button>
 
-          {/* Aba 4: Quero Ler */}
+          {/* Aba 3: Quero Ler */}
           <button
             type="button"
             onClick={() => onStatusTabChange('quero_ler')}
-            className="px-3 sm:px-4 py-2 rounded-lg font-serif font-bold text-sm sm:text-base transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+            className="px-3.5 sm:px-4 py-2 rounded-lg font-serif font-bold text-sm sm:text-base transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
             style={{
               backgroundColor: statusTab === 'quero_ler' ? palette.goldPrimary : 'transparent',
               color: statusTab === 'quero_ler' ? palette.textOnGold : palette.textOnWood,
@@ -552,6 +476,31 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </span>
           )}
 
+          {/* Chip de Formato (Físicos vs E-books) */}
+          {selectedFormat && (
+            <span
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs shrink-0 font-medium"
+              style={{
+                backgroundColor: selectedFormat === 'ebook' ? '#7c3aed25' : `${palette.goldPrimary}25`,
+                borderColor: selectedFormat === 'ebook' ? '#7c3aed80' : palette.goldPrimary,
+                color: selectedFormat === 'ebook' ? '#7c3aed' : palette.goldPrimary,
+              }}
+            >
+              {selectedFormat === 'ebook' ? <Tablet size={13} /> : <BookOpen size={13} />}
+              <span>Formato: {selectedFormat === 'ebook' ? 'E-books' : 'Físicos'}</span>
+              {onFormatFilterChange && (
+                <button
+                  type="button"
+                  onClick={() => onFormatFilterChange(null)}
+                  className="cursor-pointer hover:opacity-80 p-0.5 ml-1"
+                  title="Remover filtro de formato"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </span>
+          )}
+
           <button
             onClick={onClearFilters}
             className="text-xs font-serif font-bold underline cursor-pointer ml-auto whitespace-nowrap hover:opacity-80 px-2 py-0.5"
@@ -575,17 +524,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 color: palette.goldPrimary,
               }}
             >
-              {statusTab === 'ebook' ? <Tablet size={52} /> : <BookOpen size={52} />}
+              <BookOpen size={52} />
             </div>
 
             <h3
               className="font-serif font-bold text-2xl leading-relaxed mb-2"
               style={{ color: palette.textOnWood }}
             >
-              {statusTab === 'meus_livros'
-                ? 'Nenhum livro físico nesta estante'
-                : statusTab === 'ebook'
-                ? 'Nenhum e-book na estante digital'
+              {statusTab === 'todos' || statusTab === 'meus_livros'
+                ? 'Nenhum livro nesta estante'
                 : statusTab === 'lido'
                 ? 'Nenhum livro lido correspondente aos filtros'
                 : 'Nenhum livro na lista Quero Ler'}
@@ -595,10 +542,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               className="font-serif text-base leading-relaxed mb-6 opacity-85"
               style={{ color: palette.textSecondaryOnWood }}
             >
-              {statusTab === 'meus_livros'
-                ? 'Cadastre os livros que você tem em casa na estante física.'
-                : statusTab === 'ebook'
-                ? 'Gerencie seus livros digitais (Kindle, PDF, ePub) separadamente da estante física.'
+              {statusTab === 'todos' || statusTab === 'meus_livros'
+                ? 'Sua estante reúne seus livros físicos e e-books digitais em um só lugar.'
                 : statusTab === 'lido'
                 ? 'Registre suas leituras finalizadas com avaliação e data.'
                 : 'Adicione livros que você deseja ler em breve.'}
@@ -616,10 +561,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               }}
             >
               <Plus size={22} />
-              {statusTab === 'meus_livros'
-                ? 'Adicionar livro físico'
-                : statusTab === 'ebook'
-                ? 'Adicionar novo e-book'
+              {statusTab === 'todos' || statusTab === 'meus_livros'
+                ? 'Adicionar livro'
                 : statusTab === 'lido'
                 ? 'Adicionar livro lido'
                 : 'Adicionar à lista Quero Ler'}
@@ -828,7 +771,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           color: palette.textOnGold,
           boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
         }}
-        title={statusTab === 'ebook' ? 'Adicionar E-book' : 'Adicionar livro'}
+        title="Adicionar livro à estante"
       >
         <Plus size={32} strokeWidth={2.5} />
       </button>

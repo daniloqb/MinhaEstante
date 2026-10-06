@@ -7,6 +7,7 @@ import {
   GroupByMode,
   SortOption,
   SearchResultBook,
+  BookLoan,
   isBookInTab,
 } from './types/book';
 import { getPalette } from './theme/woodTheme';
@@ -19,11 +20,13 @@ import { NavigationBottomBar, MainTab } from './components/NavigationBottomBar';
 import { QuickActionModal } from './components/QuickActionModal';
 import { FilterModal } from './components/FilterModal';
 import { BookEditModal } from './components/BookEditModal';
+import { LoanModal } from './components/LoanModal';
 import { DuplicateConflictModal } from './components/DuplicateConflictModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 
 // Screens
 import { HomeScreen } from './screens/HomeScreen';
+import { LoansScreen } from './screens/LoansScreen';
 import { BookDetailScreen } from './screens/BookDetailScreen';
 import { SearchScreen } from './screens/SearchScreen';
 import { ManualBookScreen } from './screens/ManualBookScreen';
@@ -47,6 +50,7 @@ export const App: React.FC = () => {
   // Modals & Sheets
   const [editingBookInModal, setEditingBookInModal] = useState<Book | null>(null);
   const [quickActionBook, setQuickActionBook] = useState<Book | null>(null);
+  const [loanModalBook, setLoanModalBook] = useState<Book | null>(null);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [duplicateConflict, setDuplicateConflict] = useState<{
     newBook: SearchResultBook;
@@ -56,8 +60,9 @@ export const App: React.FC = () => {
   // Livro que ficou sem posse e sem status de leitura
   const [orphanConflictBook, setOrphanConflictBook] = useState<Book | null>(null);
 
-  // Shelf Filtering State - Abas independentes: meus_livros | lido | quero_ler
-  const [statusTab, setStatusTab] = useState<ShelfTab>('meus_livros');
+  // Shelf Filtering State - Estante unificada (Todos / Lidos / Quero Ler) e formato
+  const [statusTab, setStatusTab] = useState<ShelfTab>('todos');
+  const [selectedFormat, setSelectedFormat] = useState<'fisico' | 'ebook' | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('TITULO');
   const [textQuery, setTextQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -229,6 +234,43 @@ export const App: React.FC = () => {
     [handleSaveBook, selectedBookDetail]
   );
 
+  // Regra de negócio: Salvar empréstimo para terceiro
+  const handleSaveLoan = useCallback(
+    (book: Book, loan: BookLoan) => {
+      const updated: Book = {
+        ...book,
+        emprestimo: {
+          ...loan,
+          devolvido: false,
+        },
+        dataAtualizacao: Date.now(),
+      };
+      handleSaveBook(updated);
+      setToastMessage(`"${book.titulo}" marcado como emprestado para ${loan.nomePessoa}!`);
+    },
+    [handleSaveBook]
+  );
+
+  // Regra de negócio: Registrar devolução de livro emprestado
+  const handleReturnLoan = useCallback(
+    (book: Book) => {
+      if (!book.emprestimo) return;
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const updated: Book = {
+        ...book,
+        emprestimo: {
+          ...book.emprestimo,
+          devolvido: true,
+          dataDevolucaoEfetiva: todayIso,
+        },
+        dataAtualizacao: Date.now(),
+      };
+      handleSaveBook(updated);
+      setToastMessage(`"${book.titulo}" marcado como devolvido!`);
+    },
+    [handleSaveBook]
+  );
+
   // Search logic
   const performSearch = useCallback(
     async (query: string) => {
@@ -359,8 +401,15 @@ export const App: React.FC = () => {
 
   // Filter & Sort books por consulta de aba e filtros avançados
   const filteredBooks = useMemo(() => {
-    // 1. Consulta da aba ativa
+    // 1. Consulta da aba ativa (Todos / Lidos / Quero Ler)
     let list = books.filter((b) => isBookInTab(b, statusTab));
+
+    // 1.1 Filtro por Formato da Obra (Livros Físicos vs E-books)
+    if (selectedFormat === 'fisico') {
+      list = list.filter((b) => b.formato !== 'ebook');
+    } else if (selectedFormat === 'ebook') {
+      list = list.filter((b) => b.formato === 'ebook');
+    }
 
     // 2. Filtro de texto
     if (textQuery.trim()) {
@@ -422,33 +471,19 @@ export const App: React.FC = () => {
           return 0;
       }
     });
-  }, [books, statusTab, textQuery, selectedYear, selectedGenre, selectedRatingMin, sortBy]);
+  }, [books, statusTab, selectedFormat, textQuery, selectedYear, selectedGenre, selectedRatingMin, sortBy]);
 
   // Estatísticas calculadas
   const stats = useMemo(() => BookStorage.calculateStats(books), [books]);
 
   // Contagens para a barra inferior de navegação
-  const physicalCount = useMemo(
-    () => books.filter((b) => b.tenho_fisico && b.formato !== 'ebook').length,
-    [books]
-  );
-  const ebookCount = useMemo(
-    () => books.filter((b) => b.formato === 'ebook').length,
+  const activeBorrowedCount = useMemo(
+    () => books.filter((b) => b.emprestimo && !b.emprestimo.devolvido).length,
     [books]
   );
 
   const handleBottomTabChange = (tab: MainTab) => {
-    if (tab === 'EBOOKS') {
-      setStatusTab('ebook');
-      setCurrentTab('EBOOKS');
-    } else if (tab === 'ESTANTE') {
-      if (statusTab === 'ebook') {
-        setStatusTab('meus_livros');
-      }
-      setCurrentTab('ESTANTE');
-    } else {
-      setCurrentTab(tab);
-    }
+    setCurrentTab(tab);
   };
 
   // Limpar filtros
@@ -457,6 +492,7 @@ export const App: React.FC = () => {
     setSelectedYear(null);
     setSelectedGenre(null);
     setSelectedRatingMin(null);
+    setSelectedFormat(null);
   };
 
   return (
@@ -591,9 +627,10 @@ export const App: React.FC = () => {
         onSetStatusLeitura={handleSetStatusLeitura}
         onDelete={handleDeleteBook}
         onToggleFormato={handleToggleFormato}
+        onOpenLoanModal={(b) => setLoanModalBook(b)}
       />
 
-      {/* Modal de Filtros com Ano de Leitura */}
+      {/* Modal de Filtros com Formato da Obra e Ano de Leitura */}
       <FilterModal
         palette={palette}
         isOpen={isFilterModalOpen}
@@ -606,7 +643,19 @@ export const App: React.FC = () => {
         onRatingFilterChange={setSelectedRatingMin}
         selectedYear={selectedYear}
         onYearFilterChange={setSelectedYear}
+        selectedFormat={selectedFormat}
+        onFormatFilterChange={setSelectedFormat}
         onClearFilters={clearFilters}
+      />
+
+      {/* Modal de Empréstimo de Livro para Terceiro */}
+      <LoanModal
+        palette={palette}
+        isOpen={Boolean(loanModalBook)}
+        book={loanModalBook}
+        onClose={() => setLoanModalBook(null)}
+        onSaveLoan={handleSaveLoan}
+        onReturnBook={handleReturnLoan}
       />
 
       {/* Modal de Registro & Edição com controles independentes */}
@@ -631,6 +680,8 @@ export const App: React.FC = () => {
           onTogglePosse={() => handleTogglePosse(selectedBookDetail)}
           onSetStatusLeitura={(status) => handleSetStatusLeitura(selectedBookDetail, status)}
           onUpdateBook={handleSaveBook}
+          onOpenLoanModal={(b) => setLoanModalBook(b)}
+          onReturnBook={handleReturnLoan}
         />
       ) : isManualRegisterOpen ? (
         <ManualBookScreen
@@ -646,7 +697,7 @@ export const App: React.FC = () => {
         />
       ) : (
         <>
-          {(currentTab === 'ESTANTE' || currentTab === 'EBOOKS') && (
+          {currentTab === 'ESTANTE' && (
             <HomeScreen
               palette={palette}
               books={filteredBooks}
@@ -654,11 +705,6 @@ export const App: React.FC = () => {
               statusTab={statusTab}
               onStatusTabChange={(tab) => {
                 setStatusTab(tab);
-                if (tab === 'ebook') {
-                  setCurrentTab('EBOOKS');
-                } else {
-                  setCurrentTab('ESTANTE');
-                }
               }}
               viewMode={viewMode}
               onViewModeChange={handleViewModeChange}
@@ -674,11 +720,24 @@ export const App: React.FC = () => {
               onGenreFilterChange={setSelectedGenre}
               selectedRatingMin={selectedRatingMin}
               onRatingFilterChange={setSelectedRatingMin}
+              selectedFormat={selectedFormat}
+              onFormatFilterChange={setSelectedFormat}
               onClearFilters={clearFilters}
               onSelectBook={(book) => setSelectedBookDetail(book)}
               onOpenQuickAction={(book) => setQuickActionBook(book)}
               onOpenFiltersModal={() => setIsFilterModalOpen(true)}
               onAddBookClick={() => setIsManualRegisterOpen(true)}
+            />
+          )}
+
+          {currentTab === 'EMPRESTADOS' && (
+            <LoansScreen
+              palette={palette}
+              books={books}
+              onOpenBookDetail={(book) => setSelectedBookDetail(book)}
+              onOpenLoanModal={(book) => setLoanModalBook(book)}
+              onReturnBook={handleReturnLoan}
+              onGoToShelf={() => setCurrentTab('ESTANTE')}
             />
           )}
 
@@ -738,16 +797,10 @@ export const App: React.FC = () => {
           {/* Barra de Navegação Inferior Clássica */}
           <NavigationBottomBar
             palette={palette}
-            currentTab={
-              currentTab === 'ESTANTE' || currentTab === 'EBOOKS'
-                ? statusTab === 'ebook'
-                  ? 'EBOOKS'
-                  : 'ESTANTE'
-                : currentTab
-            }
+            currentTab={currentTab}
             onTabChange={handleBottomTabChange}
-            physicalCount={physicalCount}
-            ebookCount={ebookCount}
+            totalCount={books.length}
+            borrowedCount={activeBorrowedCount}
           />
         </>
       )}

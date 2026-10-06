@@ -56,8 +56,8 @@ cat << 'XML' > "$WORKDIR/AndroidManifest.xml"
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.aistudio.minhaestante.vbrkxp"
-    android:versionCode="109"
-    android:versionName="3.4">
+    android:versionCode="110"
+    android:versionName="3.5">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
     <uses-permission android:name="android.permission.INTERNET" />

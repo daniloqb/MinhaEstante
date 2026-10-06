@@ -1,23 +1,23 @@
 import React from 'react';
-import { BookOpen, Tablet, Search, BarChart3, Settings } from 'lucide-react';
+import { BookOpen, Handshake, Search, BarChart3, Settings } from 'lucide-react';
 import { WoodPalette } from '../theme/woodTheme';
 
-export type MainTab = 'ESTANTE' | 'EBOOKS' | 'BUSCAR' | 'ESTATISTICAS' | 'CONFIG';
+export type MainTab = 'ESTANTE' | 'EMPRESTADOS' | 'BUSCAR' | 'ESTATISTICAS' | 'CONFIG';
 
 interface NavigationBottomBarProps {
   palette: WoodPalette;
   currentTab: MainTab;
   onTabChange: (tab: MainTab) => void;
-  ebookCount?: number;
-  physicalCount?: number;
+  totalCount?: number;
+  borrowedCount?: number;
 }
 
 export const NavigationBottomBar: React.FC<NavigationBottomBarProps> = ({
   palette,
   currentTab,
   onTabChange,
-  ebookCount,
-  physicalCount,
+  totalCount,
+  borrowedCount,
 }) => {
   const tabs: {
     id: MainTab;
@@ -25,8 +25,8 @@ export const NavigationBottomBar: React.FC<NavigationBottomBarProps> = ({
     icon: React.ComponentType<{ size?: number; className?: string }>;
     count?: number;
   }[] = [
-    { id: 'ESTANTE', label: 'Físicos', icon: BookOpen, count: physicalCount },
-    { id: 'EBOOKS', label: 'E-books', icon: Tablet, count: ebookCount },
+    { id: 'ESTANTE', label: 'Estante', icon: BookOpen, count: totalCount },
+    { id: 'EMPRESTADOS', label: 'Emprestados', icon: Handshake, count: borrowedCount },
     { id: 'BUSCAR', label: 'Buscar', icon: Search },
     { id: 'ESTATISTICAS', label: 'Estatísticas', icon: BarChart3 },
     { id: 'CONFIG', label: 'Config', icon: Settings },

@@ -3,11 +3,22 @@ export type ReadingStatus = 'nenhum' | 'lido' | 'quero_ler';
 // Formato do livro: Físico ou E-book digital
 export type BookFormat = 'fisico' | 'ebook';
 
-// As 4 abas de consulta da estante: Livros Físicos, E-books, Lidos, Quero Ler
-export type ShelfTab = 'meus_livros' | 'ebook' | 'lido' | 'quero_ler';
+// Dados do empréstimo do livro para terceiros
+export interface BookLoan {
+  nomePessoa: string; // Nome de quem pegou emprestado (obrigatório)
+  emailPessoa?: string | null; // E-mail de contato (opcional)
+  dataEmprestimo: string; // Data em que o livro foi emprestado (YYYY-MM-DD)
+  dataDevolucao: string; // Data prevista para devolução (YYYY-MM-DD)
+  dataDevolucaoEfetiva?: string | null; // Data em que foi devolvido (YYYY-MM-DD)
+  devolvido?: boolean; // Se o livro já foi devolvido
+  observacoes?: string | null;
+}
+
+// As abas de consulta da estante unificada: Todos (Físicos + E-books), Lidos, Quero Ler
+export type ShelfTab = 'todos' | 'meus_livros' | 'ebook' | 'lido' | 'quero_ler';
 
 // Legado para compatibilidade retroativa com código existente
-export type BookStatus = 'meus_livros' | 'ebook' | 'lido' | 'quero_ler';
+export type BookStatus = 'todos' | 'meus_livros' | 'ebook' | 'lido' | 'quero_ler';
 
 export type BookOrigin = 'google' | 'openlibrary' | 'brasilapi' | 'manual';
 
@@ -34,6 +45,9 @@ export interface Book {
   // Posse e status de leitura independentes
   tenho_fisico: boolean;
   status_leitura: ReadingStatus;
+
+  // Empréstimo ativo ou histórico de empréstimo
+  emprestimo?: BookLoan | null;
 
   // Campo de compatibilidade opcional
   status?: string;
@@ -84,15 +98,16 @@ export interface EstanteStats {
 
 /**
  * Consulta de pertencimento à aba:
- * - Meus Livros (Físicos): formato !== 'ebook' && tenho_fisico === true
- * - E-books: formato === 'ebook'
+ * - Todos / Estante: inclui tanto livros físicos quanto e-books
  * - Lidos: status_leitura === 'lido'
  * - Quero ler: status_leitura === 'quero_ler'
  */
 export function isBookInTab(book: Book, tab: ShelfTab): boolean {
   switch (tab) {
+    case 'todos':
+      return true; // Exibe todos os livros da estante unificada (físicos e e-books)
     case 'meus_livros':
-      return Boolean(book.tenho_fisico) && book.formato !== 'ebook';
+      return Boolean(book.tenho_fisico);
     case 'ebook':
       return book.formato === 'ebook';
     case 'lido':
@@ -100,14 +115,19 @@ export function isBookInTab(book: Book, tab: ShelfTab): boolean {
     case 'quero_ler':
       return book.status_leitura === 'quero_ler';
     default:
-      return false;
+      return true;
   }
+}
+
+export function isBookBorrowed(book: Book): boolean {
+  return Boolean(book.emprestimo && !book.emprestimo.devolvido);
 }
 
 export function getShelfTabLabel(tab: ShelfTab): string {
   switch (tab) {
+    case 'todos':
     case 'meus_livros':
-      return 'Livros Físicos';
+      return 'Todos';
     case 'ebook':
       return 'E-books';
     case 'lido':

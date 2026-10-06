@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Book, ReadingStatus } from '../types/book';
+import { Book, ReadingStatus, isBookBorrowed } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import {
   BookOpen,
@@ -13,6 +13,7 @@ import {
   Check,
   AlertTriangle,
   Tablet,
+  Handshake,
 } from 'lucide-react';
 
 interface QuickActionModalProps {
@@ -25,6 +26,7 @@ interface QuickActionModalProps {
   onSetStatusLeitura: (book: Book, status: ReadingStatus) => void;
   onDelete: (book: Book) => void;
   onToggleFormato?: (book: Book) => void;
+  onOpenLoanModal?: (book: Book) => void;
 }
 
 export const QuickActionModal: React.FC<QuickActionModalProps> = ({
@@ -37,6 +39,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
   onSetStatusLeitura,
   onDelete,
   onToggleFormato,
+  onOpenLoanModal,
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -209,6 +212,29 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
             <BookOpen size={18} />
             Ver Detalhes, IA & Preços
           </button>
+
+          {/* Emprestar Livro / Gerenciar Empréstimo */}
+          {onOpenLoanModal && (
+            <button
+              onClick={() => {
+                onDismiss();
+                onOpenLoanModal(book);
+              }}
+              className="w-full py-2.5 px-4 rounded-xl font-serif font-bold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+              style={{
+                borderColor: isBookBorrowed(book) ? '#f59e0b' : palette.woodBorder,
+                backgroundColor: isBookBorrowed(book) ? '#f59e0b15' : 'transparent',
+                color: isBookBorrowed(book) ? '#92400e' : palette.textOnPaper,
+              }}
+            >
+              <Handshake size={17} className={isBookBorrowed(book) ? 'text-amber-600' : ''} />
+              <span>
+                {isBookBorrowed(book)
+                  ? `Emprestado (${book.emprestimo?.nomePessoa}) — Gerenciar`
+                  : 'Emprestar Livro'}
+              </span>
+            </button>
+          )}
 
           {/* Trocar entre Físico e E-book */}
           {onToggleFormato && (
