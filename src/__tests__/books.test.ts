@@ -531,6 +531,35 @@ describe('5. Testes da Estante Unificada, Filtro de Formato e Empréstimos', () 
     expect(isBookInTab(livroEbook, 'todos')).toBe(true);
   });
 
+  it('Aba "todos" da estante NÃO exibe livros sem posse física e sem formato ebook', () => {
+    const livroApenasDesejo: Book = {
+      id: 103,
+      origem: 'manual',
+      titulo: 'Livro Apenas Desejo',
+      autores: ['Autor'],
+      tenho_fisico: false,
+      status_leitura: 'quero_ler',
+      generos: [],
+      dataCadastro: 3000,
+      dataAtualizacao: 3000,
+    };
+    const livroLidoFora: Book = {
+      id: 104,
+      origem: 'manual',
+      titulo: 'Livro Lido Fora',
+      autores: ['Autor'],
+      tenho_fisico: false,
+      status_leitura: 'lido',
+      generos: [],
+      dataCadastro: 4000,
+      dataAtualizacao: 4000,
+    };
+    expect(isBookInTab(livroApenasDesejo, 'todos')).toBe(false);
+    expect(isBookInTab(livroLidoFora, 'todos')).toBe(false);
+    expect(isBookInTab(livroFisico, 'todos')).toBe(true);
+    expect(isBookInTab(livroEbook, 'todos')).toBe(true);
+  });
+
   it('Filtro de Formato: filtra entre livros físicos e e-books corretamente', () => {
     const acervo = [livroFisico, livroEbook];
 

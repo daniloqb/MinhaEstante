@@ -105,7 +105,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
           borderColor: palette.goldPrimary,
           color: palette.goldPrimary,
         }}
-        title="Instalar Minha Estante no seu smartphone"
+        title="Instalar BookNook no seu smartphone"
       >
         <Smartphone size={14} />
         <span className="hidden sm:inline">Instalar no Celular</span>

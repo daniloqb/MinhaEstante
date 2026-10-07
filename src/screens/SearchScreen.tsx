@@ -6,6 +6,7 @@ import { WoodShelf } from '../components/WoodShelf';
 import { BookCoverView } from '../components/BookCoverView';
 import { PaperCard } from '../components/PaperCard';
 import { areBooksDuplicate } from '../services/storage';
+import { useI18n } from '../i18n/I18nContext';
 import {
   Search,
   X,
@@ -48,6 +49,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
   onOpenManualRegister,
   userBooks = [],
 }) => {
+  const { t } = useI18n();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const handleCardClick = (item: SearchResultBook) => {
@@ -99,7 +101,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
 
   return (
     <div className="flex flex-col w-full flex-1">
-      <WoodTopAppBar palette={palette} title="Buscar Livros" />
+      <WoodTopAppBar palette={palette} title={t.search.title} />
 
       {/* Modal Leitor de Código de Barras */}
       <BarcodeScannerModal
@@ -117,7 +119,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => onQueryChange(e.target.value)}
-              placeholder="Digite título, autor ou código de barras/ISBN..."
+              placeholder={t.search.inputPlaceholder}
               className="w-full pl-10 pr-20 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 shadow-sm font-sans"
               style={{
                 backgroundColor: palette.paperSurface,

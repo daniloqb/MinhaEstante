@@ -19,6 +19,19 @@ export default defineConfig({
         server.middlewares.use((req, res, next) => {
           const rawUrl = req.url || '';
           const cleanUrl = rawUrl.split('?')[0];
+          if (cleanUrl === '/booknook.aab') {
+            const filePath = path.resolve(process.cwd(), 'booknook.aab');
+            if (fs.existsSync(filePath)) {
+              const stats = fs.statSync(filePath);
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/octet-stream');
+              res.setHeader('Content-Disposition', 'attachment; filename="booknook.aab"');
+              res.setHeader('Content-Length', stats.size);
+              res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+              fs.createReadStream(filePath).pipe(res);
+              return;
+            }
+          }
           if (cleanUrl === '/minha-estante.apk' || cleanUrl === '/app-debug.apk') {
             const fileName = cleanUrl === '/app-debug.apk' ? 'app-debug.apk' : 'minha-estante.apk';
             const filePath = path.resolve(process.cwd(), fileName);
@@ -51,9 +64,9 @@ export default defineConfig({
       ],
       manifest: {
         id: '/',
-        name: 'Minha Estante',
-        short_name: 'MinhaEstante',
-        description: 'Organizador e catálogo pessoal de livros com estante clássica de madeira.',
+        name: 'BookNook',
+        short_name: 'BookNook',
+        description: 'BookNook - Organizador e catálogo pessoal de livros com estante clássica de madeira.',
         theme_color: '#2B1A0F',
         background_color: '#1E1008',
         display: 'standalone',

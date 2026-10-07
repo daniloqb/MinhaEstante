@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Política de Privacidade - BookNook</title>
+  <meta name="description" content="Política de Privacidade do aplicativo BookNook para conformidade com a Google Play Store, LGPD e GDPR." />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#1C120C] text-[#F3E7D3] min-h-screen py-12 px-4 sm:px-6 font-sans antialiased">
+  <div class="max-w-3xl mx-auto bg-[#29170E] p-8 sm:p-12 rounded-2xl border border-[#D4AF37]/30 shadow-2xl">
+    
+    <div class="flex items-center gap-3 pb-6 border-b border-[#D4AF37]/20 mb-8">
+      <a href="index.html" class="text-xs text-[#D4AF37] hover:underline flex items-center gap-1">
+        &larr; Voltar para BookNook
+      </a>
+    </div>
+
+    <h1 class="text-3xl font-serif font-bold text-[#FFF8ED] mb-2">Política de Privacidade do BookNook</h1>
+    <p class="text-xs text-[#D4AF37] mb-8 font-mono">Última atualização: Outubro de 2026</p>
+
+    <div class="space-y-6 text-sm text-[#E7D6C1] leading-relaxed">
+      <section>
+        <h2 class="text-lg font-serif font-bold text-[#D4AF37] mb-2">1. Visão Geral e Compromisso</h2>
+        <p>
+          O aplicativo <strong>BookNook</strong> foi desenvolvido por Danilo Queiroz Barbosa com foco primordial na privacidade, simplicidade e soberania dos dados do usuário. Esta Política de Privacidade descreve como as informações são tratadas ao utilizar o aplicativo móvel Android, PWA ou web.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-serif font-bold text-[#D4AF37] mb-2">2. Dados Coletados e Armazenamento</h2>
+        <p>
+          O <strong>BookNook não coleta, não transmite e não armazena dados pessoais em servidores próprios de terceiros</strong>. Todas as informações cadastradas por você — incluindo catálogo de livros, notas, avaliações, status de leitura e anotações pessoais — ficam guardadas <strong>estritamente na memória local do seu próprio dispositivo</strong> (armazenamento local / IndexedDB).
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-serif font-bold text-[#D4AF37] mb-2">3. Permissões do Aplicativo (Android)</h2>
+        <ul class="list-disc list-inside space-y-2 mt-2">
+          <li>
+            <strong>Câmera (<code class="text-[#D4AF37]">android.permission.CAMERA</code>):</strong> Utilizada unicamente para a funcionalidade de escaneamento de código de barras (ISBN) na contracapa dos livros. Nenhuma foto ou vídeo é salvo ou compartilhado. O processamento da imagem do código de barras ocorre localmente no seu aparelho.
+          </li>
+          <li>
+            <strong>Acesso à Internet (<code class="text-[#D4AF37]">android.permission.INTERNET</code>):</strong> Utilizado para:
+            <ul class="list-circle list-inside ml-4 mt-1 space-y-1">
+              <li>Consultar metadados e capas de livros em APIs públicas abertas (Google Books API e Open Library).</li>
+              <li>Permitir a autenticação e sincronização de backup voluntária no seu próprio Google Drive.</li>
+            </ul>
+          </li>
+          <li>
+            <strong>Armazenamento / Downloads:</strong> Para permitir que você exporte e salve arquivos de backup nos formatos JSON e CSV para a pasta de Downloads do aparelho quando solicitado.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-serif font-bold text-[#D4AF37] mb-2">4. Integração com o Google Drive (Backup Pessoal)</h2>
+        <p>
+          Ao optar voluntariamente por conectar sua conta Google para sincronização de backup, o aplicativo utiliza o fluxo oficial de autorização OAuth do Google com o escopo restrito <strong>drive.file</strong> (<code class="text-[#D4AF37]">https://www.googleapis.com/auth/drive.file</code>).
+        </p>
+        <p class="mt-2">
+          Esse escopo restringe o acesso do aplicativo <strong>única e exclusivamente aos arquivos criados pelo próprio BookNook</strong> (arquivo <code class="text-[#D4AF37]">booknook_backup.json</code>). O BookNook não possui, em hipótese alguma, acesso ou visualização a quaisquer outros arquivos, pastas, fotos ou documentos presentes no seu Google Drive.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-serif font-bold text-[#D4AF37] mb-2">5. Compartilhamento de Dados com Terceiros</h2>
+        <p>
+          Nós <strong>não vendemos, não alugamos, não compartilhamos e não monetizamos</strong> nenhuma informação pessoal ou histórico de leitura dos nossos usuários. O aplicativo é 100% livre de bibliotecas de terceiros para rastreamento de anúncios (sem SDKs de Facebook, Google AdMob, etc.).
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-serif font-bold text-[#D4AF37] mb-2">6. Exclusão de Dados</h2>
+        <p>
+          Como todos os dados ficam sob seu controle direto no seu smartphone:
+        </p>
+        <ul class="list-disc list-inside space-y-1 mt-2">
+          <li>Você pode excluir qualquer livro individualmente a qualquer momento.</li>
+          <li>Você pode limpar todos os dados do catálogo nas Configurações do app através do botão "Limpar Todos os Dados".</li>
+          <li>Ao desinstalar o aplicativo ou limpar os dados do app nas configurações do Android, todos os registros locais são permanentemente eliminados.</li>
+          <li>O arquivo de backup no Google Drive pode ser excluído diretamente por você na sua lixeira do Google Drive a qualquer momento.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-serif font-bold text-[#D4AF37] mb-2">7. Privacidade de Crianças (COPPA e Diretrizes do Google Play)</h2>
+        <p>
+          O BookNook não é direcionado intencionalmente a crianças menores de 13 anos e não coleta informações identificáveis de nenhuma faixa etária.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-lg font-serif font-bold text-[#D4AF37] mb-2">8. Alterações nesta Política</h2>
+        <p>
+          Eventuais melhorias ou alterações nesta Política de Privacidade serão publicadas nesta página com a respectiva data de atualização.
+        </p>
+      </section>
+
+      <section class="pt-4 border-t border-[#D4AF37]/20">
+        <h2 class="text-lg font-serif font-bold text-[#D4AF37] mb-2">9. Contato do Desenvolvedor</h2>
+        <p>
+          Em caso de dúvidas sobre esta política de privacidade ou sobre o aplicativo BookNook, entre em contato diretamente pelo e-mail do desenvolvedor:
+        </p>
+        <p class="mt-2 font-mono text-[#D4AF37]">
+          E-mail: <a href="mailto:daniloqb@gmail.com" class="underline">daniloqb@gmail.com</a>
+        </p>
+      </section>
+    </div>
+
+    <div class="mt-10 pt-6 border-t border-[#D4AF37]/20 text-center text-xs text-stone-400">
+      &copy; 2026 BookNook &middot; Desenvolvido por Danilo Queiroz Barbosa. Todos os direitos reservados.
+    </div>
+
+  </div>
+</body>
+</html>

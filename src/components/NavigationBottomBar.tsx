@@ -1,6 +1,7 @@
 import React from 'react';
 import { BookOpen, Handshake, Search, BarChart3, Settings } from 'lucide-react';
 import { WoodPalette } from '../theme/woodTheme';
+import { useI18n } from '../i18n/I18nContext';
 
 export type MainTab = 'ESTANTE' | 'EMPRESTADOS' | 'BUSCAR' | 'ESTATISTICAS' | 'CONFIG';
 
@@ -19,17 +20,19 @@ export const NavigationBottomBar: React.FC<NavigationBottomBarProps> = ({
   totalCount,
   borrowedCount,
 }) => {
+  const { t } = useI18n();
+
   const tabs: {
     id: MainTab;
     label: string;
     icon: React.ComponentType<{ size?: number; className?: string }>;
     count?: number;
   }[] = [
-    { id: 'ESTANTE', label: 'Estante', icon: BookOpen, count: totalCount },
-    { id: 'EMPRESTADOS', label: 'Emprestados', icon: Handshake, count: borrowedCount },
-    { id: 'BUSCAR', label: 'Buscar', icon: Search },
-    { id: 'ESTATISTICAS', label: 'Estatísticas', icon: BarChart3 },
-    { id: 'CONFIG', label: 'Config', icon: Settings },
+    { id: 'ESTANTE', label: t.nav.bookshelf, icon: BookOpen, count: totalCount },
+    { id: 'EMPRESTADOS', label: t.nav.loans, icon: Handshake, count: borrowedCount },
+    { id: 'BUSCAR', label: t.nav.search, icon: Search },
+    { id: 'ESTATISTICAS', label: t.nav.stats, icon: BarChart3 },
+    { id: 'CONFIG', label: t.nav.settings, icon: Settings },
   ];
 
   return (

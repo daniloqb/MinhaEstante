@@ -1,13 +1,14 @@
 {
   "name": "minha-estante",
   "private": true,
-  "version": "1.0.0",
+  "version": "3.9.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
     "start": "tsx server.ts",
     "build": "tsc && vite build && bash scripts/build_android_apk.sh",
     "build:apk": "bash scripts/build_android_apk.sh",
+    "build:aab": "bash scripts/build_android_aab.sh",
     "test": "vitest run",
     "lint": "tsc --noEmit",
     "preview": "vite preview"

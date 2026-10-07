@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BookNook - Organizador Pessoal de Leituras e Biblioteca de Madeira</title>
+  <meta name="description" content="BookNook é o seu organizador e catálogo pessoal de livros com estante clássica de madeira, leitor de código de barras, backup no Google Drive e estatísticas de leitura." />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="BookNook - Sua Estante de Livros Pessoal" />
+  <meta property="og:description" content="Organize seus livros físicos e e-books com visual clássico de madeira nobre, leitor de ISBN, estatísticas e sincronização no Google Drive." />
+  <meta property="og:image" content="assets/pwa-512x512.png" />
+
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            wood: {
+              950: '#150A05',
+              900: '#221108',
+              800: '#2E1A0F',
+              700: '#3D2214',
+              600: '#4E2C1A',
+            },
+            amber: {
+              gold: '#D4AF37',
+              accent: '#E5A33A',
+              light: '#F5E6CC',
+            },
+            parchment: '#FBF8F1',
+            ink: '#2B1A0F',
+          },
+          fontFamily: {
+            serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            sans: ['"Source Sans 3"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .wood-texture {
+      background-color: #2E1A0F;
+      background-image: radial-gradient(circle at 50% 0%, #3D2214 0%, #2E1A0F 70%, #1A0D07 100%);
+    }
+    .shelf-bar {
+      height: 18px;
+      background: linear-gradient(180deg, #5C3821 0%, #3D2214 45%, #24130A 100%);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.15);
+      border-radius: 4px;
+    }
+    .gold-glow {
+      text-shadow: 0 0 25px rgba(212, 175, 55, 0.35);
+    }
+    .card-paper {
+      background: #FDFBF7;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(212, 175, 55, 0.25);
+    }
+  </style>
+</head>
+<body class="wood-texture text-amber-light font-sans min-h-screen flex flex-col antialiased selection:bg-amber-gold selection:text-wood-950">
+
+  <!-- Navegação Principal -->
+  <header class="sticky top-0 z-50 backdrop-blur-md bg-wood-950/80 border-b border-amber-gold/20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-3 group">
+        <!-- Logo SVG BookNook -->
+        <svg width="44" height="44" viewBox="0 0 512 512" fill="none" class="drop-shadow-md transition-transform group-hover:scale-105">
+          <rect width="512" height="512" rx="128" fill="#1A2D42" />
+          <path d="M 112 372 L 112 250 A 144 144 0 0 1 400 250 L 400 372" stroke="#F4F3ED" stroke-width="26" stroke-linecap="round" />
+          <rect x="76" y="370" width="360" height="30" rx="15" fill="#E5A33A" />
+          <rect x="160" y="218" width="44" height="152" rx="12" fill="#F4F3ED" />
+          <rect x="218" y="242" width="54" height="128" rx="12" fill="none" stroke="#F4F3ED" stroke-width="15" stroke-dasharray="13 9" />
+          <g transform="translate(328 304) rotate(14) translate(-328 -304)">
+            <rect x="306" y="232" width="44" height="142" rx="12" fill="#E5A33A" />
+          </g>
+        </svg>
+        <div>
+          <span class="font-serif font-bold text-2xl text-amber-gold tracking-wide">BookNook</span>
+          <span class="hidden sm:inline-block text-[11px] uppercase tracking-widest text-amber-gold/60 ml-2 font-mono">v3.9</span>
+        </div>
+      </a>
+
+      <nav class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="#recursos" class="text-amber-light/80 hover:text-amber-gold transition-colors">Recursos</a>
+        <a href="#como-funciona" class="text-amber-light/80 hover:text-amber-gold transition-colors">Como Funciona</a>
+        <a href="#privacidade" class="text-amber-light/80 hover:text-amber-gold transition-colors">Privacidade</a>
+        <a href="privacy-policy.html" class="text-amber-light/80 hover:text-amber-gold transition-colors">Política da Play Store</a>
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <a href="#download" class="px-4 py-2 rounded-xl bg-amber-gold text-wood-950 font-serif font-bold text-sm hover:brightness-110 active:scale-95 transition-all shadow-md flex items-center gap-2">
+          <span>Obter o App</span>
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 16l4-4h-3V4h-2v8H8l4 4zm9 4H3v-2h18v2z"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main class="flex-1">
+    <section class="relative pt-12 pb-20 md:pt-20 md:pb-28 overflow-hidden">
+      <!-- Glow dourado no fundo -->
+      <div class="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-amber-gold/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          
+          <div class="lg:col-span-7 flex flex-col gap-6 text-center lg:text-left">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-gold/10 border border-amber-gold/30 text-amber-gold text-xs font-serif font-semibold tracking-wide w-fit mx-auto lg:mx-0">
+              <span class="w-2 h-2 rounded-full bg-amber-accent animate-pulse"></span>
+              Biblioteca Pessoal Clássica em Madeira Nobre
+            </div>
+
+            <h1 class="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight text-[#FFF8ED] gold-glow">
+              Seus livros organizados com o charme de uma estante de verdade.
+            </h1>
+
+            <p class="text-base sm:text-lg text-amber-light/80 leading-relaxed font-sans max-w-2xl mx-auto lg:mx-0">
+              Catálogo visual de livros físicos e digitais com leitor instantâneo de código de barras ISBN, controle detalhado de empréstimos, metas anuais e sincronização segura com o seu próprio Google Drive.
+            </p>
+
+            <!-- Chamada para Ação / Botões -->
+            <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-4">
+              <!-- Botão Google Play (Badge Oficial) -->
+              <a href="#download" class="inline-flex items-center gap-3 px-6 py-3.5 rounded-xl bg-[#000] border border-amber-gold/40 text-white font-sans text-sm font-semibold hover:border-amber-gold transition-all shadow-xl hover:scale-102">
+                <svg class="w-6 h-6 text-amber-gold" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 20.5V3.5C3 2.91 3.34 2.39 3.84 2.15L13.69 12L3.84 21.85C3.34 21.6 3 21.09 3 20.5M16.81 15.12L18.81 14C19.5 13.6 19.5 12.4 18.81 12L16.81 10.88L14.75 12.94L16.81 15.12M14.05 13.65L4.85 22.85C5.07 22.95 5.33 23 5.6 23C6.06 23 6.5 22.79 6.81 22.61L14.05 18.43L14.05 13.65M14.05 10.35L6.81 6.17C6.5 5.99 6.06 5.78 5.6 5.78C5.33 5.78 5.07 5.83 4.85 5.93L14.05 15.14V10.35Z"/>
+                </svg>
+                <div class="text-left">
+                  <div class="text-[10px] uppercase tracking-wider text-stone-400">Disponível para</div>
+                  <div class="text-sm font-bold text-white leading-tight">Google Play Store & Android</div>
+                </div>
+              </a>
+
+              <!-- Botão Abrir Versão Web -->
+              <a href="./" class="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-amber-gold/15 border border-amber-gold/50 text-amber-gold font-serif font-bold text-base hover:bg-amber-gold/25 transition-all">
+                <span>Abrir Web App (PWA)</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+              </a>
+            </div>
+
+            <!-- Badges de Confiança -->
+            <div class="pt-6 border-t border-amber-gold/15 flex flex-wrap items-center justify-center lg:justify-start gap-6 text-xs text-amber-light/60">
+              <span class="flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Sem anúncios ou rastreadores
+              </span>
+              <span class="flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Backup direto no seu Google Drive
+              </span>
+              <span class="flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Funciona 100% Offline
+              </span>
+            </div>
+          </div>
+
+          <!-- Mockup Visual de Prateleira -->
+          <div class="lg:col-span-5 flex justify-center">
+            <div class="relative w-full max-w-[340px] sm:max-w-[380px] p-4 rounded-3xl bg-wood-900 border-4 border-[#5A3822] shadow-2xl">
+              
+              <!-- Topo do Celular simulado -->
+              <div class="w-24 h-4 bg-wood-950 mx-auto rounded-full mb-3 flex items-center justify-center">
+                <div class="w-2 h-2 rounded-full bg-stone-700"></div>
+              </div>
+
+              <!-- Tela Interna da Estante -->
+              <div class="rounded-2xl p-4 bg-wood-800 border border-amber-gold/30 flex flex-col gap-5 min-h-[440px]">
+                
+                <!-- Barra superior do App -->
+                <div class="flex items-center justify-between pb-3 border-b border-amber-gold/20">
+                  <div class="flex items-center gap-2">
+                    <svg width="24" height="24" viewBox="0 0 512 512" fill="none">
+                      <rect width="512" height="512" rx="128" fill="#1A2D42" />
+                      <rect x="76" y="370" width="360" height="30" rx="15" fill="#E5A33A" />
+                      <rect x="160" y="218" width="44" height="152" rx="12" fill="#F4F3ED" />
+                      <rect x="306" y="232" width="44" height="142" rx="12" fill="#E5A33A" />
+                    </svg>
+                    <span class="font-serif font-bold text-base text-amber-gold">Minha Estante</span>
+                  </div>
+                  <span class="text-xs font-mono text-amber-gold/80 px-2 py-0.5 rounded bg-black/30 border border-amber-gold/20">Físicos & E-books</span>
+                </div>
+
+                <!-- Prateleira 1 com livros estilizados -->
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-end justify-center gap-3 px-2 h-36">
+                    <!-- Livro 1 -->
+                    <div class="w-20 h-32 rounded-sm bg-gradient-to-r from-red-950 via-red-900 to-red-800 border-l-4 border-amber-gold/60 shadow-md flex flex-col justify-between p-1.5 text-center transition-transform hover:-translate-y-2">
+                      <span class="text-[8px] font-serif font-bold text-amber-gold uppercase truncate">Dom Casmurro</span>
+                      <span class="text-[6px] text-stone-300">Machado</span>
+                    </div>
+                    <!-- Livro 2 -->
+                    <div class="w-20 h-36 rounded-sm bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-800 border-l-4 border-amber-gold/60 shadow-md flex flex-col justify-between p-1.5 text-center transition-transform hover:-translate-y-2">
+                      <span class="text-[8px] font-serif font-bold text-amber-gold uppercase truncate">Cem Anos Solidão</span>
+                      <span class="text-[6px] text-stone-300">García Márquez</span>
+                    </div>
+                    <!-- Livro 3 -->
+                    <div class="w-20 h-30 rounded-sm bg-gradient-to-r from-amber-950 via-amber-900 to-amber-800 border-l-4 border-amber-gold/60 shadow-md flex flex-col justify-between p-1.5 text-center transition-transform hover:-translate-y-2">
+                      <span class="text-[8px] font-serif font-bold text-amber-gold uppercase truncate">O Nome da Rosa</span>
+                      <span class="text-[6px] text-stone-300">Umberto Eco</span>
+                    </div>
+                  </div>
+                  <!-- Prateleira de madeira sob os livros -->
+                  <div class="shelf-bar"></div>
+                </div>
+
+                <!-- Prateleira 2 com livros estilizados -->
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-end justify-center gap-3 px-2 h-36">
+                    <!-- Livro 4 -->
+                    <div class="w-20 h-30 rounded-sm bg-gradient-to-r from-indigo-950 via-indigo-900 to-indigo-800 border-l-4 border-amber-gold/60 shadow-md flex flex-col justify-between p-1.5 text-center transition-transform hover:-translate-y-2">
+                      <span class="text-[8px] font-serif font-bold text-amber-gold uppercase truncate">A Metamorfose</span>
+                      <span class="text-[6px] text-stone-300">Kafka</span>
+                    </div>
+                    <!-- Livro 5 -->
+                    <div class="w-20 h-34 rounded-sm bg-gradient-to-r from-stone-900 via-stone-800 to-stone-700 border-l-4 border-amber-gold/60 shadow-md flex flex-col justify-between p-1.5 text-center transition-transform hover:-translate-y-2">
+                      <span class="text-[8px] font-serif font-bold text-amber-gold uppercase truncate">Grande Sertão</span>
+                      <span class="text-[6px] text-stone-300">Guimarães Rosa</span>
+                    </div>
+                    <!-- Livro 6 -->
+                    <div class="w-20 h-32 rounded-sm bg-gradient-to-r from-purple-950 via-purple-900 to-purple-800 border-l-4 border-amber-gold/60 shadow-md flex flex-col justify-between p-1.5 text-center transition-transform hover:-translate-y-2">
+                      <span class="text-[8px] font-serif font-bold text-amber-gold uppercase truncate">Dorian Gray</span>
+                      <span class="text-[6px] text-stone-300">Oscar Wilde</span>
+                    </div>
+                  </div>
+                  <div class="shelf-bar"></div>
+                </div>
+
+                <!-- Rodapé de navegação móvel -->
+                <div class="mt-auto pt-2 flex items-center justify-around border-t border-amber-gold/20 text-[10px] text-amber-gold/70">
+                  <span class="text-amber-gold font-bold">Estante</span>
+                  <span>Emprestados</span>
+                  <span>Buscar</span>
+                  <span>Estatísticas</span>
+                  <span>Config</span>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Recursos Principais -->
+    <section id="recursos" class="py-20 bg-wood-950/60 border-y border-amber-gold/20">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        
+        <div class="text-center max-w-2xl mx-auto mb-16">
+          <span class="text-xs uppercase tracking-widest text-amber-gold font-mono">Diferenciais Exclusivos</span>
+          <h2 class="font-serif text-3xl sm:text-4xl font-bold text-[#FFF8ED] mt-2">
+            Tudo o que um leitor apaixonado precisa
+          </h2>
+          <p class="text-amber-light/70 text-sm sm:text-base mt-3">
+            Projetado de leitores para leitores, unindo estética clássica de carvalho nobre com ferramentas modernas.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          
+          <!-- Card 1 -->
+          <div class="card-paper p-6 rounded-2xl flex flex-col gap-4 text-ink">
+            <div class="w-12 h-12 rounded-xl bg-amber-accent/20 border border-amber-accent/40 flex items-center justify-center text-amber-800">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            </div>
+            <h3 class="font-serif font-bold text-xl text-wood-950">Estante Visual de Madeira</h3>
+            <p class="text-sm text-stone-700 leading-relaxed">
+              Visualize suas capas padronizadas em proporção 2:3 organizadas em prateleiras de carvalho ou nogueira escura, com lombadas fiéis e sensação de biblioteca clássica.
+            </p>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="card-paper p-6 rounded-2xl flex flex-col gap-4 text-ink">
+            <div class="w-12 h-12 rounded-xl bg-amber-accent/20 border border-amber-accent/40 flex items-center justify-center text-amber-800">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+            </div>
+            <h3 class="font-serif font-bold text-xl text-wood-950">Scanner de Código de Barras</h3>
+            <p class="text-sm text-stone-700 leading-relaxed">
+              Aponte a câmera do celular para o código de barras (ISBN) de qualquer livro e preencha automaticamente título, autores, editora, ano, número de páginas e capa.
+            </p>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="card-paper p-6 rounded-2xl flex flex-col gap-4 text-ink">
+            <div class="w-12 h-12 rounded-xl bg-amber-accent/20 border border-amber-accent/40 flex items-center justify-center text-amber-800">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            </div>
+            <h3 class="font-serif font-bold text-xl text-wood-950">Controle de Livros Emprestados</h3>
+            <p class="text-sm text-stone-700 leading-relaxed">
+              Nunca mais perca um livro emprestado. Saiba exatamente quem pegou cada obra, o número de telefone do amigo, a data do empréstimo e a previsão de devolução.
+            </p>
+          </div>
+
+          <!-- Card 4 -->
+          <div class="card-paper p-6 rounded-2xl flex flex-col gap-4 text-ink">
+            <div class="w-12 h-12 rounded-xl bg-amber-accent/20 border border-amber-accent/40 flex items-center justify-center text-amber-800">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            </div>
+            <h3 class="font-serif font-bold text-xl text-wood-950">Estatísticas & Histórico</h3>
+            <p class="text-sm text-stone-700 leading-relaxed">
+              Acompanhe seu ritmo de leitura com gráficos de páginas lidas por mês, total de livros por ano, autores mais lidos, distribuição de notas de 1 a 10 e gêneros favoritos.
+            </p>
+          </div>
+
+          <!-- Card 5 -->
+          <div class="card-paper p-6 rounded-2xl flex flex-col gap-4 text-ink">
+            <div class="w-12 h-12 rounded-xl bg-amber-accent/20 border border-amber-accent/40 flex items-center justify-center text-amber-800">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7zm0 5h16"/></svg>
+            </div>
+            <h3 class="font-serif font-bold text-xl text-wood-950">Sincronização no Google Drive</h3>
+            <p class="text-sm text-stone-700 leading-relaxed">
+              Seus dados pertencem exclusivamente a você. Faça backup de toda a sua estante com 1 clique no Google Drive pessoal, ou exporte e importe em JSON ou CSV para o Excel.
+            </p>
+          </div>
+
+          <!-- Card 6 -->
+          <div class="card-paper p-6 rounded-2xl flex flex-col gap-4 text-ink">
+            <div class="w-12 h-12 rounded-xl bg-amber-accent/20 border border-amber-accent/40 flex items-center justify-center text-amber-800">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
+            </div>
+            <h3 class="font-serif font-bold text-xl text-wood-950">Internacionalização Completa</h3>
+            <p class="text-sm text-stone-700 leading-relaxed">
+              Mude o país e idioma instantaneamente nas configurações com suporte a Português do Brasil, Inglês, Espanhol, Francês, Alemão e Italiano.
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Como Funciona -->
+    <section id="como-funciona" class="py-20 max-w-6xl mx-auto px-4 sm:px-6">
+      <div class="text-center max-w-2xl mx-auto mb-16">
+        <span class="text-xs uppercase tracking-widest text-amber-gold font-mono">Passo a Passo Simples</span>
+        <h2 class="font-serif text-3xl sm:text-4xl font-bold text-[#FFF8ED] mt-2">
+          Organize sua biblioteca em 3 etapas
+        </h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+        <div class="flex flex-col items-center gap-4">
+          <div class="w-14 h-14 rounded-full bg-amber-gold/20 border-2 border-amber-gold text-amber-gold font-serif font-bold text-2xl flex items-center justify-center shadow-lg">1</div>
+          <h3 class="font-serif font-bold text-xl text-amber-gold">Escaneie ou Busque</h3>
+          <p class="text-sm text-amber-light/75 leading-relaxed">
+            Use a câmera para ler o código ISBN do livro ou digite o título para carregar automaticamente a ficha técnica completa.
+          </p>
+        </div>
+
+        <div class="flex flex-col items-center gap-4">
+          <div class="w-14 h-14 rounded-full bg-amber-gold/20 border-2 border-amber-gold text-amber-gold font-serif font-bold text-2xl flex items-center justify-center shadow-lg">2</div>
+          <h3 class="font-serif font-bold text-xl text-amber-gold">Classifique na Estante</h3>
+          <p class="text-sm text-amber-light/75 leading-relaxed">
+            Defina se tem o exemplar físico ou e-book, marque o status (Lendo, Lido, Quero Ler), adicione notas e suas observações pessoais.
+          </p>
+        </div>
+
+        <div class="flex flex-col items-center gap-4">
+          <div class="w-14 h-14 rounded-full bg-amber-gold/20 border-2 border-amber-gold text-amber-gold font-serif font-bold text-2xl flex items-center justify-center shadow-lg">3</div>
+          <h3 class="font-serif font-bold text-xl text-amber-gold">Sincronize com o Drive</h3>
+          <p class="text-sm text-amber-light/75 leading-relaxed">
+            Mantenha seu acervo 100% seguro contra perdas ou trocas de aparelho conectando seu Google Drive com apenas um toque.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Seção de Download e Instalação -->
+    <section id="download" class="py-20 bg-wood-900 border-t border-amber-gold/30">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+        <div class="inline-block p-3 rounded-2xl bg-amber-gold/15 mb-4">
+          <svg width="48" height="48" viewBox="0 0 512 512" fill="none">
+            <rect width="512" height="512" rx="128" fill="#1A2D42" />
+            <path d="M 112 372 L 112 250 A 144 144 0 0 1 400 250 L 400 372" stroke="#F4F3ED" stroke-width="26" stroke-linecap="round" />
+            <rect x="76" y="370" width="360" height="30" rx="15" fill="#E5A33A" />
+            <rect x="160" y="218" width="44" height="152" rx="12" fill="#F4F3ED" />
+            <rect x="218" y="242" width="54" height="128" rx="12" fill="none" stroke="#F4F3ED" stroke-width="15" stroke-dasharray="13 9" />
+            <g transform="translate(328 304) rotate(14) translate(-328 -304)">
+              <rect x="306" y="232" width="44" height="142" rx="12" fill="#E5A33A" />
+            </g>
+          </svg>
+        </div>
+
+        <h2 class="font-serif text-3xl sm:text-4xl font-bold text-[#FFF8ED]">
+          Comece agora a organizar seu BookNook
+        </h2>
+        <p class="text-amber-light/80 text-base max-w-xl mx-auto mt-3">
+          Disponível diretamente pela web como PWA instalável e em publicação para a Google Play Store (pacote oficial .aab).
+        </p>
+
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+          <a href="./" class="px-8 py-4 rounded-xl bg-amber-gold text-wood-950 font-serif font-bold text-lg hover:brightness-110 active:scale-95 transition-all shadow-xl">
+            Acessar BookNook Web
+          </a>
+          <a href="privacy-policy.html" class="px-8 py-4 rounded-xl bg-wood-950 border border-amber-gold/40 text-amber-gold font-serif font-bold text-lg hover:bg-wood-800 transition-all">
+            Política de Privacidade
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Resumo de Privacidade -->
+    <section id="privacidade" class="py-16 max-w-4xl mx-auto px-4 sm:px-6 text-xs text-amber-light/70 leading-relaxed">
+      <div class="p-6 rounded-2xl bg-black/40 border border-amber-gold/20 flex flex-col gap-3">
+        <h4 class="font-serif font-bold text-base text-amber-gold">Privacidade em Primeiro Lugar (Google Play & LGPD/GDPR)</h4>
+        <p>
+          O aplicativo <strong>BookNook</strong> foi construído respeitando integralmente a sua privacidade:
+        </p>
+        <ul class="list-disc list-inside space-y-1">
+          <li><strong>Zero coleta de dados pessoais em servidores remotos:</strong> Seus livros, anotações e histórico ficam armazenados no seu dispositivo (armazenamento local).</li>
+          <li><strong>Google Drive Seguro:</strong> A autorização OAuth solicita apenas o escopo mínimo restrito (<code class="text-amber-gold">drive.file</code>), permitindo que o app crie e edite unicamente o arquivo de backup pessoal que ele próprio criou. O app não tem acesso aos seus outros arquivos do Google Drive.</li>
+          <li><strong>Sem propagandas:</strong> O BookNook não utiliza redes de anúncio ou SDKs de monetização.</li>
+          <li><strong>Permissões sob demanda:</strong> O acesso à câmera é solicitado somente quando você decide escanear o código de barras de um livro.</li>
+        </ul>
+        <div class="pt-2">
+          <a href="privacy-policy.html" class="text-amber-gold underline hover:opacity-80 font-semibold">
+            Clique aqui para ler a Política de Privacidade Completa para a Google Play Store &rarr;
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Rodapé -->
+  <footer class="bg-wood-950 border-t border-amber-gold/20 py-10 text-center text-xs text-amber-light/60">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <span class="font-serif font-bold text-amber-gold text-base">BookNook</span>
+        <span>— Feito com carinho para leitores</span>
+      </div>
+      <div class="flex items-center gap-6">
+        <a href="privacy-policy.html" class="hover:text-amber-gold transition-colors">Política de Privacidade</a>
+        <a href="terms.html" class="hover:text-amber-gold transition-colors">Termos de Uso</a>
+        <a href="mailto:daniloqb@gmail.com" class="hover:text-amber-gold transition-colors">Contato de Suporte</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

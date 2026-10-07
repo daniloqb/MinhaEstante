@@ -137,8 +137,22 @@ app.post('/api/fetch-image', async (req, res) => {
   }
 });
 
-// Servir arquivos APK diretamente
-app.get(['/minha-estante.apk', '/app-debug.apk'], (req, res) => {
+// Servir arquivos APK e AAB diretamente
+app.get(['/booknook.aab'], (_req, res) => {
+  const filePath = path.resolve(process.cwd(), 'booknook.aab');
+  if (fs.existsSync(filePath)) {
+    const stats = fs.statSync(filePath);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', 'attachment; filename="booknook.aab"');
+    res.setHeader('Content-Length', stats.size);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    fs.createReadStream(filePath).pipe(res);
+  } else {
+    res.status(404).send('Arquivo .AAB ainda não gerado ou não encontrado.');
+  }
+});
+
+app.get(['/minha-estante.apk', '/app-debug.apk', '/booknook.apk'], (req, res) => {
   const isDebug = req.path.includes('app-debug');
   const fileName = isDebug ? 'app-debug.apk' : 'minha-estante.apk';
   const filePath = path.resolve(process.cwd(), fileName);

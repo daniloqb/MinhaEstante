@@ -65,7 +65,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
   const handleDownloadApk = (e: React.MouseEvent) => {
     e.preventDefault();
     const link = document.createElement('a');
-    link.href = '/minha-estante.apk?v=' + Date.now();
+    link.href = '/minha-estante.apk?v=3.9.' + Date.now();
     link.download = 'minha-estante.apk';
     document.body.appendChild(link);
     link.click();
@@ -139,7 +139,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
               <div>
                 <p className="font-serif font-bold text-sm">Aplicativo já instalado!</p>
                 <p className="text-xs">
-                  O Minha Estante já está pronto na sua tela inicial como um app nativo.
+                  O BookNook já está pronto na sua tela inicial como um app nativo.
                 </p>
               </div>
             </div>
@@ -318,7 +318,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
                 <span className="text-xl">🤖</span>
                 <div>
                   <h4 className="font-serif font-bold text-xs" style={{ color: palette.textOnPaper }}>
-                    Arquivo .APK Android (v2.1)
+                    Arquivo .APK Android (v3.9)
                   </h4>
                   <p className="text-[11px]" style={{ color: palette.textSecondaryOnPaper }}>
                     Pacote nativo assinado na raiz

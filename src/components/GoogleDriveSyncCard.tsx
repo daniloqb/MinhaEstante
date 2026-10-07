@@ -383,7 +383,7 @@ export const GoogleDriveSyncCard: React.FC<GoogleDriveSyncCardProps> = ({
                 >
                   <AlertCircle size={15} className="text-amber-600 shrink-0" />
                   <span>
-                    <strong>Importante:</strong> Ao abrir a tela do Google, <u>marque a caixinha de autorização</u> para permitir que o Minha Estante crie o arquivo de backup no seu Drive.
+                    <strong>Importante:</strong> Ao abrir a tela do Google, <u>marque a caixinha de autorização</u> para permitir que o BookNook crie o arquivo de backup no seu Drive.
                   </span>
                 </div>
 

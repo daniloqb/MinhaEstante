@@ -40,14 +40,14 @@ sed -i 's/<script type="module" src="/<script defer src="/g' "$WORKDIR/assets/in
 # 4. Copiar e redimensionar ícones
 echo "3. Gerando ícones nativos..."
 if [ -f "$APP_ROOT/public/pwa-192x192.png" ]; then
-    convert "$APP_ROOT/public/pwa-192x192.png" -resize 192x192 "$WORKDIR/res/drawable/ic_launcher.png"
+    cp "$APP_ROOT/public/pwa-192x192.png" "$WORKDIR/res/drawable/ic_launcher.png"
 fi
 
 # 5. Strings e Recursos
 cat << 'XML' > "$WORKDIR/res/values/strings.xml"
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Minha Estante</string>
+    <string name="app_name">maShelf</string>
 </resources>
 XML
 
@@ -56,8 +56,8 @@ cat << 'XML' > "$WORKDIR/AndroidManifest.xml"
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.aistudio.minhaestante.vbrkxp"
-    android:versionCode="110"
-    android:versionName="3.5">
+    android:versionCode="150"
+    android:versionName="3.9">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
     <uses-permission android:name="android.permission.INTERNET" />

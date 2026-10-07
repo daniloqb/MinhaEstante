@@ -1,120 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <!-- Gradiente de Fundo Madeira Escura / Nogueira Nobre -->
-    <linearGradient id="woodBg" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#3A1F10" />
-      <stop offset="50%" stop-color="#24130A" />
-      <stop offset="100%" stop-color="#180C06" />
-    </linearGradient>
+<svg viewBox="0 0 512 512" width="512" height="512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fundo Squircle azul-marinho com cantos externos transparentes -->
+  <rect width="512" height="512" rx="128" fill="#1C2938" />
 
-    <!-- Gradiente Dourado Real -->
-    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#F9E4B7" />
-      <stop offset="35%" stop-color="#D4AF37" />
-      <stop offset="70%" stop-color="#AA820A" />
-      <stop offset="100%" stop-color="#E5C158" />
-    </linearGradient>
+  <!-- Arco branco superior (estante arqueada) -->
+  <path
+    d="M 112 372 L 112 250 A 144 144 0 0 1 400 250 L 400 372"
+    stroke="#F4F3ED"
+    stroke-width="26"
+    stroke-linecap="round"
+  />
 
-    <!-- Gradiente da Prateleira de Madeira 3D -->
-    <linearGradient id="shelfTop" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#5C3317" />
-      <stop offset="50%" stop-color="#7A4522" />
-      <stop offset="100%" stop-color="#4E2911" />
-    </linearGradient>
+  <!-- Prateleira inferior âmbar -->
+  <rect x="76" y="370" width="360" height="30" rx="15" fill="#E5A33A" />
 
-    <linearGradient id="shelfFront" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#42220D" />
-      <stop offset="40%" stop-color="#321908" />
-      <stop offset="100%" stop-color="#1F0E04" />
-    </linearGradient>
+  <!-- Livro 1 (Esquerdo - Branco sólido) -->
+  <rect x="160" y="218" width="44" height="152" rx="12" fill="#F4F3ED" />
 
-    <!-- Sombra dos Livros -->
-    <filter id="bookShadow" x="-10%" y="-10%" width="120%" height="130%">
-      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.6"/>
-    </filter>
-  </defs>
+  <!-- Livro 2 (Central - Branco tracejado vazado) -->
+  <rect
+    x="218"
+    y="242"
+    width="54"
+    height="128"
+    rx="12"
+    fill="none"
+    stroke="#F4F3ED"
+    stroke-width="15"
+    stroke-dasharray="13 9"
+  />
 
-  <!-- Fundo com cantos arredondados -->
-  <rect width="512" height="512" rx="108" fill="url(#woodBg)" />
-
-  <!-- Moldura de Filete Dourado Clássico -->
-  <rect x="24" y="24" width="464" height="464" rx="88" fill="none" stroke="url(#goldGradient)" stroke-width="4" opacity="0.85" />
-  <rect x="36" y="36" width="440" height="440" rx="76" fill="none" stroke="url(#goldGradient)" stroke-width="1.5" opacity="0.4" stroke-dasharray="8 6" />
-
-  <!-- Cantoneiras Ornamentais Douradas -->
-  <g stroke="url(#goldGradient)" stroke-width="3" fill="none" opacity="0.75">
-    <path d="M 50 80 L 80 50" />
-    <path d="M 462 80 L 432 50" />
-    <path d="M 50 432 L 80 462" />
-    <path d="M 462 432 L 432 462" />
+  <!-- Livro 3 (Direito - Âmbar inclinado) -->
+  <g transform="translate(328 304) rotate(14) translate(-328 -304)">
+    <rect x="306" y="232" width="44" height="142" rx="12" fill="#E5A33A" />
   </g>
-
-  <!-- Conjunto de Livros na Estante -->
-  <g filter="url(#bookShadow)">
-    <!-- Livro 1: Borgonha Profundo (Inclinado) -->
-    <g transform="translate(90, 160) rotate(-10)">
-      <rect x="0" y="0" width="56" height="200" rx="6" fill="#581825" stroke="#7A2233" stroke-width="2" />
-      <!-- Nervuras douradas na lombada -->
-      <line x1="6" y1="35" x2="50" y2="35" stroke="url(#goldGradient)" stroke-width="3" />
-      <line x1="6" y1="41" x2="50" y2="41" stroke="url(#goldGradient)" stroke-width="1.5" />
-      <line x1="6" y1="165" x2="50" y2="165" stroke="url(#goldGradient)" stroke-width="3" />
-      <line x1="6" y1="171" x2="50" y2="171" stroke="url(#goldGradient)" stroke-width="1.5" />
-      <!-- Selo central -->
-      <circle cx="28" cy="100" r="10" fill="url(#goldGradient)" opacity="0.85" />
-    </g>
-
-    <!-- Livro 2: Verde Floresta Clássico (Alto) -->
-    <g transform="translate(170, 120)">
-      <rect x="0" y="0" width="62" height="240" rx="6" fill="#1C3823" stroke="#2D5A38" stroke-width="2" />
-      <line x1="6" y1="30" x2="56" y2="30" stroke="url(#goldGradient)" stroke-width="3" />
-      <line x1="6" y1="36" x2="56" y2="36" stroke="url(#goldGradient)" stroke-width="1" />
-      <line x1="6" y1="205" x2="56" y2="205" stroke="url(#goldGradient)" stroke-width="3" />
-      <line x1="6" y1="211" x2="56" y2="211" stroke="url(#goldGradient)" stroke-width="1" />
-      <!-- Fita Marcadora Dourada saindo pelo topo -->
-      <polygon points="26,0 36,0 36,-24 31,-16 26,-24" fill="url(#goldGradient)" />
-      <!-- Letras ornamentais na lombada -->
-      <rect x="18" y="70" width="26" height="60" rx="2" fill="none" stroke="url(#goldGradient)" stroke-width="1.5" opacity="0.6" />
-    </g>
-
-    <!-- Livro 3: Azul Meia-Noite Real -->
-    <g transform="translate(245, 145)">
-      <rect x="0" y="0" width="58" height="215" rx="6" fill="#1E2F44" stroke="#2B4360" stroke-width="2" />
-      <line x1="6" y1="28" x2="52" y2="28" stroke="url(#goldGradient)" stroke-width="3" />
-      <line x1="6" y1="185" x2="52" y2="185" stroke="url(#goldGradient)" stroke-width="3" />
-      <circle cx="29" cy="90" r="8" fill="none" stroke="url(#goldGradient)" stroke-width="2" />
-      <polygon points="29,85 33,93 25,93" fill="url(#goldGradient)" />
-    </g>
-
-    <!-- Livro 4: Couro Ocre / Terracota -->
-    <g transform="translate(315, 175)">
-      <rect x="0" y="0" width="54" height="185" rx="6" fill="#753C19" stroke="#944E22" stroke-width="2" />
-      <line x1="6" y1="25" x2="48" y2="25" stroke="url(#goldGradient)" stroke-width="2.5" />
-      <line x1="6" y1="155" x2="48" y2="155" stroke="url(#goldGradient)" stroke-width="2.5" />
-      <circle cx="27" cy="85" r="9" fill="url(#goldGradient)" opacity="0.75" />
-    </g>
-
-    <!-- Livro 5: Ouro Velho / Pergaminho Encadernado -->
-    <g transform="translate(380, 195)">
-      <rect x="0" y="0" width="46" height="165" rx="6" fill="#3D291C" stroke="#5C3E2A" stroke-width="2" />
-      <line x1="5" y1="22" x2="41" y2="22" stroke="url(#goldGradient)" stroke-width="2" />
-      <line x1="5" y1="140" x2="41" y2="140" stroke="url(#goldGradient)" stroke-width="2" />
-    </g>
-  </g>
-
-  <!-- Prateleira de Madeira Maciça 3D -->
-  <!-- Topo da Prateleira com reflexo de luz -->
-  <rect x="45" y="358" width="422" height="14" rx="2" fill="url(#shelfTop)" />
-  <line x1="45" y1="358" x2="467" y2="358" stroke="url(#goldGradient)" stroke-width="2" opacity="0.8" />
-
-  <!-- Frente da Prateleira com moldura esculpida -->
-  <rect x="45" y="372" width="422" height="42" rx="4" fill="url(#shelfFront)" stroke="#221107" stroke-width="1.5" />
-  <line x1="55" y1="390" x2="457" y2="390" stroke="url(#goldGradient)" stroke-width="1" opacity="0.45" />
-
-  <!-- Placa de Latão Dourada "MINHA ESTANTE" -->
-  <rect x="156" y="380" width="200" height="26" rx="4" fill="url(#goldGradient)" stroke="#8A6608" stroke-width="1" />
-  <circle cx="166" cy="393" r="2.5" fill="#5A3A05" />
-  <circle cx="346" cy="393" r="2.5" fill="#5A3A05" />
-  <text x="256" y="398" font-family="serif" font-weight="900" font-size="13" letter-spacing="3" fill="#2C1A06" text-anchor="middle">
-    MINHA ESTANTE
-  </text>
 </svg>

@@ -3,6 +3,7 @@ import { EstanteStats } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
 import { PaperCard } from '../components/PaperCard';
+import { useI18n } from '../i18n/I18nContext';
 
 interface StatsScreenProps {
   palette: WoodPalette;
@@ -10,6 +11,7 @@ interface StatsScreenProps {
 }
 
 export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
+  const { t } = useI18n();
   const currentYear = new Date().getFullYear();
 
   const yearEntries = Object.entries(stats.lidosPorAno)
@@ -23,7 +25,7 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
 
   return (
     <div className="flex flex-col w-full flex-1">
-      <WoodTopAppBar palette={palette} title="Estatísticas de Leitura" />
+      <WoodTopAppBar palette={palette} title={t.stats.title} />
 
       <div className="flex-1 w-full max-w-2xl mx-auto px-4 py-4 flex flex-col gap-4 pb-12">
         {/* Distribuição do Acervo: Físicos | E-books | Lidos | Quero Ler */}

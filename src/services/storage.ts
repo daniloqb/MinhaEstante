@@ -10,127 +10,7 @@ const STORAGE_KEY_API_KEY = 'minha_estante_google_api_key';
 
 export const CURRENT_SCHEMA_VERSION = 2;
 
-export const INITIAL_SEED_BOOKS: Book[] = [
-  {
-    id: 1,
-    titulo: 'Dom Casmurro',
-    subtitulo: 'Edição comemorativa',
-    autores: ['Machado de Assis'],
-    editora: 'Garnier',
-    anoPublicacao: 1899,
-    paginas: 256,
-    isbn13: '9788535902778',
-    generos: ['Literatura Brasileira', 'Romance', 'Clássico'],
-    descricao: "Uma das maiores obras-primas da literatura em língua portuguesa. Narra a história de Bento Santiago e sua obsessão ciumenta por Capitu, os 'olhos de ressaca'.",
-    capaUrl: 'https://covers.openlibrary.org/b/isbn/9788535902778-M.jpg',
-    tenho_fisico: true,
-    status_leitura: 'nenhum',
-    observacoes: 'Edição física de capa dura comprada em sebo.',
-    origem: 'manual',
-    dataCadastro: Date.now() - 1000000,
-    dataAtualizacao: Date.now() - 1000000,
-  },
-  {
-    id: 2,
-    titulo: 'Cem Anos de Solidão',
-    subtitulo: null,
-    autores: ['Gabriel García Márquez'],
-    editora: 'Record',
-    anoPublicacao: 1967,
-    paginas: 448,
-    isbn13: '9788501012074',
-    generos: ['Realismo Mágico', 'Ficção', 'Clássico Latino'],
-    descricao: 'A épica saga da família Buendía na mítica aldeia de Macondo, tecida entre milagres, guerras e solidão.',
-    capaUrl: 'https://covers.openlibrary.org/b/isbn/9788501012074-M.jpg',
-    tenho_fisico: true,
-    status_leitura: 'quero_ler',
-    observacoes: 'Comprei e vou ler em breve.',
-    origem: 'manual',
-    dataCadastro: Date.now() - 2000000,
-    dataAtualizacao: Date.now() - 2000000,
-  },
-  {
-    id: 3,
-    titulo: 'O Nome da Rosa',
-    subtitulo: null,
-    autores: ['Umberto Eco'],
-    editora: 'Record',
-    anoPublicacao: 1980,
-    paginas: 544,
-    isbn13: '9788501017369',
-    generos: ['Mistério', 'Ficção Histórica', 'Filosofia'],
-    descricao: 'Durante a última semana de novembro de 1327, em um mosteiro franciscano no norte da Itália, o frade Guilherme de Baskerville investiga assassinatos misteriosos ligados a uma biblioteca labiríntica.',
-    capaUrl: 'https://covers.openlibrary.org/b/isbn/9788501017369-M.jpg',
-    tenho_fisico: true,
-    status_leitura: 'lido',
-    mesLeitura: 11,
-    anoLeitura: 2025,
-    nota: 9,
-    observacoes: 'Li um livro que é meu. A descrição da biblioteca clássica é deslumbrante.',
-    origem: 'manual',
-    dataCadastro: Date.now() - 3000000,
-    dataAtualizacao: Date.now() - 3000000,
-  },
-  {
-    id: 4,
-    titulo: 'A Metamorfose',
-    subtitulo: null,
-    autores: ['Franz Kafka'],
-    editora: 'Companhia das Letras',
-    anoPublicacao: 1915,
-    paginas: 104,
-    isbn13: '9788571646858',
-    generos: ['Ficção', 'Existencialismo', 'Clássico'],
-    descricao: 'Gregor Samsa acorda certa manhã transformado em um inseto monstruoso.',
-    capaUrl: 'https://covers.openlibrary.org/b/isbn/9788571646858-M.jpg',
-    formato: 'ebook',
-    tenho_fisico: false,
-    status_leitura: 'lido',
-    mesLeitura: 8,
-    anoLeitura: 2025,
-    nota: 9,
-    observacoes: 'Li um exemplar emprestado da biblioteca pública.',
-    origem: 'manual',
-    dataCadastro: Date.now() - 4000000,
-    dataAtualizacao: Date.now() - 4000000,
-  },
-  {
-    id: 5,
-    titulo: 'Grande Sertão: Veredas',
-    subtitulo: null,
-    autores: ['João Guimarães Rosa'],
-    editora: 'Companhia das Letras',
-    anoPublicacao: 1956,
-    paginas: 624,
-    isbn13: '9788535931983',
-    generos: ['Literatura Brasileira', 'Romance'],
-    descricao: 'O monólogo de Riobaldo, ex-jagunço que relembra sua vida pelas veredas do sertão e seu sentimento por Diadorim.',
-    capaUrl: 'https://covers.openlibrary.org/b/isbn/9788535931983-M.jpg',
-    tenho_fisico: false,
-    status_leitura: 'quero_ler',
-    origem: 'manual',
-    dataCadastro: Date.now() - 5000000,
-    dataAtualizacao: Date.now() - 5000000,
-  },
-  {
-    id: 6,
-    titulo: 'O Retrato de Dorian Gray',
-    subtitulo: null,
-    autores: ['Oscar Wilde'],
-    editora: 'Penguin',
-    anoPublicacao: 1890,
-    paginas: 280,
-    isbn13: '9788563560377',
-    generos: ['Ficção Gótica', 'Clássico'],
-    descricao: 'A busca eterna pela juventude e a degeneração da alma humana.',
-    capaUrl: 'https://covers.openlibrary.org/b/isbn/9788563560377-M.jpg',
-    tenho_fisico: false,
-    status_leitura: 'quero_ler',
-    origem: 'manual',
-    dataCadastro: Date.now() - 6000000,
-    dataAtualizacao: Date.now() - 6000000,
-  },
-];
+export const INITIAL_SEED_BOOKS: Book[] = [];
 
 /**
  * Normaliza string para comparação de duplicados
@@ -313,16 +193,24 @@ export function migrateLegacyBooks(rawBooks: any[]): Book[] {
 export const BookStorage = {
   loadBooks(): Book[] {
     try {
+      const isCleared = localStorage.getItem('booknook_cleared_initial_v1');
+      if (!isCleared) {
+        localStorage.setItem('booknook_cleared_initial_v1', 'true');
+        this.saveAllBooks([]);
+        localStorage.setItem(STORAGE_KEY_SCHEMA_VERSION, String(CURRENT_SCHEMA_VERSION));
+        return [];
+      }
+
       const data = localStorage.getItem(STORAGE_KEY_BOOKS);
       if (!data) {
-        this.saveAllBooks(INITIAL_SEED_BOOKS);
+        this.saveAllBooks([]);
         localStorage.setItem(STORAGE_KEY_SCHEMA_VERSION, String(CURRENT_SCHEMA_VERSION));
-        return INITIAL_SEED_BOOKS;
+        return [];
       }
 
       const parsed = JSON.parse(data);
       if (!Array.isArray(parsed)) {
-        return INITIAL_SEED_BOOKS;
+        return [];
       }
 
       const schemaVersion = parseInt(localStorage.getItem(STORAGE_KEY_SCHEMA_VERSION) || '1', 10);
@@ -826,6 +714,18 @@ export const BookStorage = {
       } else {
         localStorage.removeItem('minha_estante_drive_file_id');
       }
+    } catch {}
+  },
+  loadLocale(): string {
+    try {
+      return localStorage.getItem('mashelf_locale') || 'pt-BR';
+    } catch {
+      return 'pt-BR';
+    }
+  },
+  saveLocale(locale: string): void {
+    try {
+      localStorage.setItem('mashelf_locale', locale);
     } catch {}
   },
 };

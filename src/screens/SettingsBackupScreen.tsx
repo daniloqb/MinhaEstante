@@ -12,11 +12,8 @@ import {
   Palette,
   Library,
   X,
-  Usb,
-  Terminal,
   Check,
   Copy,
-  ExternalLink,
   Clipboard,
   HelpCircle,
   ShieldCheck,
@@ -26,9 +23,14 @@ import {
   Loader2,
   Trash2,
   AlertTriangle,
+  Globe,
+  ChevronDown,
 } from 'lucide-react';
 import { PWAInstallButton } from '../components/PWAInstallButton';
 import { GoogleDriveSyncCard } from '../components/GoogleDriveSyncCard';
+import { MaShelfLogo } from '../components/MaShelfLogo';
+import { useI18n } from '../i18n/I18nContext';
+import { LocaleId } from '../i18n/types';
 
 interface SettingsBackupScreenProps {
   palette: WoodPalette;
@@ -65,25 +67,16 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
   books = [],
   onUpdateAllBooks,
 }) => {
+  const { locale, setLocale, t, availableLocales, currentLocaleInfo } = useI18n();
   const [showImportDialog, setShowImportDialog] = useState<'csv' | 'json' | null>(null);
   const [importText, setImportText] = useState('');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [isUsbGuideOpen, setIsUsbGuideOpen] = useState(false);
   const [isPermissionGuideOpen, setIsPermissionGuideOpen] = useState(false);
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
-  const [copiedAdb, setCopiedAdb] = useState(false);
   const [copiedJson, setCopiedJson] = useState(false);
   const [isBatchCaching, setIsBatchCaching] = useState(false);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [hasStoragePerm, setHasStoragePerm] = useState<boolean>(() => {
-    const win = window as any;
-    if (win.AndroidApp && typeof win.AndroidApp.hasStoragePermission === 'function') {
-      return Boolean(win.AndroidApp.hasStoragePermission());
-    }
-    return true;
-  });
 
   useEffect(() => {
     const win = window as any;
@@ -93,28 +86,10 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
         setTimeout(() => setStatusMessage(null), 4000);
       }
     };
-    win.onAndroidPermissionUpdated = (granted: boolean) => {
-      setHasStoragePerm(granted);
-      if (granted) {
-        setStatusMessage('✓ Permissão para criar e salvar arquivos concedida!');
-        setTimeout(() => setStatusMessage(null), 4000);
-      }
-    };
     return () => {
       delete win.onAndroidFileSaved;
-      delete win.onAndroidPermissionUpdated;
     };
   }, []);
-
-  const handleRequestStoragePermission = () => {
-    const win = window as any;
-    if (win.AndroidApp && typeof win.AndroidApp.requestStoragePermission === 'function') {
-      win.AndroidApp.requestStoragePermission();
-    } else {
-      setStatusMessage('No navegador web, as permissões de download são automáticas.');
-      setTimeout(() => setStatusMessage(null), 3500);
-    }
-  };
 
   const localCoversCount = books.filter((b) => b.capaUrl && isDataUrl(b.capaUrl)).length;
   const remoteCoversCount = books.filter((b) => b.capaUrl && !isDataUrl(b.capaUrl)).length;
@@ -151,23 +126,6 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
     setTimeout(() => setStatusMessage(null), 4000);
   };
 
-  const handleCopyAdb = () => {
-    navigator.clipboard.writeText('adb install -r minha-estante.apk');
-    setCopiedAdb(true);
-    setTimeout(() => setCopiedAdb(false), 2500);
-  };
-
-  const handleDownloadApk = () => {
-    const a = document.createElement('a');
-    a.href = '/minha-estante.apk?v=3.5.' + Date.now();
-    a.download = 'minha-estante.apk';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setStatusMessage('Download do .APK v3.5 iniciado!');
-    setTimeout(() => setStatusMessage(null), 3500);
-  };
-
   const downloadFile = async (content: string, filename: string, mimeType: string) => {
     // 1. Android Native App Bridge (com suporte nativo ao Storage Access Framework)
     const win = window as any;
@@ -199,7 +157,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
           await navigator.share({
             files: [file],
             title: filename,
-            text: `Backup Minha Estante: ${filename}`,
+            text: `Backup BookNook: ${filename}`,
           });
           setStatusMessage('Arquivo compartilhado com sucesso!');
           setTimeout(() => setStatusMessage(null), 3000);
@@ -318,7 +276,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
 
   return (
     <div className="flex flex-col w-full flex-1">
-      <WoodTopAppBar palette={palette} title="Configurações & Backup" />
+      <WoodTopAppBar palette={palette} title={t.settings.title} />
 
       {/* Notificação Temporária de Sucesso */}
       {statusMessage && (
@@ -530,183 +488,120 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
 
       {/* Conteúdo Principal */}
       <div className="flex-1 w-full max-w-2xl mx-auto px-4 py-6 flex flex-col gap-5 pb-16">
-        {/* Instalação no Android (.APK / Cabo USB) */}
+        {/* Idioma e Região / Country & Language */}
         <PaperCard palette={palette} elevated className="flex flex-col gap-3.5">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5">
-              <span className="p-2 rounded-lg bg-amber-900/10 text-xl flex items-center justify-center">
-                🤖
-              </span>
+            <div className="flex items-center gap-3">
+              <div
+                className="p-2.5 rounded-xl border flex items-center justify-center shadow-xs"
+                style={{
+                  backgroundColor: `${palette.goldPrimary}20`,
+                  borderColor: `${palette.goldPrimary}50`,
+                  color: palette.goldPrimary,
+                }}
+              >
+                <Globe size={24} />
+              </div>
               <div>
-                <h3 className="font-serif font-bold text-lg leading-tight" style={{ color: palette.textOnPaper }}>
-                  Instalar no Android (.APK & Via USB)
+                <h3
+                  className="font-serif font-bold text-lg leading-tight"
+                  style={{ color: palette.textOnPaper }}
+                >
+                  {t.settings.languageAndRegion}
                 </h3>
-                <p className="text-xs font-serif" style={{ color: palette.textSecondaryOnPaper }}>
-                  Versão 3.5 com Estante Unificada (Físicos + E-books) e Nova Aba Emprestados
+                <p
+                  className="text-xs font-serif opacity-80"
+                  style={{ color: palette.textSecondaryOnPaper }}
+                >
+                  {t.settings.languageAndRegionDesc}
                 </p>
               </div>
             </div>
 
             <span
-              className="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider"
+              className="px-2.5 py-1 rounded-full text-xs font-serif font-bold border flex items-center gap-1.5 shrink-0"
               style={{
                 backgroundColor: `${palette.goldPrimary}20`,
-                color: palette.goldPrimary,
-                border: `1px solid ${palette.goldPrimary}40`,
+                borderColor: palette.goldPrimary,
+                color: palette.woodBorder,
               }}
             >
-              v3.5 Atualizado .apk
+              <span>{currentLocaleInfo.flag}</span>
+              <span className="hidden sm:inline">{currentLocaleInfo.country}</span>
             </span>
           </div>
 
-          <p className="text-xs leading-relaxed" style={{ color: palette.textOnPaper }}>
-            Você pode baixar o arquivo <strong>.apk</strong> diretamente para instalar no celular ou conectar o aparelho via cabo USB ao computador e instalar com depuração USB (ADB).
-          </p>
+          {/* Combobox de Seleção de País e Idioma */}
+          <div className="flex flex-col gap-2 pt-1">
+            <label
+              htmlFor="country-language-combobox"
+              className="text-xs font-serif font-bold flex items-center justify-between"
+              style={{ color: palette.textOnPaper }}
+            >
+              <span>{t.settings.currentLanguage}:</span>
+              <span className="text-[11px] font-sans font-normal opacity-75">
+                {currentLocaleInfo.name}
+              </span>
+            </label>
 
-          {/* Permissão para Criar e Gravar Arquivos no Smartphone */}
-          <div
-            className="p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
-            style={{
-              backgroundColor: palette.paperSurfaceElevated,
-              borderColor: `${palette.woodBorder}30`,
-            }}
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div
-                className="p-2 rounded-lg shrink-0 flex items-center justify-center shadow-xs"
+            <div className="relative w-full">
+              <select
+                id="country-language-combobox"
+                value={locale}
+                onChange={(e) => {
+                  const newLoc = e.target.value as LocaleId;
+                  const locInfo = availableLocales.find((l) => l.id === newLoc);
+                  setLocale(newLoc);
+                  setStatusMessage(`Idioma alterado para ${locInfo ? locInfo.name : newLoc}!`);
+                  setTimeout(() => setStatusMessage(null), 3000);
+                }}
+                className="w-full appearance-none pl-11 pr-10 py-3 rounded-xl border text-sm sm:text-base font-serif font-bold shadow-xs focus:outline-none focus:ring-2 cursor-pointer transition-all"
                 style={{
-                  backgroundColor: hasStoragePerm ? '#16653420' : '#854d0e20',
-                  color: hasStoragePerm ? '#16a34a' : palette.goldPrimary,
+                  backgroundColor: palette.paperSurfaceElevated,
+                  borderColor: palette.woodBorder,
+                  color: palette.textOnPaper,
                 }}
               >
-                <ShieldCheck size={18} />
+                {availableLocales.map((loc) => (
+                  <option
+                    key={loc.id}
+                    value={loc.id}
+                    className="py-2 text-stone-900 bg-amber-50"
+                  >
+                    {loc.flag} {loc.country} — {loc.language} ({loc.name})
+                  </option>
+                ))}
+              </select>
+
+              {/* Bandeira no início do combobox */}
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-xl leading-none select-none">
+                {currentLocaleInfo.flag}
               </div>
-              <div className="min-w-0">
-                <p className="font-serif font-bold text-xs" style={{ color: palette.textOnPaper }}>
-                  Permissão para Criar e Salvar Arquivos
-                </p>
-                <p className="text-[11px] opacity-80 font-serif">
-                  {hasStoragePerm
-                    ? '✓ Permissão ativada para gravar backups e capas na memória'
-                    : 'Toque ao lado para ativar a permissão de salvar backups'}
-                </p>
+
+              {/* Seta / Chevron estilizado no final */}
+              <div
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                style={{ color: palette.woodBorder }}
+              >
+                <ChevronDown size={18} />
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleRequestStoragePermission}
-              className="py-1.5 px-3 rounded-lg font-serif font-bold text-xs border shrink-0 flex items-center justify-center gap-1.5 cursor-pointer hover:brightness-105 active:scale-98 transition-all shadow-xs"
-              style={{
-                backgroundColor: hasStoragePerm ? `${palette.goldPrimary}15` : palette.goldPrimary,
-                borderColor: palette.goldPrimary,
-                color: hasStoragePerm ? palette.textOnPaper : palette.textOnGold,
-              }}
-            >
-              <ShieldCheck size={14} />
-              <span>{hasStoragePerm ? 'Permissão Ativada' : 'Ativar Permissão'}</span>
-            </button>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5 pt-1">
-            <button
-              type="button"
-              onClick={handleDownloadApk}
-              className="flex-1 min-w-[140px] py-2.5 px-4 rounded-xl font-serif font-bold text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer hover:brightness-105 active:scale-98 transition-all"
-              style={{
-                backgroundColor: palette.goldPrimary,
-                color: palette.textOnGold,
-              }}
-              title="Baixar minha-estante.apk diretamente no computador ou celular"
-            >
-              <Download size={15} strokeWidth={2.5} />
-              Baixar .APK Direto
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsUsbGuideOpen(!isUsbGuideOpen)}
-              className="flex-1 min-w-[140px] py-2.5 px-4 rounded-xl font-serif font-bold text-xs border flex items-center justify-center gap-2 cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
-              style={{
-                borderColor: palette.woodBorder,
-                color: palette.textOnPaper,
-                backgroundColor: isUsbGuideOpen ? `${palette.goldPrimary}25` : 'transparent',
-              }}
-              title="Ver instruções para instalação via cabo USB com ADB"
-            >
-              <Usb size={15} />
-              {isUsbGuideOpen ? 'Ocultar Guia USB' : 'Instalar via USB (ADB)'}
-            </button>
-          </div>
-
-          {/* Painel com Instruções e Linha de Comando para Instalação via Cabo USB */}
-          {isUsbGuideOpen && (
             <div
-              className="p-3.5 rounded-xl border flex flex-col gap-3 text-xs animate-in fade-in slide-in-from-top-2 duration-200 mt-1"
+              className="flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-serif"
               style={{
-                backgroundColor: palette.paperSurfaceElevated,
-                borderColor: `${palette.woodBorder}50`,
+                backgroundColor: `${palette.goldPrimary}12`,
+                borderColor: `${palette.goldPrimary}35`,
+                color: palette.textOnPaper,
               }}
             >
-              <div className="flex items-center gap-2 font-serif font-bold text-xs" style={{ color: palette.woodBorder }}>
-                <Terminal size={15} />
-                <span>Instalação rápida via Cabo USB (ADB):</span>
-              </div>
-
-              <ol className="list-decimal list-inside space-y-1.5 text-xs leading-relaxed" style={{ color: palette.textOnPaper }}>
-                <li>Conecte o smartphone Android ao computador usando o <strong>cabo USB</strong>.</li>
-                <li>
-                  No celular, ative a <strong>Depuração USB</strong> em:{' '}
-                  <em>Configurações &gt; Opções do Desenvolvedor &gt; Depuração USB</em>.
-                </li>
-                <li>
-                  Baixe o arquivo <strong>minha-estante.apk</strong> (ou use o arquivo na raiz do projeto).
-                </li>
-                <li>Abra o terminal na pasta do arquivo e execute:</li>
-              </ol>
-
-              {/* Bloco de Comando com botão Copiar */}
-              <div className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-black/90 text-emerald-400 font-mono text-xs shadow-inner">
-                <span className="select-all break-all">adb install -r minha-estante.apk</span>
-                <button
-                  type="button"
-                  onClick={handleCopyAdb}
-                  className="px-2.5 py-1 rounded bg-white/15 hover:bg-white/25 text-white font-sans text-[11px] font-bold flex items-center gap-1.5 shrink-0 cursor-pointer transition-colors"
-                >
-                  {copiedAdb ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-                  {copiedAdb ? 'Copiado!' : 'Copiar'}
-                </button>
-              </div>
-
-              {/* Dica para erro INSTALL_PARSE_FAILED_NOT_APK */}
-              <div className="p-2.5 rounded-lg border bg-amber-500/10 border-amber-500/30 flex flex-col gap-1 text-[11px] text-amber-950">
-                <span className="font-bold flex items-center gap-1">
-                  ⚠️ Deu erro INSTALL_PARSE_FAILED_NOT_APK?
-                </span>
-                <p className="leading-snug">
-                  Isso acontece quando há uma versão anterior instalada com assinatura ou cache conflitante. Execute para limpar e reinstalar:
-                </p>
-                <code className="p-1.5 rounded bg-black/80 text-emerald-400 font-mono text-[10.5px] select-all break-all">
-                  adb uninstall com.aistudio.minhaestante.vbrkxp &amp;&amp; adb install minha-estante.apk
-                </code>
-              </div>
-
-              <div className="flex items-center justify-between gap-2 pt-1 border-t border-black/10 text-[11px]">
-                <span className="text-stone-500">
-                  Sem terminal? Use o instalador no navegador:
-                </span>
-                <a
-                  href="https://webadb.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-serif font-bold underline flex items-center gap-1 hover:opacity-80"
-                  style={{ color: palette.goldPrimary }}
-                >
-                  Abrir WebADB <ExternalLink size={11} />
-                </a>
-              </div>
+              <span className="flex items-center gap-1.5 font-medium">
+                <CheckCircle2 size={14} className="text-emerald-700" />
+                <span>Ativo: <strong>{currentLocaleInfo.country}</strong> ({currentLocaleInfo.language})</span>
+              </span>
+              <span className="opacity-75 font-mono text-[11px]">{locale}</span>
             </div>
-          )}
+          </div>
         </PaperCard>
 
         {/* Instalação no Smartphone */}
@@ -1164,7 +1059,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                     <strong>Novo padrão do Android (Scoped Storage):</strong> Em versões modernas do Android (11, 12, 13 e 14), o Google substituiu a permissão de "Acesso total à memória". O sistema abre diretamente a tela segura de arquivos ou o menu de compartilhamento.
                   </li>
                   <li>
-                    <strong>No novo APK (v2.4):</strong> O seletor de arquivos e a permissão de armazenamento foram ativados.
+                    <strong>No novo APK (v3.9):</strong> O seletor de arquivos e a permissão de armazenamento foram ativados.
                   </li>
                   <li>
                     <strong>Método mais simples (Sem precisar de arquivo):</strong>
@@ -1183,18 +1078,19 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
         </div>
 
         {/* Sobre o App */}
-        <div className="text-center py-4 flex flex-col items-center">
+        <div className="text-center py-4 flex flex-col items-center gap-2">
+          <MaShelfLogo size={44} />
           <span
             className="font-serif font-bold text-lg"
             style={{ color: palette.goldPrimary }}
           >
-            Minha Estante
+            BookNook · v3.9
           </span>
           <span
-            className="text-xs mt-0.5 opacity-80"
+            className="text-xs opacity-80"
             style={{ color: palette.textSecondaryOnWood }}
           >
-            Registro clássico de leituras · 100% Offline & Seguro
+            {t.settings.footerText}
           </span>
         </div>
       </div>

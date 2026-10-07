@@ -98,14 +98,15 @@ export interface EstanteStats {
 
 /**
  * Consulta de pertencimento à aba:
- * - Todos / Estante: inclui tanto livros físicos quanto e-books
+ * - Todos / Estante: apenas livros que tenho fisicamente OU como e-book (posse confirmada)
  * - Lidos: status_leitura === 'lido'
  * - Quero ler: status_leitura === 'quero_ler'
  */
 export function isBookInTab(book: Book, tab: ShelfTab): boolean {
   switch (tab) {
     case 'todos':
-      return true; // Exibe todos os livros da estante unificada (físicos e e-books)
+      // Filtra apenas os livros que o usuário tem fisicamente ou como e-book
+      return Boolean(book.tenho_fisico) || book.formato === 'ebook';
     case 'meus_livros':
       return Boolean(book.tenho_fisico);
     case 'ebook':
@@ -115,7 +116,7 @@ export function isBookInTab(book: Book, tab: ShelfTab): boolean {
     case 'quero_ler':
       return book.status_leitura === 'quero_ler';
     default:
-      return true;
+      return Boolean(book.tenho_fisico) || book.formato === 'ebook';
   }
 }
 

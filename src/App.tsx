@@ -799,7 +799,7 @@ export const App: React.FC = () => {
             palette={palette}
             currentTab={currentTab}
             onTabChange={handleBottomTabChange}
-            totalCount={books.length}
+            totalCount={books.filter((b) => Boolean(b.tenho_fisico) || b.formato === 'ebook').length}
             borrowedCount={activeBorrowedCount}
           />
         </>

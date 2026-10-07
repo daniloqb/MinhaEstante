@@ -6,6 +6,8 @@ import { BookCoverView } from '../components/BookCoverView';
 import { PaperCard } from '../components/PaperCard';
 import { StarRatingBar } from '../components/StarRatingBar';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
+import { MaShelfLogo } from '../components/MaShelfLogo';
+import { useI18n } from '../i18n/I18nContext';
 import {
   Search,
   Filter as FilterIcon,
@@ -75,12 +77,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenFiltersModal,
   onAddBookClick,
 }) => {
+  const { t } = useI18n();
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
   // Contadores reais de cada aba da estante unificada
   const tabCounts = useMemo(() => {
     return {
-      todos: allBooks.length,
+      todos: allBooks.filter((b) => Boolean(b.tenho_fisico) || b.formato === 'ebook').length,
       lido: allBooks.filter((b) => b.status_leitura === 'lido').length,
       quero_ler: allBooks.filter((b) => b.status_leitura === 'quero_ler').length,
     };
@@ -197,13 +200,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* Top Bar */}
       <WoodTopAppBar
         palette={palette}
-        title="Minha Estante"
+        title={t.home.title}
+        navigationIcon={<MaShelfLogo size={32} />}
         actions={
           <>
             <button
               onClick={() => setIsSearchExpanded(!isSearchExpanded)}
               className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
-              title="Pesquisar na estante"
+              title={t.common.search}
             >
               {isSearchExpanded ? (
                 <X size={22} color={palette.goldPrimary} />
@@ -214,7 +218,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <button
               onClick={onOpenFiltersModal}
               className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer relative"
-              title="Filtros da estante"
+              title={t.common.filter}
             >
               <FilterIcon size={22} color={palette.goldPrimary} />
               {hasActiveFilters && (
@@ -239,7 +243,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => onSearchQueryChange(e.target.value)}
-              placeholder="Pesquisar título, autor ou notas..."
+              placeholder={t.home.searchPlaceholder}
               autoFocus
               className="w-full pl-10 pr-9 py-2.5 rounded-xl text-base focus:outline-none focus:ring-2"
               style={{
@@ -297,7 +301,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             }}
           >
             <BookOpen size={16} />
-            <span>Todos</span>
+            <span>{t.home.filterFormatAll}</span>
             <span
               className="px-2 py-0.5 rounded-full text-xs font-sans font-bold"
               style={{
@@ -326,7 +330,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             }}
           >
             <Check size={16} />
-            <span>Lidos</span>
+            <span>{t.status.read}</span>
             <span
               className="px-2 py-0.5 rounded-full text-xs font-sans font-bold"
               style={{
@@ -349,7 +353,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             }}
           >
             <Bookmark size={16} />
-            <span>Quero Ler</span>
+            <span>{t.status.wantToRead}</span>
             <span
               className="px-2 py-0.5 rounded-full text-xs font-sans font-bold"
               style={{
@@ -378,7 +382,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               backgroundColor: viewMode === 'CAPAS' ? `${palette.goldPrimary}30` : 'transparent',
               color: viewMode === 'CAPAS' ? palette.goldPrimary : palette.textSecondaryOnWood,
             }}
-            title="Prateleiras de Capas"
+            title={t.home.viewCovers}
           >
             <LayoutGrid size={20} />
           </button>
@@ -390,7 +394,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               backgroundColor: viewMode === 'LISTA' ? `${palette.goldPrimary}30` : 'transparent',
               color: viewMode === 'LISTA' ? palette.goldPrimary : palette.textSecondaryOnWood,
             }}
-            title="Lista de Cartões"
+            title={t.home.viewList}
           >
             <ListIcon size={20} />
           </button>
@@ -587,14 +591,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   {/* Livros em pé sobre a prateleira */}
                   <div className="w-full overflow-x-auto px-6 flex items-end gap-6 pb-0 pt-3 scrollbar-thin">
                     {shelfBooks.map((book) => {
-                      // Altura orgânica simulando biblioteca real (150 a 174px)
-                      let hash = 0;
-                      for (let i = 0; i < book.titulo.length; i++) {
-                        hash = (hash << 5) - hash + book.titulo.charCodeAt(i);
-                        hash |= 0;
-                      }
-                      const dynamicHeight = 150 + (Math.abs(hash) % 5) * 6;
-
                       return (
                         <div
                           key={book.id}
@@ -605,8 +601,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                             title={book.titulo}
                             author={book.autores[0]}
                             coverUrl={book.capaUrl}
-                            width={106}
-                            height={dynamicHeight}
+                            width={108}
+                            height={160}
                             badge={renderCoverBadge(book)}
                             onClick={() => onSelectBook(book)}
                             onContextMenu={(e) => {

@@ -3,6 +3,7 @@ import { Book, BookLoan } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
 import { PaperCard } from '../components/PaperCard';
+import { useI18n } from '../i18n/I18nContext';
 import {
   Handshake,
   Search,
@@ -36,6 +37,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
   onReturnBook,
   onGoToShelf,
 }) => {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<'ativos' | 'historico'>('ativos');
   const [searchQuery, setSearchQuery] = useState('');
   const [isBookPickerOpen, setIsBookPickerOpen] = useState(false);
@@ -170,7 +172,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
       {/* Top Bar */}
       <WoodTopAppBar
         palette={palette}
-        title="Livros Emprestados"
+        title={t.loans.title}
         actions={
           <div className="flex items-center gap-2">
             <button
@@ -389,7 +391,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                   style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
                 >
                   <BookOpen size={15} />
-                  <span>Ir para Minha Estante</span>
+                  <span>Ir para a Estante</span>
                 </button>
               </div>
             )}

@@ -138,7 +138,7 @@ export async function uploadDriveBackup(
   const metadata = {
     name: BACKUP_FILENAME,
     mimeType: 'application/json',
-    description: 'Backup pessoal sincronizado pelo aplicativo Minha Estante',
+    description: 'Backup pessoal sincronizado pelo aplicativo BookNook',
   };
 
   const multipartRequestBody =
