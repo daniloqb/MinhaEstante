@@ -137,7 +137,7 @@ Livre de anúncios, sem rastreadores intrusivos e feito com carinho para quem ap
 ## 6. Produção / Lançamento do Pacote (.AAB)
 
 * **Arquivo para Upload:** `booknook.aab` (localizado na raiz do projeto e pronto para download em `/booknook.aab`).
-* **Package Name:** `com.daniloqb.booknook`
+* **Package Name:** `com.booknookapp`
 * **Version Code:** `1`
 * **Version Name:** `1.0.0`
 * **Chave de Assinatura (Keystore):**
