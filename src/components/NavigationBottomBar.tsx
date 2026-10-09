@@ -36,7 +36,13 @@ export const NavigationBottomBar: React.FC<NavigationBottomBarProps> = ({
   ];
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 flex flex-col shadow-2xl">
+    <nav
+      className="fixed bottom-0 inset-x-0 z-40 flex flex-col shadow-2xl transition-all"
+      style={{
+        backgroundColor: palette.woodDark,
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
+    >
       {/* Filete de madeira sobre a barra de navegação */}
       <div className="w-full h-[2px]" style={{ backgroundColor: palette.woodBorder }} />
 

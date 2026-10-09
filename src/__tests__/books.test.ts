@@ -622,3 +622,29 @@ describe('5. Testes da Estante Unificada, Filtro de Formato e Empréstimos', () 
     expect(livro.emprestimo?.emailPessoa).toBeNull();
   });
 });
+
+describe('8. Testes de Busca de Livros e Autores', () => {
+  it('Busca por Dom Casmurro retorna edições brasileiras', async () => {
+    const { searchLocalClassics } = await import('../services/classicBooksCatalog');
+    const results = searchLocalClassics('dom casmurro');
+    expect(results.length).toBeGreaterThan(0);
+    const hasMachado = results.some((b) => b.autores.some((a) => a.includes('Machado')));
+    expect(hasMachado).toBe(true);
+  });
+
+  it('Busca por autor Orwell retorna 1984 e A Revolução dos Bichos', async () => {
+    const { searchLocalClassics } = await import('../services/classicBooksCatalog');
+    const results = searchLocalClassics('orwell');
+    expect(results.length).toBeGreaterThan(0);
+    const has1984 = results.some((b) => b.titulo.includes('1984'));
+    expect(has1984).toBe(true);
+  });
+
+  it('Busca por Jules Verne / Júlio Verne retorna obras clássicas', async () => {
+    const { searchLocalClassics } = await import('../services/classicBooksCatalog');
+    const results = searchLocalClassics('jules verne');
+    expect(results.length).toBeGreaterThan(0);
+    const hasVinteMil = results.some((b) => b.titulo.includes('Vinte Mil Léguas'));
+    expect(hasVinteMil).toBe(true);
+  });
+});

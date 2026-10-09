@@ -140,7 +140,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
       : 'Cadastro Manual';
 
   return (
-    <div className="flex flex-col w-full min-h-screen">
+    <div className="flex flex-col w-full flex-1">
       {/* Diálogo de confirmação de exclusão */}
       {showDeleteConfirm && (
         <div

@@ -159,15 +159,16 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setIsScannerOpen(true)}
-                className="p-1.5 rounded-lg border flex items-center justify-center cursor-pointer hover:brightness-105 active:scale-95 transition-all"
+                className="px-2 py-1.5 rounded-lg border flex items-center justify-center cursor-pointer shadow-sm hover:brightness-110 active:scale-95 transition-all font-sans font-medium"
                 style={{
-                  backgroundColor: `${palette.goldPrimary}25`,
-                  borderColor: `${palette.goldPrimary}80`,
-                  color: palette.woodBorder,
+                  backgroundColor: palette.goldPrimary,
+                  borderColor: palette.woodBorder,
+                  color: palette.textOnGold,
                 }}
                 title="Escanear código de barras com a câmera"
+                aria-label="Escanear código de barras com a câmera"
               >
-                <ScanBarcode size={16} />
+                <ScanBarcode size={17} />
               </button>
             </div>
           </div>
@@ -177,14 +178,14 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setIsScannerOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-serif font-bold text-xs border shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all"
+                className="flex items-center gap-2 px-3.5 py-2 rounded-lg font-serif font-bold text-xs border shadow-md cursor-pointer hover:brightness-110 active:scale-95 transition-all"
                 style={{
-                  backgroundColor: `${palette.goldPrimary}20`,
-                  borderColor: palette.goldPrimary,
-                  color: palette.woodBorder,
+                  backgroundColor: palette.goldPrimary,
+                  borderColor: palette.woodBorder,
+                  color: palette.textOnGold,
                 }}
               >
-                <Camera size={14} />
+                <Camera size={15} />
                 <span>Escanear Código de Barras</span>
               </button>
             </div>

@@ -226,7 +226,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
   };
 
   return (
-    <div className="flex flex-col w-full min-h-screen">
+    <div className="flex flex-col w-full flex-1">
       {/* Modal de Resumo com IA */}
       <BookSummaryAiModal
         palette={palette}

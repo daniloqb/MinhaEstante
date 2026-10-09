@@ -6,11 +6,19 @@
     --font-sans: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
 
+  html,
   body {
-    font-family: var(--font-sans);
     margin: 0;
     padding: 0;
-    overflow-x: hidden;
+    min-height: 100%;
+    min-height: 100dvh;
+    /* Use clip instead of hidden so position: sticky on header does not break in mobile WebKit/Chromium */
+    overflow-x: clip;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    font-family: var(--font-sans);
   }
 }
 

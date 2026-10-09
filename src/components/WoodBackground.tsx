@@ -10,7 +10,7 @@ interface WoodBackgroundProps {
 export const WoodBackground: React.FC<WoodBackgroundProps> = ({ palette, children, className = '' }) => {
   return (
     <div
-      className={`min-h-screen w-full relative flex flex-col transition-colors duration-300 ${className}`}
+      className={`min-h-screen min-h-[100dvh] w-full relative flex flex-col transition-colors duration-300 ${className}`}
       style={{
         backgroundColor: palette.woodMedium,
       }}
@@ -89,7 +89,14 @@ export const WoodBackground: React.FC<WoodBackgroundProps> = ({ palette, childre
         }}
       />
 
-      <div className="relative z-10 flex flex-col flex-1 pb-24">{children}</div>
+      <div
+        className="relative z-10 flex flex-col flex-1"
+        style={{
+          paddingBottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))',
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 };
