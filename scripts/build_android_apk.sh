@@ -56,10 +56,10 @@ cat << 'XML' > "$WORKDIR/AndroidManifest.xml"
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.aistudio.minhaestante.vbrkxp"
-    android:versionCode="150"
-    android:versionName="3.9">
+    android:versionCode="151"
+    android:versionName="3.9.1">
 
-    <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="36" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CAMERA" />
@@ -434,11 +434,32 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
+        if (webView != null) {
+            webView.evaluateJavascript(
+                "(function() { try { return !!(window.onAndroidBackPressed && window.onAndroidBackPressed()); } catch(e) { return false; } })()",
+                new ValueCallback<String>() {
+                    @Override
+                    public void onReceiveValue(String value) {
+                        if ("true".equalsIgnoreCase(value)) {
+                            // Evento consumido pela navegação interna do app até a tela principal
+                            return;
+                        }
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (webView.canGoBack()) {
+                                    webView.goBack();
+                                } else {
+                                    MainActivity.super.onBackPressed();
+                                }
+                            }
+                        });
+                    }
+                }
+            );
+            return;
         }
+        super.onBackPressed();
     }
 }
 JAVA
@@ -472,7 +493,7 @@ echo "9. Assinando APK com apksigner (v1 JAR, v2 APK Scheme, v3 Scheme)..."
 if [ -f "$APP_ROOT/debug.keystore.base64" ]; then
     base64 -d "$APP_ROOT/debug.keystore.base64" > /tmp/debug.keystore
     apksigner sign \
-        --min-sdk-version 21 \
+        --min-sdk-version 24 \
         --v1-signing-enabled true \
         --v2-signing-enabled true \
         --v3-signing-enabled true \
@@ -490,7 +511,7 @@ fi
 rm -f "$APP_ROOT"/*.idsig /minha-estante.apk.idsig /app/applet/*.idsig 2>/dev/null || true
 
 echo "10. Validando assinatura e alinhamento do APK final..."
-apksigner verify --verbose --min-sdk-version 21 "$APP_ROOT/minha-estante.apk"
+apksigner verify --verbose --min-sdk-version 24 "$APP_ROOT/minha-estante.apk"
 zipalign -c 4 "$APP_ROOT/minha-estante.apk"
 
 # 11. Copiar para todas as localizações esperadas

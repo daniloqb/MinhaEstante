@@ -23,9 +23,9 @@ BookNook
 
 ### Breve Descrição (Máximo 80 caracteres)
 ```text
-Organize seus livros com estante de madeira, scanner ISBN e backup no Drive.
+Organize seus livros com estante de madeira, scanner ISBN e backup seguro.
 ```
-*(75 caracteres)*
+*(74 caracteres)*
 
 ### Descrição Completa (Máximo 4000 caracteres)
 ```text
@@ -54,10 +54,10 @@ PRINCIPAIS RECURSOS:
 • Gráficos de autores mais lidos, distribuição de notas (1 a 10) e gêneros favoritos.
 • Histórico organizado de leituras concluídas.
 
-☁️ Seus Dados São 100% Seus (Backup no Google Drive)
-• Sincronização segura com um único toque no seu Google Drive pessoal (usando escopo restrito drive.file).
+💾 Seus Dados São 100% Seus (Backup Local Completo)
 • Exportação e importação completa em arquivos JSON e planilhas CSV (compatível com Excel).
-• Totalmente funcional mesmo sem internet (offline-first).
+• Totalmente funcional mesmo sem internet (100% offline-first).
+• Nenhuma dependência de servidores de terceiros ou nuvens instáveis.
 
 🌍 Internacionalização
 • Altere idioma e preferências de exibição a qualquer momento (Português, Inglês, Espanhol, Francês, Alemão e Italiano).
@@ -138,8 +138,10 @@ Livre de anúncios, sem rastreadores intrusivos e feito com carinho para quem ap
 
 * **Arquivo para Upload:** `booknook.aab` (localizado na raiz do projeto e pronto para download em `/booknook.aab`).
 * **Package Name:** `com.booknookapp`
-* **Version Code:** `1`
-* **Version Name:** `1.0.0`
+* **Version Code:** `10`
+* **Version Name:** `1.0.10`
+* **SDK Mínimo:** `24` (Android 7.0+)
+* **SDK Alvo:** `34` (Android 14+)
 * **Chave de Assinatura (Keystore):**
   * Arquivo gerado: `booknook-release-key.jks`
   * Alias: `booknook`
@@ -163,3 +165,31 @@ Livre de anúncios, sem rastreadores intrusivos e feito com carinho para quem ap
    `https://daniloqb.github.io/BookNook/`
    E sua política de privacidade em:
    `https://daniloqb.github.io/BookNook/privacy-policy.html`
+
+---
+
+## 8. Notas da Versão (Release Notes — v1.0.10)
+
+*(Limite de 500 caracteres por idioma no Google Play Console)*
+
+### Formato direto com tags para o Google Play Console:
+```xml
+<pt-BR>
+🎉 Bem-vindo ao BookNook 1.0.10!
+• Navegação nativa por histórico com o botão voltar do smartphone
+• Marcadores múltiplos na capa (Lido, Formato Físico/Digital e Emprestado)
+• Estante visual com acabamento elegante em madeira nobre
+• Leitor de código de barras (ISBN) e metas de leitura
+• Backup local 100% offline em CSV/JSON
+• Livre de anúncios e rastreadores
+</pt-BR>
+<en-US>
+🎉 Welcome to BookNook 1.0.10!
+• Native smartphone back button navigation
+• Multiple cover markers (Read, Format Physical/Digital, and Borrowed)
+• Elegant hardwood bookshelf view
+• Barcode scanner (ISBN) and reading goals
+• 100% offline local backup in CSV/JSON
+• Completely ad-free and privacy-focused
+</en-US>
+```

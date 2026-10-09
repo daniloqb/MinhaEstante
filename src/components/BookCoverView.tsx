@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { WoodPalette } from '../theme/woodTheme';
+import { Book, isBookBorrowed } from '../types/book';
+import { Check, Bookmark, Tablet, BookOpen, Handshake } from 'lucide-react';
 
 interface BookCoverViewProps {
   palette: WoodPalette;
@@ -11,6 +13,8 @@ interface BookCoverViewProps {
   elevation?: number;
   className?: string;
   badge?: React.ReactNode;
+  book?: Book;
+  compact?: boolean;
   onClick?: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
 }
@@ -34,10 +38,99 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
   height = 160,
   className = '',
   badge,
+  book,
+  compact = false,
   onClick,
   onContextMenu,
 }) => {
   const [imageFailed, setImageFailed] = useState(false);
+
+  // Marcadores ordenados solicitados: 1. Lido, 2. Físico/Digital, 3. Emprestado
+  const renderBadges = () => {
+    if (badge) return badge;
+    if (!book) return null;
+
+    const items: React.ReactNode[] = [];
+
+    // 1. Lido / Status de Leitura
+    if (book.status_leitura === 'lido') {
+      items.push(
+        <span
+          key="lido"
+          className={`${
+            compact ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[9px] sm:text-[10px]'
+          } rounded-full font-serif font-bold shadow-md flex items-center gap-0.5 border bg-emerald-600 text-white border-white/70 backdrop-blur-xs`}
+          title={`Lido ${book.nota != null ? `(★ ${book.nota})` : ''}`}
+        >
+          <Check size={compact ? 8 : 10} strokeWidth={3} />
+          <span>{book.nota != null ? `★${book.nota}` : 'Lido'}</span>
+        </span>
+      );
+    } else if (book.status_leitura === 'quero_ler') {
+      items.push(
+        <span
+          key="quero"
+          className={`${
+            compact ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[9px] sm:text-[10px]'
+          } rounded-full font-serif font-bold shadow-md flex items-center gap-0.5 border bg-blue-600 text-white border-white/70 backdrop-blur-xs`}
+          title="Na lista Quero Ler"
+        >
+          <Bookmark size={compact ? 8 : 10} />
+          <span>Quero</span>
+        </span>
+      );
+    }
+
+    // 2. Físico / Digital
+    if (book.formato === 'ebook') {
+      items.push(
+        <span
+          key="digital"
+          className={`${
+            compact ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[9px] sm:text-[10px]'
+          } rounded-full font-sans font-bold shadow-md flex items-center gap-0.5 border bg-purple-900/90 text-purple-100 border-purple-300/50 backdrop-blur-xs`}
+          title="E-book Digital"
+        >
+          <Tablet size={compact ? 8 : 10} />
+          <span>E-book</span>
+        </span>
+      );
+    } else {
+      items.push(
+        <span
+          key="fisico"
+          className={`${
+            compact ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[9px] sm:text-[10px]'
+          } rounded-full font-serif font-bold shadow-md flex items-center gap-0.5 border bg-amber-950/90 text-amber-100 border-amber-300/50 backdrop-blur-xs`}
+          title={book.tenho_fisico ? 'Livro Físico (tenho em casa)' : 'Livro Físico'}
+        >
+          <BookOpen size={compact ? 8 : 10} />
+          <span>Físico</span>
+        </span>
+      );
+    }
+
+    // 3. Emprestado
+    if (isBookBorrowed(book)) {
+      items.push(
+        <span
+          key="emprestado"
+          className={`${
+            compact ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[9px] sm:text-[10px]'
+          } rounded-full font-serif font-bold shadow-lg flex items-center gap-0.5 border bg-amber-500 text-stone-950 border-amber-200 backdrop-blur-xs animate-pulse`}
+          title={`Emprestado para ${book.emprestimo?.nomePessoa}`}
+        >
+          <Handshake size={compact ? 8 : 10} strokeWidth={2.5} />
+          <span>Emprestado</span>
+        </span>
+      );
+    }
+
+    if (items.length === 0) return null;
+    return <>{items}</>;
+  };
+
+  const renderedBadges = renderBadges();
 
   // Hash code for deterministic cover color
   let hash = 0;
@@ -133,10 +226,10 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
         }}
       />
 
-      {/* Selo / Badge posicionado sobre a capa */}
-      {badge && (
-        <div className="absolute top-1.5 right-1.5 z-30 pointer-events-none">
-          {badge}
+      {/* Selos / Badges posicionados sobre a capa (Lido, Físico/Digital, Emprestado) */}
+      {renderedBadges && (
+        <div className="absolute top-1 right-1 z-30 pointer-events-none max-w-[92%] flex flex-col items-end gap-1">
+          {renderedBadges}
         </div>
       )}
     </div>

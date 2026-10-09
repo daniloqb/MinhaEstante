@@ -80,6 +80,165 @@ export const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, [toastMessage]);
 
+  // Navegação Histórica para Botão Voltar do Smartphone (Android & Navegador)
+  const tabStackRef = React.useRef<MainTab[]>(['ESTANTE']);
+  const historyDepthRef = React.useRef<number>(0);
+  const navStateRef = React.useRef({
+    orphanConflictBook,
+    duplicateConflict,
+    loanModalBook,
+    editingBookInModal,
+    quickActionBook,
+    isFilterModalOpen,
+    selectedBookDetail,
+    isManualRegisterOpen,
+    currentTab,
+  });
+
+  navStateRef.current = {
+    orphanConflictBook,
+    duplicateConflict,
+    loanModalBook,
+    editingBookInModal,
+    quickActionBook,
+    isFilterModalOpen,
+    selectedBookDetail,
+    isManualRegisterOpen,
+    currentTab,
+  };
+
+  const pushNavState = useCallback((screenName: string, meta: Record<string, any> = {}) => {
+    try {
+      historyDepthRef.current += 1;
+      window.history.pushState(
+        { screen: screenName, depth: historyDepthRef.current, time: Date.now(), ...meta },
+        '',
+        `#${screenName}`
+      );
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const closeOverlayOrBack = useCallback((closeAction: () => void) => {
+    closeAction();
+  }, []);
+
+  // Função central de navegação ao pressionar voltar no smartphone (Android / navegador)
+  const handleNativeBack = useCallback((): boolean => {
+    const s = navStateRef.current;
+
+    // 1. Fechar Modais e Diálogos em ordem de profundidade
+    if (s.orphanConflictBook) {
+      setOrphanConflictBook(null);
+      return true;
+    }
+    if (s.duplicateConflict) {
+      setDuplicateConflict(null);
+      return true;
+    }
+    if (s.loanModalBook) {
+      setLoanModalBook(null);
+      return true;
+    }
+    if (s.editingBookInModal) {
+      setEditingBookInModal(null);
+      return true;
+    }
+    if (s.quickActionBook) {
+      setQuickActionBook(null);
+      return true;
+    }
+    if (s.isFilterModalOpen) {
+      setIsFilterModalOpen(false);
+      return true;
+    }
+
+    // 2. Fechar Telas Sobrepostas (Detalhes e Cadastro Manual)
+    if (s.selectedBookDetail) {
+      setSelectedBookDetail(null);
+      return true;
+    }
+    if (s.isManualRegisterOpen) {
+      setIsManualRegisterOpen(false);
+      return true;
+    }
+
+    // 3. Voltar para a aba anterior até chegar na tela principal (ESTANTE)
+    if (tabStackRef.current.length > 1) {
+      tabStackRef.current.pop();
+      const prevTab = tabStackRef.current[tabStackRef.current.length - 1] || 'ESTANTE';
+      setCurrentTab(prevTab);
+      return true;
+    }
+
+    if (s.currentTab !== 'ESTANTE') {
+      tabStackRef.current = ['ESTANTE'];
+      setCurrentTab('ESTANTE');
+      return true;
+    }
+
+    // 4. Já está na tela principal (ESTANTE) sem nada sobreposto -> sinaliza que pode sair
+    return false;
+  }, []);
+
+  useEffect(() => {
+    try {
+      historyDepthRef.current = 0;
+      window.history.replaceState({ screen: 'root', tab: 'ESTANTE', depth: 0 }, '', '#estante');
+    } catch {
+      // ignore
+    }
+
+    // Registra manipulador nativo chamado pelo MainActivity do Android
+    (window as any).onAndroidBackPressed = handleNativeBack;
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (e.state && typeof e.state.depth === 'number') {
+        historyDepthRef.current = e.state.depth;
+      } else {
+        historyDepthRef.current = Math.max(0, historyDepthRef.current - 1);
+      }
+      handleNativeBack();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      delete (window as any).onAndroidBackPressed;
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [handleNativeBack]);
+
+  const handleOpenBookDetail = useCallback((book: Book) => {
+    setSelectedBookDetail(book);
+    pushNavState('detail');
+  }, [pushNavState]);
+
+  const handleOpenManualRegister = useCallback(() => {
+    setIsManualRegisterOpen(true);
+    pushNavState('manual');
+  }, [pushNavState]);
+
+  const handleOpenEditModal = useCallback((book: Book | null) => {
+    setEditingBookInModal(book);
+    if (book) pushNavState('edit');
+  }, [pushNavState]);
+
+  const handleOpenQuickAction = useCallback((book: Book | null) => {
+    setQuickActionBook(book);
+    if (book) pushNavState('quick');
+  }, [pushNavState]);
+
+  const handleOpenLoanModal = useCallback((book: Book | null) => {
+    setLoanModalBook(book);
+    if (book) pushNavState('loan');
+  }, [pushNavState]);
+
+  const handleOpenFilterModal = useCallback((open: boolean) => {
+    setIsFilterModalOpen(open);
+    if (open) pushNavState('filter');
+  }, [pushNavState]);
+
   // Online Search State
   const [searchInput, setSearchInput] = useState('');
   const [isSearchLoading, setIsSearchLoading] = useState(false);
@@ -339,7 +498,7 @@ export const App: React.FC = () => {
             anoLeitura: existing.anoLeitura || new Date().getFullYear(),
             mesLeitura: existing.mesLeitura || (new Date().getMonth() + 1),
           };
-          setEditingBookInModal(forEdit);
+          handleOpenEditModal(forEdit);
           return;
         }
 
@@ -383,7 +542,7 @@ export const App: React.FC = () => {
       };
 
       if (targetAction === 'lido') {
-        setEditingBookInModal(baseBook);
+        handleOpenEditModal(baseBook);
       } else {
         const { updatedBooks } = BookStorage.saveBook(baseBook, books);
         setBooks(updatedBooks);
@@ -482,9 +641,19 @@ export const App: React.FC = () => {
     [books]
   );
 
-  const handleBottomTabChange = (tab: MainTab) => {
-    setCurrentTab(tab);
-  };
+  const handleBottomTabChange = useCallback((tab: MainTab) => {
+    if (tab === currentTab) return;
+    if (tab === 'ESTANTE') {
+      tabStackRef.current = ['ESTANTE'];
+      setCurrentTab('ESTANTE');
+    } else {
+      const currentStack = tabStackRef.current.filter((t) => t !== tab);
+      currentStack.push(tab);
+      tabStackRef.current = currentStack;
+      setCurrentTab(tab);
+    }
+    pushNavState(`tab-${tab}`, { tab });
+  }, [currentTab, pushNavState]);
 
   // Limpar filtros
   const clearFilters = () => {
@@ -583,10 +752,10 @@ export const App: React.FC = () => {
       <DuplicateConflictModal
         palette={palette}
         conflict={duplicateConflict}
-        onDismiss={() => setDuplicateConflict(null)}
+        onDismiss={() => closeOverlayOrBack(() => setDuplicateConflict(null))}
         onOpenExisting={(existing: Book) => {
           setDuplicateConflict(null);
-          setSelectedBookDetail(existing);
+          handleOpenBookDetail(existing);
         }}
         onAddAnyway={(searchedBook) => {
           setDuplicateConflict(null);
@@ -620,21 +789,21 @@ export const App: React.FC = () => {
       <QuickActionModal
         palette={palette}
         book={quickActionBook}
-        onDismiss={() => setQuickActionBook(null)}
-        onViewDetails={(b) => setSelectedBookDetail(b)}
-        onEdit={(b) => setEditingBookInModal(b)}
+        onDismiss={() => closeOverlayOrBack(() => setQuickActionBook(null))}
+        onViewDetails={(b) => handleOpenBookDetail(b)}
+        onEdit={(b) => handleOpenEditModal(b)}
         onTogglePosse={handleTogglePosse}
         onSetStatusLeitura={handleSetStatusLeitura}
         onDelete={handleDeleteBook}
         onToggleFormato={handleToggleFormato}
-        onOpenLoanModal={(b) => setLoanModalBook(b)}
+        onOpenLoanModal={(b) => handleOpenLoanModal(b)}
       />
 
       {/* Modal de Filtros com Formato da Obra e Ano de Leitura */}
       <FilterModal
         palette={palette}
         isOpen={isFilterModalOpen}
-        onDismiss={() => setIsFilterModalOpen(false)}
+        onDismiss={() => closeOverlayOrBack(() => setIsFilterModalOpen(false))}
         groupBy={groupBy}
         onGroupByChange={handleGroupByChange}
         sortOption={sortBy}
@@ -653,7 +822,7 @@ export const App: React.FC = () => {
         palette={palette}
         isOpen={Boolean(loanModalBook)}
         book={loanModalBook}
-        onClose={() => setLoanModalBook(null)}
+        onClose={() => closeOverlayOrBack(() => setLoanModalBook(null))}
         onSaveLoan={handleSaveLoan}
         onReturnBook={handleReturnLoan}
       />
@@ -664,7 +833,7 @@ export const App: React.FC = () => {
         palette={palette}
         book={editingBookInModal}
         isOpen={Boolean(editingBookInModal)}
-        onDismiss={() => setEditingBookInModal(null)}
+        onDismiss={() => closeOverlayOrBack(() => setEditingBookInModal(null))}
         onSave={handleSaveBook}
         onDelete={handleDeleteBook}
       />
@@ -674,23 +843,23 @@ export const App: React.FC = () => {
         <BookDetailScreen
           palette={palette}
           book={selectedBookDetail}
-          onBack={() => setSelectedBookDetail(null)}
-          onEdit={() => setEditingBookInModal(selectedBookDetail)}
+          onBack={() => closeOverlayOrBack(() => setSelectedBookDetail(null))}
+          onEdit={() => handleOpenEditModal(selectedBookDetail)}
           onDelete={() => handleDeleteBook(selectedBookDetail)}
           onTogglePosse={() => handleTogglePosse(selectedBookDetail)}
           onSetStatusLeitura={(status) => handleSetStatusLeitura(selectedBookDetail, status)}
           onUpdateBook={handleSaveBook}
-          onOpenLoanModal={(b) => setLoanModalBook(b)}
+          onOpenLoanModal={(b) => handleOpenLoanModal(b)}
           onReturnBook={handleReturnLoan}
         />
       ) : isManualRegisterOpen ? (
         <ManualBookScreen
           palette={palette}
           initialTab={statusTab}
-          onBack={() => setIsManualRegisterOpen(false)}
+          onBack={() => closeOverlayOrBack(() => setIsManualRegisterOpen(false))}
           onSave={(newBook) => {
             handleSaveBook(newBook);
-            setIsManualRegisterOpen(false);
+            closeOverlayOrBack(() => setIsManualRegisterOpen(false));
             setToastMessage(`"${newBook.titulo}" salvo com sucesso!`);
           }}
           onDelete={handleDeleteBook}
@@ -723,10 +892,10 @@ export const App: React.FC = () => {
               selectedFormat={selectedFormat}
               onFormatFilterChange={setSelectedFormat}
               onClearFilters={clearFilters}
-              onSelectBook={(book) => setSelectedBookDetail(book)}
-              onOpenQuickAction={(book) => setQuickActionBook(book)}
-              onOpenFiltersModal={() => setIsFilterModalOpen(true)}
-              onAddBookClick={() => setIsManualRegisterOpen(true)}
+              onSelectBook={(book) => handleOpenBookDetail(book)}
+              onOpenQuickAction={(book) => handleOpenQuickAction(book)}
+              onOpenFiltersModal={() => handleOpenFilterModal(true)}
+              onAddBookClick={() => handleOpenManualRegister()}
             />
           )}
 
@@ -734,10 +903,10 @@ export const App: React.FC = () => {
             <LoansScreen
               palette={palette}
               books={books}
-              onOpenBookDetail={(book) => setSelectedBookDetail(book)}
-              onOpenLoanModal={(book) => setLoanModalBook(book)}
+              onOpenBookDetail={(book) => handleOpenBookDetail(book)}
+              onOpenLoanModal={(book) => handleOpenLoanModal(book)}
               onReturnBook={handleReturnLoan}
-              onGoToShelf={() => setCurrentTab('ESTANTE')}
+              onGoToShelf={() => handleBottomTabChange('ESTANTE')}
             />
           )}
 
@@ -745,14 +914,20 @@ export const App: React.FC = () => {
             <SearchScreen
               palette={palette}
               searchQuery={searchInput}
-              onQueryChange={setSearchInput}
+              onQueryChange={(val) => {
+                setSearchInput(val);
+                if (!val.trim()) {
+                  setSearchResults([]);
+                  setSearchError(null);
+                }
+              }}
               onSearch={performSearch}
               isLoading={isSearchLoading}
               results={searchResults}
               errorMessage={searchError}
               onSelectBookToAdd={handleSelectBookToAdd}
-              onSelectBookDetail={(book) => setSelectedBookDetail(book)}
-              onOpenManualRegister={() => setIsManualRegisterOpen(true)}
+              onSelectBookDetail={(book) => handleOpenBookDetail(book)}
+              onOpenManualRegister={() => handleOpenManualRegister()}
               userBooks={books}
             />
           )}

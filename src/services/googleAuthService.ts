@@ -20,9 +20,38 @@ provider.setCustomParameters({
   include_granted_scopes: 'true',
 });
 
-// Cache de token em memória (MANDATÓRIO pela política de segurança)
-let cachedAccessToken: string | null = null;
+const TOKEN_KEY = 'minha_estante_drive_access_token';
+const USER_KEY = 'minha_estante_drive_user_cache';
+
+// Cache de token em memória e persistido localmente para manter a conexão ativa
+let cachedAccessToken: string | null =
+  typeof localStorage !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
 let isSigningIn = false;
+
+export interface CachedGoogleUser {
+  displayName?: string | null;
+  email?: string | null;
+  photoURL?: string | null;
+}
+
+export const getStoredGoogleUser = (): CachedGoogleUser | null => {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const setStoredGoogleUser = (user: CachedGoogleUser | null) => {
+  if (typeof localStorage === 'undefined') return;
+  if (user) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(USER_KEY);
+  }
+};
 
 export const isLocalAndroidApp = (): boolean => {
   if (typeof window === 'undefined') return false;
@@ -74,12 +103,6 @@ export const initGoogleAuth = (
 };
 
 export const signInWithGoogle = async (): Promise<{ user: User; accessToken: string }> => {
-  if (isLocalAndroidApp()) {
-    throw new Error(
-      'No aplicativo Android (.APK local), utilize a opção nativa "Salvar Backup JSON" para gravar diretamente no Google Drive do aparelho. O login web pop-up do Google requer um domínio público com certificado SSL registrado.'
-    );
-  }
-
   try {
     isSigningIn = true;
     const result = await signInWithPopup(auth, provider);
@@ -100,14 +123,27 @@ export const signInWithGoogle = async (): Promise<{ user: User; accessToken: str
       );
     }
 
-    cachedAccessToken = token;
-    return { user: result.user, accessToken: cachedAccessToken };
+    setCachedAccessToken(token);
+    setStoredGoogleUser({
+      displayName: result.user.displayName,
+      email: result.user.email,
+      photoURL: result.user.photoURL,
+    });
+    return { user: result.user, accessToken: token };
   } catch (error: any) {
     console.error('Erro ao conectar com Google:', error);
     if (error.code === 'auth/unauthorized-domain') {
       throw new Error(
-        'Domínio não autorizado pelo Firebase. Este domínio precisa estar cadastrado na lista de Domínios Autorizados do console do Firebase/Google Cloud. No aplicativo Android, use a gravação local via Storage Access Framework.'
+        'Domínio não cadastrado no Firebase Auth. Adicione "appassets.androidplatform.net" no Firebase Console (Authentication > Settings > Authorized Domains).'
       );
+    }
+    if (error.code === 'auth/popup-blocked') {
+      throw new Error(
+        'A janela de login do Google foi bloqueada. Por favor, permita pop-ups para conectar com o Google Drive.'
+      );
+    }
+    if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+      throw new Error('Login com o Google cancelado.');
     }
     throw error;
   } finally {
@@ -116,16 +152,32 @@ export const signInWithGoogle = async (): Promise<{ user: User; accessToken: str
 };
 
 export const getCachedAccessToken = (): string | null => {
-  return cachedAccessToken;
+  if (cachedAccessToken) return cachedAccessToken;
+  if (typeof localStorage !== 'undefined') {
+    return localStorage.getItem(TOKEN_KEY);
+  }
+  return null;
 };
 
 export const setCachedAccessToken = (token: string | null) => {
   cachedAccessToken = token;
+  if (typeof localStorage !== 'undefined') {
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+  }
 };
 
 export const signOutGoogle = async (): Promise<void> => {
-  await signOut(auth);
-  cachedAccessToken = null;
+  try {
+    await signOut(auth);
+  } catch (e) {
+    console.warn('Erro ao chamar signOut do Firebase:', e);
+  }
+  setCachedAccessToken(null);
+  setStoredGoogleUser(null);
 };
 
 export const getCurrentGoogleUser = (): User | null => {

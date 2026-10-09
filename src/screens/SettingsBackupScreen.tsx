@@ -26,8 +26,6 @@ import {
   Globe,
   ChevronDown,
 } from 'lucide-react';
-import { PWAInstallButton } from '../components/PWAInstallButton';
-import { GoogleDriveSyncCard } from '../components/GoogleDriveSyncCard';
 import { MaShelfLogo } from '../components/MaShelfLogo';
 import { useI18n } from '../i18n/I18nContext';
 import { LocaleId } from '../i18n/types';
@@ -604,9 +602,6 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
           </div>
         </PaperCard>
 
-        {/* Instalação no Smartphone */}
-        <PWAInstallButton variant="card" palette={palette} />
-
         {/* Identidade Visual & Tema */}
         <PaperCard palette={palette} elevated className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
@@ -878,18 +873,6 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
             </div>
           )}
         </PaperCard>
-
-        {/* Sincronização Direta pelo Google Drive */}
-        <GoogleDriveSyncCard
-          palette={palette}
-          books={books}
-          onUpdateAllBooks={onUpdateAllBooks || (() => {})}
-          onShowToast={(msg) => {
-            setStatusMessage(msg);
-            setTimeout(() => setStatusMessage(null), 3500);
-          }}
-          onTriggerLocalBackup={handleExportJson}
-        />
 
         {/* Backup e Sincronização Local */}
         <div id="sec-backup-local">

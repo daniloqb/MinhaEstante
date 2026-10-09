@@ -1,4 +1,5 @@
 import { SearchResultBook } from '../types/book';
+import { searchLocalClassics } from './classicBooksCatalog';
 
 function createSafeTimeoutSignal(ms: number): AbortSignal | undefined {
   if (typeof AbortSignal !== 'undefined' && typeof (AbortSignal as any).timeout === 'function') {
@@ -25,23 +26,17 @@ export const BookSearchService = {
     const trimmed = query.trim();
     if (!trimmed) return [];
 
+    // 0. Busca imediata no acervo curado local (obras clássicas brasileiras e mundiais, autores e títulos)
+    const localMatches = searchLocalClassics(trimmed);
+
     const cleanIsbn = trimmed.replace(/[-\s]/g, '');
     const isIsbn =
       (cleanIsbn.length === 10 || cleanIsbn.length === 13) &&
       cleanIsbn.split('').every((c) => (c >= '0' && c <= '9') || c === 'X' || c === 'x');
 
-    const googleQuery = isIsbn ? `isbn:${cleanIsbn}` : encodeURIComponent(trimmed);
-    const openLibQuery = isIsbn ? cleanIsbn : encodeURIComponent(trimmed);
-
-    // Google Books com preferência brasileira (country=BR)
-    const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${googleQuery}&country=BR&maxResults=20${
-      apiKey?.trim() ? `&key=${apiKey.trim()}` : ''
-    }`;
-    const openLibUrl = `https://openlibrary.org/search.json?q=${openLibQuery}&limit=20`;
-
     const promises: Promise<SearchResultBook[]>[] = [];
 
-    // 1. BrasilAPI (CBL - Câmara Brasileira do Livro & Mercado Editorial)
+    // 1. BrasilAPI (CBL - Câmara Brasileira do Livro & Mercado Editorial) para busca por ISBN
     if (isIsbn) {
       const brasilApiUrl = `https://brasilapi.com.br/api/isbn/v1/${cleanIsbn}`;
       promises.push(
@@ -58,27 +53,82 @@ export const BookSearchService = {
       promises.push(Promise.resolve([]));
     }
 
-    // 2. Google Books API
-    promises.push(
-      fetch(googleUrl, { signal: createSafeTimeoutSignal(7000) })
-        .then(async (res) => {
-          if (!res.ok) return [];
-          const data = await res.json();
-          return this.parseGoogleResults(data);
-        })
-        .catch(() => [])
-    );
+    // 2. Google Books API com priorização brasileira (hl=pt-BR, country=BR, printType=books)
+    // OBS: Chaves do AI Studio (iniciadas em AIzaSy para Gemini) causam erro 401 no Google Books API se enviadas
+    const isBooksKey = Boolean(apiKey && !apiKey.trim().startsWith('AIzaSy'));
+    const keyParam = isBooksKey && apiKey?.trim() ? `&key=${apiKey.trim()}` : '';
+    const googleTimeout = 7500;
 
-    // 3. Open Library API
-    promises.push(
-      fetch(openLibUrl, { signal: createSafeTimeoutSignal(7000) })
-        .then(async (res) => {
-          if (!res.ok) return [];
-          const data = await res.json();
-          return this.parseOpenLibResults(data);
-        })
-        .catch(() => [])
-    );
+    const fetchGoogleEndpoint = async (qParam: string): Promise<SearchResultBook[]> => {
+      try {
+        const url = `https://www.googleapis.com/books/v1/volumes?q=${qParam}&hl=pt-BR&country=BR&printType=books&maxResults=25${keyParam}`;
+        const res = await fetch(url, { signal: createSafeTimeoutSignal(googleTimeout) });
+        if (!res.ok) return [];
+        const data = await res.json();
+        return this.parseGoogleResults(data);
+      } catch {
+        return [];
+      }
+    };
+
+    if (isIsbn) {
+      promises.push(fetchGoogleEndpoint(`isbn:${cleanIsbn}`));
+    } else {
+      const encoded = encodeURIComponent(trimmed);
+      // Busca geral por termo
+      const generalGoogle = fetchGoogleEndpoint(encoded);
+      // Se tiver de 1 a 3 palavras e não for código, busca também por autor para garantir autores como "Orwell", "Jules Verne", etc.
+      const wordCount = trimmed.split(/\s+/).length;
+      if (wordCount <= 3 && !trimmed.includes(':')) {
+        const authorGoogle = fetchGoogleEndpoint(`inauthor:${encoded}`);
+        promises.push(
+          Promise.allSettled([generalGoogle, authorGoogle]).then((results) => {
+            const listA = results[0].status === 'fulfilled' ? results[0].value : [];
+            const listB = results[1].status === 'fulfilled' ? results[1].value : [];
+            return [...listA, ...listB];
+          })
+        );
+      } else {
+        promises.push(generalGoogle);
+      }
+    }
+
+    // 3. Open Library API (suporte global e edições em português com timeout seguro)
+    const openLibTimeout = 8500;
+    const fetchOpenLibEndpoint = async (url: string): Promise<SearchResultBook[]> => {
+      try {
+        const res = await fetch(url, { signal: createSafeTimeoutSignal(openLibTimeout) });
+        if (!res.ok) return [];
+        const data = await res.json();
+        return this.parseOpenLibResults(data);
+      } catch {
+        return [];
+      }
+    };
+
+    if (isIsbn) {
+      const openLibIsbnUrl = `https://openlibrary.org/search.json?isbn=${cleanIsbn}&limit=10`;
+      promises.push(fetchOpenLibEndpoint(openLibIsbnUrl));
+    } else {
+      const encoded = encodeURIComponent(trimmed);
+      const openLibGeneralUrl = `https://openlibrary.org/search.json?q=${encoded}&limit=25`;
+      const wordCount = trimmed.split(/\s+/).length;
+      if (wordCount <= 3 && !trimmed.includes(':')) {
+        const openLibAuthorUrl = `https://openlibrary.org/search.json?author=${encoded}&limit=15`;
+        promises.push(
+          Promise.allSettled([
+            fetchOpenLibEndpoint(openLibGeneralUrl),
+            fetchOpenLibEndpoint(openLibAuthorUrl),
+          ]).then((results) => {
+            const listA = results[0].status === 'fulfilled' ? results[0].value : [];
+            const listB = results[1].status === 'fulfilled' ? results[1].value : [];
+            return [...listA, ...listB];
+          })
+        );
+      } else {
+        promises.push(fetchOpenLibEndpoint(openLibGeneralUrl));
+      }
+    }
 
     const [brasilPromise, googlePromise, openLibPromise] = await Promise.allSettled(promises);
 
@@ -89,7 +139,7 @@ export const BookSearchService = {
     const openLibResults: SearchResultBook[] =
       openLibPromise.status === 'fulfilled' ? openLibPromise.value : [];
 
-    return this.mergeAndDeduplicate(brasilResults, googleResults, openLibResults);
+    return this.mergeAndDeduplicate(localMatches, brasilResults, googleResults, openLibResults);
   },
 
   parseBrasilApiResult(data: any, originalIsbn: string): SearchResultBook | null {
@@ -238,10 +288,28 @@ export const BookSearchService = {
   },
 
   mergeAndDeduplicate(
-    brasilList: SearchResultBook[],
-    googleList: SearchResultBook[],
-    openLibList: SearchResultBook[]
+    arg1: SearchResultBook[],
+    arg2: SearchResultBook[],
+    arg3: SearchResultBook[],
+    arg4?: SearchResultBook[]
   ): SearchResultBook[] {
+    let localList: SearchResultBook[] = [];
+    let brasilList: SearchResultBook[] = [];
+    let googleList: SearchResultBook[] = [];
+    let openLibList: SearchResultBook[] = [];
+
+    if (arg4 !== undefined) {
+      localList = arg1;
+      brasilList = arg2;
+      googleList = arg3;
+      openLibList = arg4;
+    } else {
+      localList = [];
+      brasilList = arg1;
+      googleList = arg2;
+      openLibList = arg3;
+    }
+
     const merged: SearchResultBook[] = [];
     const seenIsbns = new Set<string>();
     const seenTitleAuthors = new Set<string>();
@@ -251,6 +319,14 @@ export const BookSearchService = {
       const normAuthor = (authors[0] || '').toLowerCase().replace(/[^a-z0-9]/g, '');
       return `${normTitle}|${normAuthor}`;
     };
+
+    // 0. Catálogo clássico e curado local (resultados instantâneos com capas de alta qualidade)
+    for (const lBook of localList) {
+      merged.push({ ...lBook });
+      if (lBook.isbn13) seenIsbns.add(lBook.isbn13);
+      if (lBook.isbn10) seenIsbns.add(lBook.isbn10);
+      seenTitleAuthors.add(keyTitleAuthor(lBook.titulo, lBook.autores));
+    }
 
     // 1. BrasilAPI tem prioridade máxima para livros brasileiros
     for (const bBook of brasilList) {
@@ -341,6 +417,31 @@ export const BookSearchService = {
       }
     }
 
-    return merged;
+    // Garantir capa para qualquer livro que tenha ISBN e ordenar com prioridade para edições completas e brasileiras
+    const enrichedList = merged.map((b) => {
+      const copy = { ...b };
+      const rawIsbn = copy.isbn13 || copy.isbn10;
+      if (!copy.capaUrl && rawIsbn) {
+        copy.capaUrl = `https://covers.openlibrary.org/b/isbn/${rawIsbn}-M.jpg`;
+      }
+      return copy;
+    });
+
+    // Ordenação inteligente:
+    // 1. Obras com capas vêm antes de obras sem capa
+    // 2. Edições nacionais (BrasilAPI, acervo clássico, ISBN brasileiro 97885/97865) têm prioridade
+    return enrichedList.sort((a, b) => {
+      const aHasCover = Boolean(a.capaUrl);
+      const bHasCover = Boolean(b.capaUrl);
+      if (aHasCover && !bHasCover) return -1;
+      if (!aHasCover && bHasCover) return 1;
+
+      const aIsBr = a.origem === 'brasilapi' || a.origem === 'manual' || a.isbn13?.startsWith('97885') || a.isbn13?.startsWith('97865');
+      const bIsBr = b.origem === 'brasilapi' || b.origem === 'manual' || b.isbn13?.startsWith('97885') || b.isbn13?.startsWith('97865');
+      if (aIsBr && !bIsBr) return -1;
+      if (!aIsBr && bIsBr) return 1;
+
+      return 0;
+    });
   },
 };

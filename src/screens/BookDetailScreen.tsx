@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Book, ReadingStatus, BookFormat } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
@@ -66,6 +66,28 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
   const [isShoppingOpen, setIsShoppingOpen] = useState(false);
   const [isCachingCover, setIsCachingCover] = useState(false);
   const [cacheSuccessMessage, setCacheSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      if (showDeleteConfirm) {
+        setShowDeleteConfirm(false);
+        e.stopImmediatePropagation();
+        return;
+      }
+      if (isAiSummaryOpen) {
+        setIsAiSummaryOpen(false);
+        e.stopImmediatePropagation();
+        return;
+      }
+      if (isShoppingOpen) {
+        setIsShoppingOpen(false);
+        e.stopImmediatePropagation();
+        return;
+      }
+    };
+    window.addEventListener('popstate', handlePopState, true);
+    return () => window.removeEventListener('popstate', handlePopState, true);
+  }, [showDeleteConfirm, isAiSummaryOpen, isShoppingOpen]);
 
   const readingDateFormatted =
     book.anoLeitura != null
@@ -209,39 +231,13 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
           <div className="relative group">
             <BookCoverView
               palette={palette}
+              book={book}
               title={book.titulo}
               author={book.autores[0]}
               coverUrl={book.capaUrl}
               width={170}
               height={255}
               className="shadow-2xl"
-              badge={
-                isEbook ? (
-                  <span
-                    className="p-1.5 rounded-full shadow-md flex items-center justify-center border"
-                    style={{
-                      backgroundColor: '#7c3aed',
-                      color: '#ffffff',
-                      borderColor: '#FFFFFF70',
-                    }}
-                    title="E-book Digital"
-                  >
-                    <Tablet size={14} />
-                  </span>
-                ) : book.tenho_fisico ? (
-                  <span
-                    className="p-1.5 rounded-full shadow-md flex items-center justify-center border"
-                    style={{
-                      backgroundColor: palette.goldPrimary,
-                      color: palette.textOnGold,
-                      borderColor: '#FFFFFF60',
-                    }}
-                    title="Tenho este exemplar físico"
-                  >
-                    <Library size={14} />
-                  </span>
-                ) : null
-              }
             />
           </div>
 

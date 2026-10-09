@@ -20,23 +20,31 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '15mb' }));
 
 // Helper to get Gemini client
-const getAiClient = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
+const getAiClient = (customKey?: string) => {
+  const apiKey = (customKey || process.env.GEMINI_API_KEY || '').trim();
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY não configurada no ambiente.');
+    throw new Error('Chave da API do Google Gemini não configurada.');
   }
-  return new GoogleGenAI({ apiKey });
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      },
+    },
+  });
 };
 
 // API: Resumo literário do livro via Gemini
 app.post('/api/resumo', async (req, res) => {
   try {
-    const { titulo, autores, sinopse, anoPublicacao, formato } = req.body;
+    const { titulo, autores, sinopse, anoPublicacao, formato, userApiKey } = req.body;
+    const headerKey = (req.headers['x-goog-api-key'] as string) || '';
     if (!titulo) {
       return res.status(400).json({ error: 'Título do livro é obrigatório.' });
     }
 
-    const ai = getAiClient();
+    const ai = getAiClient(userApiKey || headerKey);
     const prompt = `Você é um bibliotecário sábio, leitor voraz e especialista literário acolhedor.
 O usuário leu ou deseja relembrar os principais pontos do seguinte livro da sua estante pessoal:
 
@@ -138,12 +146,20 @@ app.post('/api/fetch-image', async (req, res) => {
 });
 
 // Servir arquivos APK e AAB diretamente
-app.get(['/booknook.aab'], (_req, res) => {
-  const filePath = path.resolve(process.cwd(), 'booknook.aab');
+app.get(['/booknook.aab', '/minha-estante.aab'], (req, res) => {
+  const isMinhaEstante = req.path.includes('minha-estante');
+  const targetName = isMinhaEstante ? 'minha-estante.aab' : 'booknook.aab';
+  let filePath = path.resolve(process.cwd(), targetName);
+  if (!fs.existsSync(filePath)) {
+    filePath = path.resolve(process.cwd(), 'booknook.aab');
+  }
+  if (!fs.existsSync(filePath)) {
+    filePath = path.resolve(process.cwd(), 'public', targetName);
+  }
   if (fs.existsSync(filePath)) {
     const stats = fs.statSync(filePath);
     res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Content-Disposition', 'attachment; filename="booknook.aab"');
+    res.setHeader('Content-Disposition', `attachment; filename="${targetName}"`);
     res.setHeader('Content-Length', stats.size);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     fs.createReadStream(filePath).pipe(res);

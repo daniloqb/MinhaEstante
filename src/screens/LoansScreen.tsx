@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Book, BookLoan } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
 import { PaperCard } from '../components/PaperCard';
+import { BookCoverView } from '../components/BookCoverView';
 import { useI18n } from '../i18n/I18nContext';
 import {
   Handshake,
@@ -42,6 +43,17 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isBookPickerOpen, setIsBookPickerOpen] = useState(false);
   const [bookPickerQuery, setBookPickerQuery] = useState('');
+
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      if (isBookPickerOpen) {
+        setIsBookPickerOpen(false);
+        e.stopImmediatePropagation();
+      }
+    };
+    window.addEventListener('popstate', handlePopState, true);
+    return () => window.removeEventListener('popstate', handlePopState, true);
+  }, [isBookPickerOpen]);
 
   // Livros atualmente emprestados (ativos)
   const activeBorrowedBooks = useMemo(() => {
@@ -411,26 +423,18 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                 >
                   {/* Capa e Informações da Obra */}
                   <div className="flex items-start gap-3 min-w-0 flex-1">
-                    <button
-                      type="button"
+                    <BookCoverView
+                      palette={palette}
+                      book={book}
+                      compact={true}
+                      title={book.titulo}
+                      author={book.autores[0]}
+                      coverUrl={book.capaLocalPath || book.capaUrl}
+                      width={56}
+                      height={84}
                       onClick={() => onOpenBookDetail(book)}
-                      className="w-14 h-20 rounded-md overflow-hidden shrink-0 shadow-md border hover:opacity-90 transition-opacity cursor-pointer flex items-center justify-center"
-                      style={{
-                        backgroundColor: palette.woodBorder,
-                        borderColor: `${palette.goldPrimary}60`,
-                      }}
-                      title="Ver detalhes da obra"
-                    >
-                      {book.capaUrl ? (
-                        <img
-                          src={book.capaLocalPath || book.capaUrl}
-                          alt={book.titulo}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <BookOpen size={24} className="text-amber-200" />
-                      )}
-                    </button>
+                      className="cursor-pointer hover:opacity-90 transition-opacity"
+                    />
 
                     <div className="flex flex-col gap-1 min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">

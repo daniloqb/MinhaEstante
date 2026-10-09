@@ -21,6 +21,22 @@ export function isRunningInAndroidApk(): boolean {
   return isAppAssets || hasAndroidBridge;
 }
 
+export function getSavedGeminiApiKey(): string {
+  if (typeof localStorage === 'undefined') return '';
+  return (localStorage.getItem('minha_estante_google_api_key') || '').trim();
+}
+
+export function setSavedGeminiApiKey(key: string): void {
+  if (typeof localStorage !== 'undefined') {
+    const trimmed = key.trim();
+    if (trimmed) {
+      localStorage.setItem('minha_estante_google_api_key', trimmed);
+    } else {
+      localStorage.removeItem('minha_estante_google_api_key');
+    }
+  }
+}
+
 export async function generateBookSummary(params: GenerateBookSummaryParams): Promise<string> {
   const isApk = isRunningInAndroidApk();
 
@@ -53,15 +69,16 @@ export async function generateBookSummary(params: GenerateBookSummaryParams): Pr
   }
 
   // 2. Conexão direta com a API do Google Gemini (necessária no APK do smartphone)
-  const apiKey =
+  const apiKey = (
     params.userApiKey ||
-    (typeof localStorage !== 'undefined' ? localStorage.getItem('minha_estante_google_api_key') : null) ||
+    getSavedGeminiApiKey() ||
     import.meta.env.VITE_GEMINI_API_KEY ||
-    '';
+    ''
+  ).trim();
 
   if (!apiKey) {
     throw new Error(
-      'Não foi possível conectar ao serviço de IA. Verifique sua conexão com a internet ou configure sua chave gratuita do Gemini nas Configurações do app.'
+      'Autenticação necessária: Chave da API do Google Gemini não configurada. Por favor, informe sua chave gratuita do Google AI Studio em Configurações para gerar resumos literários.'
     );
   }
 
@@ -120,17 +137,30 @@ Use formatação Markdown limpa com tópicos legíveis e parágrafos fluidos. Se
         const status = errorBody?.error?.status || '';
 
         if (
+          res.status === 401 ||
+          status === 'UNAUTHENTICATED' ||
+          rawMsg.toLowerCase().includes('authentication') ||
+          rawMsg.toLowerCase().includes('invalid authentication credentials') ||
+          rawMsg.toLowerCase().includes('api key not valid') ||
+          rawMsg.toLowerCase().includes('api_key_service_blocked')
+        ) {
+          throw new Error(
+            'Chave de autenticação da IA inválida ou ausente. Por favor, insira sua chave gratuita do Google AI Studio gerada em aistudio.google.com para gerar os resumos.'
+          );
+        }
+
+        if (
           res.status === 429 ||
           status === 'RESOURCE_EXHAUSTED' ||
           rawMsg.toLowerCase().includes('quota') ||
           rawMsg.toLowerCase().includes('exceeded')
         ) {
           throw new Error(
-            'Limite temporário de requisições gratuitas atingido. A cota da IA do Google renova-se automaticamente a cada minuto. Por favor, aguarde 1 a 2 minutos e tente novamente, ou insira sua chave gratuita pessoal do Gemini em Configurações para acesso prioritário.'
+            'Limite temporário de requisições gratuitas atingido. A cota da IA do Google renova-se automaticamente a cada minuto. Por favor, aguarde 1 minuto e tente novamente.'
           );
         }
 
-        throw new Error(rawMsg || `Erro HTTP ${res.status}`);
+        throw new Error(rawMsg || `Erro ao consultar a IA do Google (Código ${res.status}).`);
       }
 
       const data = await res.json();

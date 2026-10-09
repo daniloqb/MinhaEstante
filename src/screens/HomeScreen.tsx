@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Book, ShelfTab, ViewMode, GroupByMode, SortOption, isBookBorrowed } from '../types/book';
+import { Book, ShelfTab, ViewMode, GroupByMode, SortOption } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodShelf } from '../components/WoodShelf';
 import { BookCoverView } from '../components/BookCoverView';
@@ -20,7 +20,6 @@ import {
   Check,
   Bookmark,
   Tablet,
-  Handshake,
 } from 'lucide-react';
 
 interface HomeScreenProps {
@@ -135,65 +134,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     Boolean(selectedGenre) ||
     selectedRatingMin != null ||
     Boolean(selectedFormat);
-
-  /**
-   * Renderiza o selo adequado para a capa na visualização de prateleiras
-   */
-  const renderCoverBadge = (book: Book) => {
-    // 1. Prioridade máxima: Livro atualmente emprestado
-    if (isBookBorrowed(book)) {
-      return (
-        <span
-          className="px-2 py-0.5 rounded-full text-xs font-serif font-bold shadow-lg flex items-center gap-1 border bg-amber-500 text-stone-950 border-amber-200"
-          title={`Emprestado para ${book.emprestimo?.nomePessoa}`}
-        >
-          <Handshake size={12} strokeWidth={2.5} />
-          <span>Emprestado</span>
-        </span>
-      );
-    }
-
-    // 2. Se for Lido
-    if (book.status_leitura === 'lido') {
-      return (
-        <span
-          className="px-2 py-0.5 rounded-full text-xs font-serif font-bold shadow-lg flex items-center gap-1 border bg-emerald-600 text-white border-white/60"
-          title={`Lido ${book.nota != null ? `(★ ${book.nota})` : ''}`}
-        >
-          <Check size={12} strokeWidth={3} />
-          {book.nota != null ? `★${book.nota}` : 'Lido'}
-        </span>
-      );
-    }
-
-    // 3. Se for Quero Ler
-    if (book.status_leitura === 'quero_ler') {
-      return (
-        <span
-          className="px-2 py-0.5 rounded-full text-xs font-serif font-bold shadow-lg flex items-center gap-1 border bg-blue-600 text-white border-white/60"
-          title="Na lista Quero Ler"
-        >
-          <Bookmark size={12} />
-          Quero
-        </span>
-      );
-    }
-
-    // 4. Se for E-book digital no acervo unificado
-    if (book.formato === 'ebook') {
-      return (
-        <span
-          className="px-2 py-0.5 rounded-full text-[10px] font-sans font-bold shadow-lg flex items-center gap-1 border bg-purple-900/90 text-purple-100 border-purple-400/50"
-          title="E-book digital no acervo"
-        >
-          <Tablet size={11} />
-          <span>E-book</span>
-        </span>
-      );
-    }
-
-    return null;
-  };
 
   return (
     <div className="flex flex-col w-full flex-1">
@@ -598,12 +538,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                         >
                           <BookCoverView
                             palette={palette}
+                            book={book}
                             title={book.titulo}
                             author={book.autores[0]}
                             coverUrl={book.capaUrl}
                             width={108}
                             height={160}
-                            badge={renderCoverBadge(book)}
                             onClick={() => onSelectBook(book)}
                             onContextMenu={(e) => {
                               e.preventDefault();
@@ -637,12 +577,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <div className="flex items-center gap-4">
                   <BookCoverView
                     palette={palette}
+                    book={book}
+                    compact={true}
                     title={book.titulo}
                     author={book.autores[0]}
                     coverUrl={book.capaUrl}
                     width={64}
                     height={96}
-                    badge={renderCoverBadge(book)}
                   />
 
                   <div className="flex-1 min-w-0">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SearchResultBook, ShelfTab, Book } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
@@ -52,6 +52,17 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
   const { t } = useI18n();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      if (isScannerOpen) {
+        setIsScannerOpen(false);
+        e.stopImmediatePropagation();
+      }
+    };
+    window.addEventListener('popstate', handlePopState, true);
+    return () => window.removeEventListener('popstate', handlePopState, true);
+  }, [isScannerOpen]);
+
   const handleCardClick = (item: SearchResultBook) => {
     const existingInLibrary = (userBooks || []).find((b) => areBooksDuplicate(b, item));
     if (existingInLibrary) {
@@ -87,15 +98,16 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      onSearch(searchQuery);
+    const trimmed = searchQuery.trim();
+    if (trimmed) {
+      onSearch(trimmed);
     }
   };
 
   const handleBarcodeDetected = (barcode: string) => {
     onQueryChange(barcode);
     setTimeout(() => {
-      onSearch(barcode);
+      onSearch(barcode.trim());
     }, 50);
   };
 
@@ -209,8 +221,14 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                 className="animate-spin mb-3"
                 style={{ color: palette.goldPrimary }}
               />
-              <p className="font-serif text-lg" style={{ color: palette.textOnWood }}>
-                Consultando os arquivos da biblioteca...
+              <p className="font-serif text-lg font-bold" style={{ color: palette.textOnWood }}>
+                Consultando acervos brasileiros e internacionais...
+              </p>
+              <p
+                className="font-serif italic text-xs mt-1"
+                style={{ color: palette.textSecondaryOnWood }}
+              >
+                Buscando na CBL / BrasilAPI, Google Books e Open Library
               </p>
             </div>
           ) : errorMessage && results.length === 0 ? (
@@ -218,7 +236,10 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
             <div className="p-6 my-auto text-center">
               <PaperCard palette={palette} className="flex flex-col items-center p-6">
                 <BookOpen size={40} className="mb-2" style={{ color: palette.woodBorder }} />
-                <p className="font-serif font-bold text-lg mb-4">{errorMessage}</p>
+                <p className="font-serif font-bold text-lg mb-2">{errorMessage}</p>
+                <p className="text-xs font-serif italic mb-4 max-w-sm" style={{ color: palette.textSecondaryOnPaper }}>
+                  Dica: tente buscar apenas pelo sobrenome do autor (ex: "Orwell", "Verne", "Machado") ou título simplificado.
+                </p>
                 <button
                   type="button"
                   onClick={onOpenManualRegister}
@@ -235,7 +256,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
             </div>
           ) : results.length === 0 && !searchQuery.trim() ? (
             /* Estado Inicial */
-            <div className="flex flex-col items-center justify-center p-8 my-auto text-center">
+            <div className="flex flex-col items-center justify-center p-6 my-auto text-center">
               <div
                 className="p-4 rounded-full mb-3 shadow-md border"
                 style={{
@@ -247,11 +268,40 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                 <Search size={40} />
               </div>
               <p
-                className="font-serif text-lg leading-snug mb-5 max-w-sm"
+                className="font-serif text-lg leading-snug mb-2 max-w-sm"
                 style={{ color: palette.textOnWood }}
               >
                 Encontre qualquer livro por título, autor ou código ISBN
               </p>
+              <p
+                className="font-serif italic text-xs mb-4"
+                style={{ color: palette.textSecondaryOnWood }}
+              >
+                Digite o termo e clique em <strong>Buscar</strong> para pesquisar
+              </p>
+
+              {/* Sugestões rápidas de pesquisa */}
+              <div className="flex flex-wrap justify-center gap-2 mb-6 max-w-md">
+                {['Dom Casmurro', 'George Orwell', 'Júlio Verne', 'Machado de Assis', 'Clarice Lispector'].map((sug) => (
+                  <button
+                    key={sug}
+                    type="button"
+                    onClick={() => {
+                      onQueryChange(sug);
+                      onSearch(sug);
+                    }}
+                    className="px-3 py-1.5 rounded-full text-xs font-serif border shadow-xs hover:brightness-105 active:scale-95 transition-all cursor-pointer"
+                    style={{
+                      backgroundColor: palette.paperSurface,
+                      borderColor: palette.woodBorder,
+                      color: palette.textOnPaper,
+                    }}
+                  >
+                    📚 {sug}
+                  </button>
+                ))}
+              </div>
+
               <WoodShelf palette={palette} className="mb-6 max-w-sm" />
               <button
                 type="button"
@@ -300,6 +350,8 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                     <div className="flex gap-3">
                       <BookCoverView
                         palette={palette}
+                        book={existingInLibrary}
+                        compact={true}
                         title={item.titulo || 'Sem título'}
                         author={(Array.isArray(item.autores) && item.autores[0]) || ''}
                         coverUrl={item.capaUrl}
@@ -319,6 +371,10 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                             >
                               {item.origem === 'brasilapi'
                                 ? '🇧🇷 BrasilAPI (CBL)'
+                                : item.origem === 'manual'
+                                ? '🇧🇷 Edição Brasileira'
+                                : (item.isbn13?.startsWith('97885') || item.isbn13?.startsWith('97865'))
+                                ? '🇧🇷 Edição Nacional'
                                 : item.origem === 'google'
                                 ? 'Google Books'
                                 : 'Open Library'}

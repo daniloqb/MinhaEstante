@@ -1,9 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, X, Copy, Check, BookmarkPlus, RefreshCw, AlertCircle, BookOpen, Tablet } from 'lucide-react';
+import {
+  Sparkles,
+  X,
+  Copy,
+  Check,
+  BookmarkPlus,
+  RefreshCw,
+  AlertCircle,
+  BookOpen,
+  Tablet,
+  Key,
+  ExternalLink,
+} from 'lucide-react';
 import { Book } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { BookCoverView } from './BookCoverView';
-import { generateBookSummary } from '../services/aiService';
+import {
+  generateBookSummary,
+  getSavedGeminiApiKey,
+  setSavedGeminiApiKey,
+} from '../services/aiService';
 
 interface BookSummaryAiModalProps {
   palette: WoodPalette;
@@ -29,12 +45,22 @@ export const BookSummaryAiModal: React.FC<BookSummaryAiModalProps> = ({
   const [copied, setCopied] = useState<boolean>(false);
   const [savedToNotes, setSavedToNotes] = useState<boolean>(false);
 
+  // Chave de API da IA do Google AI Studio
+  const [apiKey, setApiKey] = useState<string>(() => getSavedGeminiApiKey());
+  const [showKeyInput, setShowKeyInput] = useState<boolean>(false);
+  const [inputKeyVal, setInputKeyVal] = useState<string>('');
+
   useEffect(() => {
     if (!isOpen || !book) {
       setSummary(null);
       setErrorMessage(null);
+      setShowKeyInput(false);
       return;
     }
+
+    const currentSaved = getSavedGeminiApiKey();
+    setApiKey(currentSaved);
+    setInputKeyVal(currentSaved);
 
     // Se o livro já possui um resumo gravado em suas anotações, carrega instantaneamente
     if (book.observacoes && book.observacoes.includes('=== RESUMO DA IA')) {
@@ -49,18 +75,32 @@ export const BookSummaryAiModal: React.FC<BookSummaryAiModalProps> = ({
 
   if (!isOpen || !book) return null;
 
-  const handleFetchSummary = async () => {
+  const handleSaveKeyAndGenerate = async () => {
+    const trimmed = inputKeyVal.trim();
+    if (!trimmed) {
+      setErrorMessage('Por favor, informe uma chave de API válida do Google AI Studio.');
+      return;
+    }
+    setSavedGeminiApiKey(trimmed);
+    setApiKey(trimmed);
+    setShowKeyInput(false);
+    await handleFetchSummary(trimmed);
+  };
+
+  const handleFetchSummary = async (overrideKey?: string) => {
     setIsLoading(true);
     setErrorMessage(null);
     setSavedToNotes(false);
 
     try {
+      const effectiveKey = overrideKey || apiKey || getSavedGeminiApiKey();
       const resultText = await generateBookSummary({
         titulo: book.titulo,
         autores: book.autores,
         sinopse: book.descricao || book.observacoes,
         anoPublicacao: book.anoPublicacao,
         formato: book.formato || 'fisico',
+        userApiKey: effectiveKey,
       });
 
       if (!resultText) {
@@ -70,10 +110,18 @@ export const BookSummaryAiModal: React.FC<BookSummaryAiModalProps> = ({
       setSummary(resultText);
     } catch (err: any) {
       console.error('Falha ao gerar resumo da IA:', err);
-      setErrorMessage(
+      const msg =
         err.message ||
-          'Não foi possível conectar com a IA no momento. Verifique sua conexão com a internet e tente novamente.'
-      );
+        'Não foi possível conectar com a IA no momento. Verifique sua conexão com a internet e tente novamente.';
+      setErrorMessage(msg);
+      if (
+        msg.toLowerCase().includes('autenticação') ||
+        msg.toLowerCase().includes('chave') ||
+        msg.toLowerCase().includes('auth') ||
+        msg.toLowerCase().includes('credential')
+      ) {
+        setShowKeyInput(true);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -211,8 +259,78 @@ export const BookSummaryAiModal: React.FC<BookSummaryAiModalProps> = ({
             </div>
           </div>
 
+          {/* Seção de Autenticação & Configuração da Chave da IA */}
+          {(showKeyInput || (!apiKey && !summary && !isLoading)) && (
+            <div
+              className="p-4 rounded-xl border space-y-3 animate-in fade-in"
+              style={{
+                backgroundColor: palette.paperSurfaceElevated,
+                borderColor: `${palette.woodBorder}40`,
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-serif font-bold text-sm" style={{ color: palette.textOnPaper }}>
+                  <Key size={16} className="text-amber-700" />
+                  <span>Autenticação da IA (Google AI Studio)</span>
+                </div>
+                {apiKey && (
+                  <button
+                    type="button"
+                    onClick={() => setShowKeyInput(false)}
+                    className="text-xs underline cursor-pointer text-stone-500 hover:text-stone-800"
+                  >
+                    Fechar
+                  </button>
+                )}
+              </div>
+
+              <p className="text-xs leading-relaxed" style={{ color: palette.textSecondaryOnPaper }}>
+                Para gerar o resumo da obra através do modelo Google Gemini, insira sua chave gratuita de API gerada em <strong>aistudio.google.com</strong>.
+              </p>
+
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={inputKeyVal}
+                  onChange={(e) => setInputKeyVal(e.target.value)}
+                  placeholder="AIzaSy... (Chave gratuita do Google AI Studio)"
+                  className="w-full px-3 py-2.5 rounded-lg border text-xs font-mono focus:outline-none focus:ring-1"
+                  style={{
+                    backgroundColor: palette.paperSurface,
+                    borderColor: palette.woodBorder,
+                    color: palette.textOnPaper,
+                  }}
+                />
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <a
+                    href="https://aistudio.google.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-blue-700 hover:underline flex items-center gap-1 font-sans"
+                  >
+                    <span>Criar chave gratuita no Google AI Studio</span>
+                    <ExternalLink size={12} />
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveKeyAndGenerate}
+                    className="py-2 px-4 rounded-lg font-serif font-bold text-xs shadow-md cursor-pointer hover:brightness-105 active:scale-95 transition-all"
+                    style={{
+                      backgroundColor: palette.goldPrimary,
+                      color: palette.textOnGold,
+                    }}
+                  >
+                    Salvar Chave e Gerar Resumo
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Estado Inicial: Nenhum resumo gerado ainda */}
-          {!summary && !isLoading && !errorMessage && (
+          {!summary && !isLoading && !errorMessage && !showKeyInput && (
             <div className="py-8 flex flex-col items-center justify-center text-center space-y-3.5">
               <div
                 className="w-16 h-16 rounded-full flex items-center justify-center border shadow-inner"
@@ -235,9 +353,29 @@ export const BookSummaryAiModal: React.FC<BookSummaryAiModalProps> = ({
                 </p>
               </div>
 
+              {apiKey && (
+                <div className="flex items-center gap-2 text-[11px] font-sans text-stone-500">
+                  <span className="text-emerald-600 font-bold">✓ Chave da IA configurada</span>
+                  <span>•</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowKeyInput(true)}
+                    className="underline hover:text-stone-800 cursor-pointer"
+                  >
+                    Alterar chave
+                  </button>
+                </div>
+              )}
+
               <button
                 type="button"
-                onClick={handleFetchSummary}
+                onClick={() => {
+                  if (!apiKey) {
+                    setShowKeyInput(true);
+                  } else {
+                    handleFetchSummary();
+                  }
+                }}
                 className="mt-2 py-3 px-6 rounded-xl font-serif font-bold text-sm shadow-lg flex items-center gap-2 cursor-pointer hover:brightness-105 active:scale-95 transition-all"
                 style={{
                   backgroundColor: palette.goldPrimary,
@@ -284,14 +422,26 @@ export const BookSummaryAiModal: React.FC<BookSummaryAiModalProps> = ({
                 <span>Não foi possível gerar o resumo</span>
               </div>
               <p className="leading-relaxed">{errorMessage}</p>
-              <button
-                type="button"
-                onClick={handleFetchSummary}
-                className="mt-2 py-2 px-4 rounded-lg bg-red-700 text-white font-serif font-bold text-xs flex items-center gap-1.5 hover:bg-red-800 cursor-pointer"
-              >
-                <RefreshCw size={14} />
-                Tentar novamente
-              </button>
+
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleFetchSummary()}
+                  className="mt-2 py-2 px-4 rounded-lg bg-red-700 text-white font-serif font-bold text-xs flex items-center gap-1.5 hover:bg-red-800 cursor-pointer"
+                >
+                  <RefreshCw size={14} />
+                  Tentar novamente
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowKeyInput(true)}
+                  className="mt-2 py-2 px-3 rounded-lg border border-red-300 bg-white text-red-900 font-serif font-bold text-xs flex items-center gap-1.5 hover:bg-red-100 cursor-pointer"
+                >
+                  <Key size={14} />
+                  Informar / Trocar Chave da IA
+                </button>
+              </div>
             </div>
           )}
 
@@ -323,7 +473,7 @@ export const BookSummaryAiModal: React.FC<BookSummaryAiModalProps> = ({
           >
             <button
               type="button"
-              onClick={handleFetchSummary}
+              onClick={() => handleFetchSummary()}
               className="py-2 px-3 rounded-lg border font-serif text-xs font-semibold flex items-center gap-1.5 hover:bg-black/5 active:scale-95 transition-all cursor-pointer"
               style={{ borderColor: `${palette.woodBorder}60`, color: palette.textOnPaper }}
               title="Gerar uma nova versão do resumo"
