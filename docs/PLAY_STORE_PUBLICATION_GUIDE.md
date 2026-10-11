@@ -11,7 +11,7 @@ Este guia detalha o fluxo de compilação, validação, rotação de chaves de a
 | :--- | :--- |
 | **Nome Oficial do App** | `BookNook` |
 | **Application ID / Package Name** | `com.booknookapp` |
-| **Versão / VersionCode** | `15` (1.0.15) |
+| **Versão / VersionCode** | `17` (1.0.17) |
 | **SDK Mínimo (minSdkVersion)** | `24` (Android 7.0+) |
 | **SDK de Destino (targetSdkVersion)** | `36` (Android 16 / Compatibilidade total) |
 | **Tráfego Seguro (HTTPS)** | `usesCleartextTraffic="false"` (100% criptografado) |

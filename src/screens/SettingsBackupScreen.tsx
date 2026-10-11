@@ -1065,7 +1065,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
           <div className="flex items-center gap-2 mb-2">
             <Package size={20} style={{ color: palette.woodBorder }} />
             <h3 className="font-serif font-bold text-base" style={{ color: palette.textOnPaper }}>
-              Pacotes de Publicação & Instalação (v1.0.15)
+              Pacotes de Publicação & Instalação (v1.0.17)
             </h3>
           </div>
           <p className="text-xs mb-3.5" style={{ color: palette.textSecondaryOnPaper }}>
@@ -1120,6 +1120,31 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
               </div>
               <span className="text-[11px]" style={{ color: palette.textSecondaryOnPaper }}>
                 APK universal pronto para instalar diretamente no smartphone Android.
+              </span>
+            </a>
+
+            {/* Download PEM Certificate (para Redefinição de Chave no Google Play) */}
+            <a
+              href="/upload_certificate.pem"
+              download="upload_certificate.pem"
+              className="p-3.5 rounded-xl border flex flex-col gap-1.5 transition-all hover:brightness-105 active:scale-98 shadow-sm no-underline sm:col-span-2"
+              style={{
+                backgroundColor: `${palette.goldPrimary}10`,
+                borderColor: `${palette.woodBorder}60`,
+                color: palette.textOnPaper,
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-serif font-bold text-sm flex items-center gap-1.5">
+                  <Download size={16} />
+                  upload_certificate.pem
+                </span>
+                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-700 text-white">
+                  Certificado Público
+                </span>
+              </div>
+              <span className="text-[11px]" style={{ color: palette.textSecondaryOnPaper }}>
+                Envie este certificado no <strong>Google Play Console</strong> caso precise redefinir a chave de upload (SHA1: 31:DD:AF:DC:73...).
               </span>
             </a>
           </div>

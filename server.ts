@@ -290,6 +290,37 @@ app.get(['/minha-estante.apk', '/app-debug.apk', '/booknook.apk'], (req, res) =>
   }
 });
 
+app.get('/upload_certificate.pem', (req, res) => {
+  let filePath = path.resolve(process.cwd(), 'upload_certificate.pem');
+  if (!fs.existsSync(filePath)) {
+    filePath = path.resolve(process.cwd(), 'public', 'upload_certificate.pem');
+  }
+  if (fs.existsSync(filePath)) {
+    const stats = fs.statSync(filePath);
+    res.setHeader('Content-Type', 'application/x-pem-file');
+    res.setHeader('Content-Disposition', 'attachment; filename="upload_certificate.pem"');
+    res.setHeader('Content-Length', stats.size);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    fs.createReadStream(filePath).pipe(res);
+  } else {
+    res.status(404).send('Certificado PEM não encontrado.');
+  }
+});
+
+app.get('/booknook-release-key.jks', (req, res) => {
+  const filePath = path.resolve(process.cwd(), 'booknook-release-key.jks');
+  if (fs.existsSync(filePath)) {
+    const stats = fs.statSync(filePath);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', 'attachment; filename="booknook-release-key.jks"');
+    res.setHeader('Content-Length', stats.size);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    fs.createReadStream(filePath).pipe(res);
+  } else {
+    res.status(404).send('Keystore JKS não encontrada.');
+  }
+});
+
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
