@@ -173,43 +173,57 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-xs px-1 flex-wrap gap-2">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between text-xs px-1 flex-wrap gap-2.5">
+            {/* Grupo de Ações Complementares: Escanear e Cadastro Manual */}
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <button
                 type="button"
                 onClick={() => setIsScannerOpen(true)}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-lg font-serif font-bold text-xs border shadow-md cursor-pointer hover:brightness-110 active:scale-95 transition-all"
+                className="flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-lg font-serif font-bold text-xs border shadow-sm cursor-pointer hover:brightness-110 active:scale-95 transition-all whitespace-nowrap min-h-[38px]"
                 style={{
                   backgroundColor: palette.goldPrimary,
                   borderColor: palette.woodBorder,
                   color: palette.textOnGold,
                 }}
+                title="Escanear código de barras com a câmera"
+                aria-label="Escanear código de barras com a câmera"
               >
                 <Camera size={15} />
-                <span>Escanear Código de Barras</span>
+                <span className="hidden xs:inline">Escanear Código de Barras</span>
+                <span className="xs:hidden">Escanear</span>
               </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span
-                className="font-serif italic text-[11px] hidden sm:inline"
-                style={{ color: palette.textSecondaryOnWood }}
-              >
-                BrasilAPI (CBL), Google e Open Library
-              </span>
 
               <button
-                type="submit"
-                disabled={Boolean(isLoading) || !searchQuery.trim()}
-                className="px-4 py-1.5 rounded-lg font-serif font-bold text-xs shadow-sm cursor-pointer disabled:opacity-50 hover:brightness-105 active:scale-95 transition-all"
+                type="button"
+                onClick={onOpenManualRegister}
+                className="flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-lg font-serif font-bold text-xs border shadow-sm cursor-pointer hover:brightness-105 active:scale-95 transition-all whitespace-nowrap min-h-[38px]"
                 style={{
-                  backgroundColor: palette.goldPrimary,
-                  color: palette.textOnGold,
+                  backgroundColor: palette.paperSurface,
+                  borderColor: palette.woodBorder,
+                  color: palette.textOnPaper,
                 }}
+                title="Cadastrar livro manualmente"
+                aria-label="Cadastrar livro manualmente"
               >
-                Buscar
+                <Plus size={15} style={{ color: palette.woodBorder }} />
+                <span className="hidden xs:inline">Cadastro Manual</span>
+                <span className="xs:hidden">Manual</span>
               </button>
             </div>
+
+            {/* Ação de Busca */}
+            <button
+              type="submit"
+              disabled={Boolean(isLoading) || !searchQuery.trim()}
+              className="px-4 py-2 rounded-lg font-serif font-bold text-xs shadow-sm cursor-pointer disabled:opacity-50 hover:brightness-105 active:scale-95 transition-all min-h-[38px] flex items-center justify-center gap-1.5 ml-auto"
+              style={{
+                backgroundColor: palette.goldPrimary,
+                color: palette.textOnGold,
+              }}
+            >
+              <Search size={14} />
+              <span>Buscar</span>
+            </button>
           </div>
         </form>
 
@@ -229,7 +243,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                 className="font-serif italic text-xs mt-1"
                 style={{ color: palette.textSecondaryOnWood }}
               >
-                Buscando na CBL / BrasilAPI, Google Books e Open Library
+                Consultando acervos bibliográficos nacionais e internacionais...
               </p>
             </div>
           ) : errorMessage && results.length === 0 ? (
@@ -371,7 +385,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                               }}
                             >
                               {item.origem === 'brasilapi'
-                                ? '🇧🇷 BrasilAPI (CBL)'
+                                ? '🇧🇷 Edição Nacional (ISBN)'
                                 : item.origem === 'manual'
                                 ? '🇧🇷 Edição Brasileira'
                                 : (item.isbn13?.startsWith('97885') || item.isbn13?.startsWith('97865'))

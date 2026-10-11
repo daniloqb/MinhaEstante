@@ -7,17 +7,98 @@ import fs from 'fs';
 const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
+// Configuração segura de CORS: permitir origens da aplicação, esquemas locais do Android e requisições do app
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  const origin = req.headers.origin;
+  if (
+    !origin ||
+    origin === 'null' ||
+    origin.startsWith('http://localhost') ||
+    origin.startsWith('https://localhost') ||
+    origin.includes('appassets.androidplatform.net') ||
+    origin.includes('run.app')
+  ) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-goog-api-key');
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    return res.sendStatus(204);
   }
   next();
 });
 
-app.use(express.json({ limit: '15mb' }));
+// Limite de corpo seguro (JSON 2MB é mais do que suficiente para metadados)
+app.use(express.json({ limit: '2mb' }));
+
+// Mecanismo de Rate Limiting em memória para proteção contra abusos
+interface RateLimitEntry {
+  count: number;
+  resetTime: number;
+}
+const rateLimitMap = new Map<string, RateLimitEntry>();
+
+function checkRateLimit(ip: string, maxRequests: number, windowMs: number): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetTime) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + windowMs });
+    return true;
+  }
+  if (entry.count >= maxRequests) {
+    return false;
+  }
+  entry.count++;
+  return true;
+}
+
+// Limpeza periódica do mapa de rate limit a cada 10 minutos
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of rateLimitMap.entries()) {
+    if (now > entry.resetTime) {
+      rateLimitMap.delete(ip);
+    }
+  }
+}, 10 * 60 * 1000);
+
+// Validador SSRF para URLs externas
+function isSafeExternalUrl(targetUrl: string): boolean {
+  try {
+    const parsed = new URL(targetUrl);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return false;
+    }
+    const hostname = parsed.hostname.toLowerCase();
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
+      hostname === '::1' ||
+      hostname.endsWith('.internal') ||
+      hostname.endsWith('.local')
+    ) {
+      return false;
+    }
+    const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    const ipMatch = hostname.match(ipv4Regex);
+    if (ipMatch) {
+      const b0 = parseInt(ipMatch[1], 10);
+      const b1 = parseInt(ipMatch[2], 10);
+      if (b0 === 10 || b0 === 127 || (b0 === 169 && b1 === 254) || (b0 === 192 && b1 === 168)) {
+        return false;
+      }
+      if (b0 === 172 && b1 >= 16 && b1 <= 31) {
+        return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // Helper to get Gemini client
 const getAiClient = (customKey?: string) => {
@@ -37,20 +118,25 @@ const getAiClient = (customKey?: string) => {
 
 // API: Resumo literário do livro via Gemini
 app.post('/api/resumo', async (req, res) => {
+  const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+  if (!checkRateLimit(clientIp, 30, 60 * 1000)) {
+    return res.status(429).json({ error: 'Muitas requisições. Aguarde um momento antes de gerar outro resumo.' });
+  }
+
   try {
     const { titulo, autores, sinopse, anoPublicacao, formato, userApiKey } = req.body;
     const headerKey = (req.headers['x-goog-api-key'] as string) || '';
-    if (!titulo) {
-      return res.status(400).json({ error: 'Título do livro é obrigatório.' });
+    if (!titulo || typeof titulo !== 'string' || titulo.length > 500) {
+      return res.status(400).json({ error: 'Título do livro é obrigatório e deve ser válido.' });
     }
 
     const ai = getAiClient(userApiKey || headerKey);
     const prompt = `Você é um bibliotecário sábio, leitor voraz e especialista literário acolhedor.
 O usuário leu ou deseja relembrar os principais pontos do seguinte livro da sua estante pessoal:
 
-• Título: "${titulo}"
-• Autor(es): ${Array.isArray(autores) ? autores.join(', ') : (autores || 'Não especificado')}
-${sinopse ? `• Sinopse / Contexto fornecido: "${sinopse}"` : ''}
+• Título: "${titulo.slice(0, 300)}"
+• Autor(es): ${Array.isArray(autores) ? autores.join(', ').slice(0, 300) : (autores ? String(autores).slice(0, 300) : 'Não especificado')}
+${sinopse ? `• Sinopse / Contexto fornecido: "${String(sinopse).slice(0, 2000)}"` : ''}
 ${anoPublicacao ? `• Ano de Publicação: ${anoPublicacao}` : ''}
 • Formato na Estante: ${formato === 'ebook' ? 'E-book / Digital' : 'Livro Físico'}
 
@@ -106,12 +192,17 @@ Use formatação Markdown limpa com tópicos legíveis e parágrafos fluidos. Se
   }
 });
 
-// API: Proxy para baixar e converter imagens de capas externas em Data URL (evitando bloqueios de CORS no cliente)
+// API: Proxy para baixar e converter imagens de capas externas em Data URL (evitando bloqueios de CORS no cliente com proteção SSRF e limite de tamanho)
 app.post('/api/fetch-image', async (req, res) => {
+  const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+  if (!checkRateLimit(clientIp, 60, 60 * 1000)) {
+    return res.status(429).json({ error: 'Muitas requisições de download de imagens. Aguarde alguns instantes.' });
+  }
+
   try {
     const { url } = req.body;
-    if (!url || typeof url !== 'string' || !url.startsWith('http')) {
-      return res.status(400).json({ error: 'URL de imagem válida é obrigatória.' });
+    if (!url || typeof url !== 'string' || !isSafeExternalUrl(url)) {
+      return res.status(400).json({ error: 'URL de imagem externa inválida ou não permitida.' });
     }
 
     const controller = new AbortController();
@@ -119,6 +210,7 @@ app.post('/api/fetch-image', async (req, res) => {
 
     const imageResp = await fetch(url, {
       signal: controller.signal,
+      redirect: 'follow',
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -134,7 +226,20 @@ app.post('/api/fetch-image', async (req, res) => {
     }
 
     const contentType = imageResp.headers.get('content-type') || 'image/jpeg';
+    if (contentType && !contentType.startsWith('image/') && !contentType.includes('octet-stream')) {
+      return res.status(400).json({ error: 'O recurso fornecido não é uma imagem válida.' });
+    }
+
+    const contentLength = imageResp.headers.get('content-length');
+    if (contentLength && parseInt(contentLength, 10) > 8 * 1024 * 1024) {
+      return res.status(413).json({ error: 'A imagem excede o tamanho máximo permitido de 8MB.' });
+    }
+
     const buffer = await imageResp.arrayBuffer();
+    if (buffer.byteLength > 8 * 1024 * 1024) {
+      return res.status(413).json({ error: 'A imagem excede o tamanho máximo permitido de 8MB.' });
+    }
+
     const base64 = Buffer.from(buffer).toString('base64');
     const dataUrl = `data:${contentType};base64,${base64}`;
 

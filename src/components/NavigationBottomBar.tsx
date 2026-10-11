@@ -37,10 +37,13 @@ export const NavigationBottomBar: React.FC<NavigationBottomBarProps> = ({
 
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-40 flex flex-col shadow-2xl transition-all"
+      className="fixed bottom-0 inset-x-0 z-50 flex flex-col shadow-2xl transition-all isolate"
       style={{
         backgroundColor: palette.woodDark,
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        transform: 'translate3d(0, 0, 0)',
+        WebkitTransform: 'translate3d(0, 0, 0)',
+        willChange: 'transform',
       }}
     >
       {/* Filete de madeira sobre a barra de navegação */}

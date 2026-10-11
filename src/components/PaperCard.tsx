@@ -25,10 +25,11 @@ export const PaperCard: React.FC<PaperCardProps> = ({
       title={title}
       onClick={onClick}
       onContextMenu={onContextMenu}
-      className={`rounded-xl p-3.5 transition-all duration-200 border ${
+      className={`relative isolate rounded-xl p-3.5 transition-all duration-200 border ${
         onClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99]' : ''
       } ${className}`}
       style={{
+        isolation: 'isolate',
         backgroundColor: elevated ? palette.paperSurfaceElevated : palette.paperSurface,
         borderColor: `${palette.woodBorder}40`,
         boxShadow: elevated

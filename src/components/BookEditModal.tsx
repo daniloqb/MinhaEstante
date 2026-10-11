@@ -19,6 +19,7 @@ import {
   DownloadCloud,
   Sparkles,
   Upload,
+  Check,
 } from 'lucide-react';
 
 interface BookEditModalProps {
@@ -209,13 +210,13 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs"
+      className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs"
       onClick={onDismiss}
     >
       {/* Modal de confirmação quando o livro fica sem posse e sem status de leitura */}
       {showOrphanPrompt && (
         <div
-          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs"
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs"
           onClick={() => setShowOrphanPrompt(false)}
         >
           <div
@@ -274,7 +275,7 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
       )}
 
       <div
-        className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl border max-h-[92vh] overflow-y-auto"
+        className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl border flex flex-col max-h-[92dvh] sm:max-h-[88vh] overflow-hidden"
         style={{
           backgroundColor: palette.paperSurface,
           borderColor: palette.woodBorder,
@@ -282,9 +283,6 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Handle visual no mobile */}
-        <div className="w-12 h-1.5 rounded-full mx-auto mb-4 bg-black/20 sm:hidden" />
-
         {/* Modal de Resumo com IA */}
         <BookSummaryAiModal
           palette={palette}
@@ -304,40 +302,57 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
           }}
         />
 
-        <div className="flex items-start justify-between pb-3 border-b" style={{ borderColor: `${palette.woodBorder}40` }}>
-          <div>
-            <h2 className="font-serif font-bold text-2xl" style={{ color: palette.textOnPaper }}>
-              Editar Obra & Leitura
-            </h2>
-            <p className="font-serif text-sm font-semibold line-clamp-1" style={{ color: palette.textSecondaryOnPaper }}>
-              {titulo || book.titulo}
-            </p>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setIsAiModalOpen(true)}
-              className="py-1 px-2.5 rounded-lg border font-serif font-bold text-xs flex items-center gap-1 shadow-xs cursor-pointer hover:brightness-105"
-              style={{
-                backgroundColor: `${palette.goldPrimary}20`,
-                borderColor: palette.goldPrimary,
-                color: palette.woodBorder,
-              }}
-              title="Solicitar resumo literário à IA"
-            >
-              <Sparkles size={13} />
-              <span>Resumo IA</span>
-            </button>
-            <button
-              onClick={onDismiss}
-              className="p-1 rounded-full hover:bg-black/10 transition-colors cursor-pointer"
-            >
-              <X size={20} />
-            </button>
+        {/* Cabeçalho Fixo do Modal */}
+        <div
+          className="p-4 sm:p-5 border-b shrink-0 flex flex-col gap-1.5"
+          style={{
+            borderColor: `${palette.woodBorder}40`,
+            backgroundColor: palette.paperSurfaceElevated,
+          }}
+        >
+          {/* Handle visual no mobile */}
+          <div className="w-12 h-1.5 rounded-full mx-auto mb-2 bg-black/20 sm:hidden" />
+
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="font-serif font-bold text-xl sm:text-2xl leading-tight truncate" style={{ color: palette.textOnPaper }}>
+                Editar Obra & Leitura
+              </h2>
+              <p className="font-serif text-xs sm:text-sm font-semibold truncate mt-0.5" style={{ color: palette.textSecondaryOnPaper }}>
+                {titulo || book.titulo}
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsAiModalOpen(true)}
+                className="py-1 px-2.5 rounded-lg border font-serif font-bold text-xs flex items-center gap-1 shadow-xs cursor-pointer hover:brightness-105"
+                style={{
+                  backgroundColor: `${palette.goldPrimary}20`,
+                  borderColor: palette.goldPrimary,
+                  color: palette.woodBorder,
+                }}
+                title="Solicitar resumo literário à IA"
+              >
+                <Sparkles size={13} />
+                <span>Resumo IA</span>
+              </button>
+              <button
+                type="button"
+                onClick={onDismiss}
+                className="p-1.5 rounded-lg border hover:bg-black/10 transition-colors cursor-pointer text-stone-700"
+                style={{ borderColor: `${palette.woodBorder}50` }}
+                title="Fechar"
+                aria-label="Fechar"
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-5 py-4">
+        {/* Corpo do Formulário com Rolagem Independente */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-5 overscroll-contain">
           {/* Seletor de Formato: Livro Físico vs E-book Digital */}
           <div
             className="p-3.5 rounded-xl border flex flex-col gap-2.5"
@@ -907,12 +922,19 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
           </div>
         </div>
 
-        {/* Botões do Rodapé */}
-        <div className="flex items-center gap-3 pt-3 border-t" style={{ borderColor: `${palette.woodBorder}40` }}>
+        {/* Rodapé Fixo / Sticky com Ações — Sempre Visível em Qualquer Resolução */}
+        <div
+          className="p-3.5 sm:p-4 border-t shrink-0 flex items-center gap-3 shadow-md z-10"
+          style={{
+            backgroundColor: palette.paperSurfaceElevated,
+            borderColor: `${palette.woodBorder}40`,
+            paddingBottom: 'calc(0.875rem + env(safe-area-inset-bottom, 0px))',
+          }}
+        >
           <button
             type="button"
             onClick={onDismiss}
-            className="flex-1 py-2.5 rounded-lg font-serif font-bold text-sm border cursor-pointer hover:bg-black/5"
+            className="flex-1 py-3 px-4 rounded-xl font-serif font-bold text-sm border cursor-pointer hover:bg-black/5 active:scale-98 transition-all text-center"
             style={{
               borderColor: palette.woodBorder,
               color: palette.textOnPaper,
@@ -923,13 +945,14 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
           <button
             type="button"
             onClick={handleSaveClick}
-            className="flex-1 py-2.5 rounded-lg font-serif font-bold text-sm shadow-md cursor-pointer hover:brightness-105 active:scale-98 transition-all"
+            className="flex-1 py-3 px-4 rounded-xl font-serif font-bold text-sm shadow-md cursor-pointer hover:brightness-105 active:scale-98 transition-all flex items-center justify-center gap-1.5 text-center"
             style={{
               backgroundColor: palette.goldPrimary,
               color: palette.textOnGold,
             }}
           >
-            Salvar na Estante
+            <Check size={16} strokeWidth={2.5} />
+            <span>Salvar na Estante</span>
           </button>
         </div>
       </div>

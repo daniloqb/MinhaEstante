@@ -59,7 +59,7 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
           key="lido"
           className={`${
             compact ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[9px] sm:text-[10px]'
-          } rounded-full font-serif font-bold shadow-md flex items-center gap-0.5 border bg-emerald-600 text-white border-white/70 backdrop-blur-xs`}
+          } rounded-full font-serif font-bold shadow-md flex items-center gap-0.5 border bg-emerald-700 text-white border-white/80`}
           title={`Lido ${book.nota != null ? `(★ ${book.nota})` : ''}`}
         >
           <Check size={compact ? 8 : 10} strokeWidth={3} />
@@ -72,7 +72,7 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
           key="quero"
           className={`${
             compact ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[9px] sm:text-[10px]'
-          } rounded-full font-serif font-bold shadow-md flex items-center gap-0.5 border bg-blue-600 text-white border-white/70 backdrop-blur-xs`}
+          } rounded-full font-serif font-bold shadow-md flex items-center gap-0.5 border bg-blue-700 text-white border-white/80`}
           title="Na lista Quero Ler"
         >
           <Bookmark size={compact ? 8 : 10} />
@@ -88,7 +88,7 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
           key="digital"
           className={`${
             compact ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[9px] sm:text-[10px]'
-          } rounded-full font-sans font-bold shadow-md flex items-center gap-0.5 border bg-purple-900/90 text-purple-100 border-purple-300/50 backdrop-blur-xs`}
+          } rounded-full font-sans font-bold shadow-md flex items-center gap-0.5 border bg-purple-950 text-purple-100 border-purple-300/70`}
           title="E-book Digital"
         >
           <Tablet size={compact ? 8 : 10} />
@@ -101,7 +101,7 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
           key="fisico"
           className={`${
             compact ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[9px] sm:text-[10px]'
-          } rounded-full font-serif font-bold shadow-md flex items-center gap-0.5 border bg-amber-950/90 text-amber-100 border-amber-300/50 backdrop-blur-xs`}
+          } rounded-full font-serif font-bold shadow-md flex items-center gap-0.5 border bg-amber-950 text-amber-100 border-amber-300/70`}
           title={book.tenho_fisico ? 'Livro Físico (tenho em casa)' : 'Livro Físico'}
         >
           <BookOpen size={compact ? 8 : 10} />
@@ -117,7 +117,7 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
           key="emprestado"
           className={`${
             compact ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[9px] sm:text-[10px]'
-          } rounded-full font-serif font-bold shadow-lg flex items-center gap-0.5 border bg-amber-500 text-stone-950 border-amber-200 backdrop-blur-xs animate-pulse`}
+          } rounded-full font-serif font-bold shadow-lg flex items-center gap-0.5 border bg-amber-500 text-stone-950 border-amber-200`}
           title={`Emprestado para ${book.emprestimo?.nomePessoa}`}
         >
           <Handshake size={compact ? 8 : 10} strokeWidth={2.5} />
@@ -149,8 +149,9 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
     <div
       onClick={onClick}
       onContextMenu={onContextMenu}
-      className={`relative overflow-hidden rounded-r-md rounded-l-xs cursor-pointer select-none transition-transform duration-200 hover:-translate-y-1 hover:brightness-105 active:scale-95 group flex-shrink-0 ${className}`}
+      className={`relative isolate overflow-hidden rounded-r-md rounded-l-xs cursor-pointer select-none transition-transform duration-200 hover:-translate-y-1 hover:brightness-105 active:scale-95 group flex-shrink-0 ${className}`}
       style={{
+        isolation: 'isolate',
         width: typeof width === 'number' ? `${width}px` : width,
         height: typeof height === 'number' ? `${height}px` : height,
         backgroundColor: coverBgColor,
@@ -228,7 +229,7 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
 
       {/* Selos / Badges posicionados sobre a capa (Lido, Físico/Digital, Emprestado) */}
       {renderedBadges && (
-        <div className="absolute top-1 right-1 z-30 pointer-events-none max-w-[92%] flex flex-col items-end gap-1">
+        <div className="absolute top-1 right-1 z-10 pointer-events-none max-w-[92%] flex flex-col items-end gap-1">
           {renderedBadges}
         </div>
       )}

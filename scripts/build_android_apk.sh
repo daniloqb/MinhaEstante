@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+export PATH="/usr/lib/jvm/java-17-openjdk-amd64/bin:$PATH"
+
 APP_ROOT="$(pwd)"
 WORKDIR="/tmp/android_pkg"
 
@@ -18,10 +20,10 @@ echo "=== INICIANDO COMPILAÇÃO DO ZERO DO APK ==="
 
 # 1. Limpar artefatos anteriores
 rm -rf "$WORKDIR"
-rm -f "$APP_ROOT/minha-estante.apk" "$APP_ROOT/app-debug.apk" "$APP_ROOT/public/minha-estante.apk" "$APP_ROOT/.build-outputs/app-debug.apk"
+rm -f "$APP_ROOT/minha-estante.apk" "$APP_ROOT/booknook.apk" "$APP_ROOT/app-debug.apk" "$APP_ROOT/public/minha-estante.apk" "$APP_ROOT/public/booknook.apk" "$APP_ROOT/.build-outputs/app-debug.apk"
 rm -f "$APP_ROOT"/*.idsig /minha-estante.apk /minha-estante.apk.idsig 2>/dev/null || true
 
-mkdir -p "$WORKDIR/src/com/aistudio/minhaestante/vbrkxp"
+mkdir -p "$WORKDIR/src/com/booknookapp"
 mkdir -p "$WORKDIR/res/values"
 mkdir -p "$WORKDIR/res/drawable"
 mkdir -p "$WORKDIR/assets"
@@ -47,15 +49,15 @@ fi
 cat << 'XML' > "$WORKDIR/res/values/strings.xml"
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">maShelf</string>
+    <string name="app_name">BookNook</string>
 </resources>
 XML
 
-# 6. AndroidManifest.xml com package original e versionCode elevado para upgrade garantido
+# 6. AndroidManifest.xml com package oficial com.booknookapp
 cat << 'XML' > "$WORKDIR/AndroidManifest.xml"
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.aistudio.minhaestante.vbrkxp"
+    package="com.booknookapp"
     android:versionCode="151"
     android:versionName="3.9.1">
 
@@ -63,8 +65,6 @@ cat << 'XML' > "$WORKDIR/AndroidManifest.xml"
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
@@ -73,7 +73,7 @@ cat << 'XML' > "$WORKDIR/AndroidManifest.xml"
         android:icon="@drawable/ic_launcher"
         android:theme="@android:style/Theme.NoTitleBar"
         android:hardwareAccelerated="true"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"
             android:label="@string/app_name"
@@ -90,8 +90,8 @@ cat << 'XML' > "$WORKDIR/AndroidManifest.xml"
 XML
 
 # 7. MainActivity.java com suporte a shouldInterceptRequest, file chooser e bridge de criação/salvamento de arquivos
-cat << 'JAVA' > "$WORKDIR/src/com/aistudio/minhaestante/vbrkxp/MainActivity.java"
-package com.aistudio.minhaestante.vbrkxp;
+cat << 'JAVA' > "$WORKDIR/src/com/booknookapp/MainActivity.java"
+package com.booknookapp;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -183,21 +183,14 @@ public class MainActivity extends Activity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                        requestPermissions(new String[]{
-                            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                            Manifest.permission.READ_EXTERNAL_STORAGE
-                        }, STORAGE_PERMISSION_CODE);
-                    } else {
-                        Toast.makeText(MainActivity.this, "Permissão para salvar arquivos já está ativada!", Toast.LENGTH_SHORT).show();
-                    }
+                    Toast.makeText(MainActivity.this, "Armazenamento via Storage Access Framework ativo!", Toast.LENGTH_SHORT).show();
                 }
             });
         }
 
         @JavascriptInterface
         public boolean hasStoragePermission() {
-            return checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+            return true;
         }
 
         @JavascriptInterface
@@ -468,7 +461,7 @@ echo "4. Gerando R.java..."
 aapt package -f -m -J "$WORKDIR/src" -M "$WORKDIR/AndroidManifest.xml" -S "$WORKDIR/res" -I "$ANDROID_JAR"
 
 echo "5. Compilando Java com javac (compatível com Android 8+)..."
-javac -source 1.8 -target 1.8 -cp "$ANDROID_JAR" -d "$WORKDIR/bin" "$WORKDIR/src/com/aistudio/minhaestante/vbrkxp/"*.java
+javac -source 1.8 -target 1.8 -cp "$ANDROID_JAR" -d "$WORKDIR/bin" "$WORKDIR/src/com/booknookapp/"*.java
 
 echo "6. Gerando Dalvik DEX (classes.dex)..."
 if command -v dx &> /dev/null; then

@@ -1,15 +1,35 @@
 #!/bin/bash
 set -e
 
+export PATH="/usr/lib/jvm/java-17-openjdk-amd64/bin:$PATH"
+
 APP_ROOT="$(pwd)"
 WORKDIR="/tmp/aab_pkg"
 BUNDLETOOL="/usr/local/bin/bundletool.jar"
 AAPT2="/usr/local/bin/aapt2"
 ANDROID_JAR="/usr/local/lib/android.jar"
 D8_JAR="/usr/local/lib/d8.jar"
-KEYSTORE_PATH="$APP_ROOT/booknook-release-key.jks"
-KEYSTORE_PASS="booknook123"
-KEY_ALIAS="booknook"
+# Credenciais de Assinatura via Variáveis de Ambiente
+RAW_KS_PATH="${ANDROID_KEYSTORE_PATH:-}"
+if [ -n "$RAW_KS_PATH" ] && [ -d "$RAW_KS_PATH" ]; then
+    if [ -f "$RAW_KS_PATH/booknook-release-key.jks" ]; then
+        KEYSTORE_PATH="$RAW_KS_PATH/booknook-release-key.jks"
+    else
+        KEYSTORE_PATH="$APP_ROOT/booknook-release-key.jks"
+    fi
+elif [ -n "$RAW_KS_PATH" ] && [ -f "$RAW_KS_PATH" ]; then
+    KEYSTORE_PATH="$RAW_KS_PATH"
+else
+    KEYSTORE_PATH="$APP_ROOT/booknook-release-key.jks"
+fi
+
+KEYSTORE_PASS="${ANDROID_KEYSTORE_PASSWORD:-}"
+KEY_ALIAS="${ANDROID_KEY_ALIAS:-booknook}"
+
+# Se ANDROID_KEYSTORE_PASSWORD não estiver setada e o arquivo existir localmente para compatibilidade de build local
+if [ -z "$KEYSTORE_PASS" ] && [ -f "$KEYSTORE_PATH" ]; then
+    KEYSTORE_PASS="booknook123"
+fi
 
 VERSION_CODE="15"
 VERSION_NAME="1.0.15"
@@ -86,8 +106,6 @@ cat << XML > "$WORKDIR/AndroidManifest.xml"
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
@@ -96,7 +114,7 @@ cat << XML > "$WORKDIR/AndroidManifest.xml"
         android:icon="@drawable/ic_launcher"
         android:theme="@android:style/Theme.NoTitleBar"
         android:hardwareAccelerated="true"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="false">
         <activity
             android:name="com.booknookapp.MainActivity"
             android:label="@string/app_name"
@@ -226,21 +244,14 @@ public class MainActivity extends Activity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                        requestPermissions(new String[]{
-                            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                            Manifest.permission.READ_EXTERNAL_STORAGE
-                        }, STORAGE_PERMISSION_CODE);
-                    } else {
-                        Toast.makeText(MainActivity.this, "Permissão para salvar arquivos já está ativada!", Toast.LENGTH_SHORT).show();
-                    }
+                    Toast.makeText(MainActivity.this, "Armazenamento via Storage Access Framework ativo!", Toast.LENGTH_SHORT).show();
                 }
             });
         }
 
         @JavascriptInterface
         public boolean hasStoragePermission() {
-            return checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+            return true;
         }
 
         @JavascriptInterface
@@ -651,5 +662,5 @@ echo "=== SUCESSO! ARQUIVO .AAB E .APK GERADOS COM AS ÚLTIMAS ALTERAÇÕES ==="
 ls -lh "$APP_ROOT/booknook.aab" "$APP_ROOT/booknook.apk"
 echo ""
 echo "=== CHAVE DE ASSINATURA / FINGERPRINTS PARA GOOGLE PLAY ==="
-keytool -list -v -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASS" | grep -E "SHA1|SHA256" || true
+keytool -list -v -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" -storepass:env ANDROID_KEYSTORE_PASSWORD 2>/dev/null | grep -E "SHA1|SHA256" || keytool -list -v -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASS" 2>/dev/null | grep -E "SHA1|SHA256" || true
 echo "=========================================================="

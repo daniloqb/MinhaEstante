@@ -256,6 +256,7 @@ export const App: React.FC = () => {
   };
 
   const handleViewModeChange = (mode: ViewMode) => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
     setViewMode(mode);
     BookStorage.saveViewMode(mode);
   };
@@ -895,7 +896,7 @@ export const App: React.FC = () => {
               onSelectBook={(book) => handleOpenBookDetail(book)}
               onOpenQuickAction={(book) => handleOpenQuickAction(book)}
               onOpenFiltersModal={() => handleOpenFilterModal(true)}
-              onAddBookClick={() => handleOpenManualRegister()}
+              onAddBookClick={() => handleBottomTabChange('BUSCAR')}
             />
           )}
 

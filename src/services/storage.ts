@@ -1,8 +1,8 @@
 import { Book, EstanteStats, ReadingStatus } from '../types/book';
 
-const STORAGE_KEY_BOOKS = 'minha_estante_livros_v1';
-const STORAGE_KEY_SCHEMA_VERSION = 'minha_estante_schema_version';
-const STORAGE_KEY_BACKUP_PRE_MIGRATION = 'minha_estante_backup_pre_migration_v1';
+export const STORAGE_KEY_BOOKS = 'minha_estante_livros_v1';
+export const STORAGE_KEY_SCHEMA_VERSION = 'minha_estante_schema_version';
+export const STORAGE_KEY_BACKUP_PRE_MIGRATION = 'minha_estante_backup_pre_migration_v1';
 const STORAGE_KEY_THEME = 'minha_estante_light_oak';
 const STORAGE_KEY_VIEW_MODE = 'minha_estante_view_mode';
 const STORAGE_KEY_GROUP_BY = 'minha_estante_group_by';
@@ -129,23 +129,18 @@ export function migrateLegacyBooks(rawBooks: any[]): Book[] {
       tenho_fisico = raw.tenho_fisico;
     }
 
-    if (raw.status_leitura === 'lido' || raw.status_leitura === 'quero_ler' || raw.status_leitura === 'nenhum') {
-      status_leitura = raw.status_leitura;
-    } else if (raw.status) {
-      // Regra de migração solicitada:
-      // - "Meus Livros" -> tenho_fisico = true, status_leitura = nenhum
-      // - "lido" -> status_leitura = lido, tenho_fisico = false
-      // - "quero_ler" -> status_leitura = quero_ler, tenho_fisico = false
-      if (raw.status === 'meus_livros') {
-        tenho_fisico = true;
-        status_leitura = 'nenhum';
-      } else if (raw.status === 'lido') {
-        status_leitura = 'lido';
-        if (typeof raw.tenho_fisico !== 'boolean') tenho_fisico = false;
-      } else if (raw.status === 'quero_ler') {
-        status_leitura = 'quero_ler';
-        if (typeof raw.tenho_fisico !== 'boolean') tenho_fisico = false;
-      }
+    const legacyIndicator = raw.status_leitura || raw.status || raw.categoria;
+    if (legacyIndicator === 'lido' || legacyIndicator === 'lidos') {
+      status_leitura = 'lido';
+      if (typeof raw.tenho_fisico !== 'boolean') tenho_fisico = false;
+    } else if (legacyIndicator === 'quero_ler' || legacyIndicator === 'desejo') {
+      status_leitura = 'quero_ler';
+      if (typeof raw.tenho_fisico !== 'boolean') tenho_fisico = false;
+    } else if (legacyIndicator === 'meus_livros' || legacyIndicator === 'tenho' || legacyIndicator === 'possui') {
+      tenho_fisico = true;
+      status_leitura = 'nenhum';
+    } else if (legacyIndicator === 'nenhum') {
+      status_leitura = 'nenhum';
     }
 
     return {
@@ -193,19 +188,15 @@ export function migrateLegacyBooks(rawBooks: any[]): Book[] {
 export const BookStorage = {
   loadBooks(): Book[] {
     try {
-      const isCleared = localStorage.getItem('booknook_cleared_initial_v1');
-      if (!isCleared) {
-        localStorage.setItem('booknook_cleared_initial_v1', 'true');
-        this.saveAllBooks([]);
-        localStorage.setItem(STORAGE_KEY_SCHEMA_VERSION, String(CURRENT_SCHEMA_VERSION));
-        return [];
-      }
-
-      const data = localStorage.getItem(STORAGE_KEY_BOOKS);
+      let data = localStorage.getItem(STORAGE_KEY_BOOKS);
       if (!data) {
-        this.saveAllBooks([]);
-        localStorage.setItem(STORAGE_KEY_SCHEMA_VERSION, String(CURRENT_SCHEMA_VERSION));
-        return [];
+        // Fallback para chaves de versões legadas caso existam
+        const legacyData = localStorage.getItem('minha_estante_livros');
+        if (legacyData) {
+          data = legacyData;
+        } else {
+          return [];
+        }
       }
 
       const parsed = JSON.parse(data);

@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   Globe,
   ChevronDown,
+  Package,
 } from 'lucide-react';
 import { MaShelfLogo } from '../components/MaShelfLogo';
 import { useI18n } from '../i18n/I18nContext';
@@ -1056,6 +1057,71 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                 </ul>
               </div>
             )}
+          </div>
+        </PaperCard>
+
+        {/* Pacotes de Publicação & Instalação Android */}
+        <PaperCard palette={palette} elevated>
+          <div className="flex items-center gap-2 mb-2">
+            <Package size={20} style={{ color: palette.woodBorder }} />
+            <h3 className="font-serif font-bold text-base" style={{ color: palette.textOnPaper }}>
+              Pacotes de Publicação & Instalação (v1.0.15)
+            </h3>
+          </div>
+          <p className="text-xs mb-3.5" style={{ color: palette.textSecondaryOnPaper }}>
+            Arquivos oficiais compilados para target SDK 36 e assinados com a keystore oficial via jarsigner com timestamp DigiCert.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Download AAB */}
+            <a
+              href="/booknook.aab"
+              download="booknook.aab"
+              className="p-3.5 rounded-xl border flex flex-col gap-1.5 transition-all hover:brightness-105 active:scale-98 shadow-sm no-underline"
+              style={{
+                backgroundColor: `${palette.goldPrimary}20`,
+                borderColor: palette.goldPrimary,
+                color: palette.textOnPaper,
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-serif font-bold text-sm flex items-center gap-1.5">
+                  <Download size={16} />
+                  booknook.aab
+                </span>
+                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-700 text-white">
+                  1.3 MB
+                </span>
+              </div>
+              <span className="text-[11px]" style={{ color: palette.textSecondaryOnPaper }}>
+                Android App Bundle oficial para upload no <strong>Google Play Console</strong>.
+              </span>
+            </a>
+
+            {/* Download APK */}
+            <a
+              href="/booknook.apk"
+              download="booknook.apk"
+              className="p-3.5 rounded-xl border flex flex-col gap-1.5 transition-all hover:brightness-105 active:scale-98 shadow-sm no-underline"
+              style={{
+                backgroundColor: palette.paperSurfaceElevated,
+                borderColor: `${palette.woodBorder}50`,
+                color: palette.textOnPaper,
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-serif font-bold text-sm flex items-center gap-1.5">
+                  <Download size={16} />
+                  booknook.apk
+                </span>
+                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-700 text-white">
+                  1.3 MB
+                </span>
+              </div>
+              <span className="text-[11px]" style={{ color: palette.textSecondaryOnPaper }}>
+                APK universal pronto para instalar diretamente no smartphone Android.
+              </span>
+            </a>
           </div>
         </PaperCard>
         </div>

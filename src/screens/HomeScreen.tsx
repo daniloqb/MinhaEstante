@@ -22,7 +22,7 @@ import {
   Tablet,
 } from 'lucide-react';
 
-interface HomeScreenProps {
+export interface HomeScreenProps {
   palette: WoodPalette;
   books: Book[];
   allBooks: Book[];
@@ -78,6 +78,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 }) => {
   const { t } = useI18n();
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+
+  const handleSwitchViewMode = (mode: ViewMode) => {
+    if (mode === viewMode) return;
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    onViewModeChange(mode);
+  };
 
   // Contadores reais de cada aba da estante unificada
   const tabCounts = useMemo(() => {
@@ -316,7 +322,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         >
           <button
             type="button"
-            onClick={() => onViewModeChange('CAPAS')}
+            onClick={() => handleSwitchViewMode('CAPAS')}
             className="p-2 rounded-lg transition-all cursor-pointer"
             style={{
               backgroundColor: viewMode === 'CAPAS' ? `${palette.goldPrimary}30` : 'transparent',
@@ -328,7 +334,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => onViewModeChange('LISTA')}
+            onClick={() => handleSwitchViewMode('LISTA')}
             className="p-2 rounded-lg transition-all cursor-pointer"
             style={{
               backgroundColor: viewMode === 'LISTA' ? `${palette.goldPrimary}30` : 'transparent',
@@ -514,8 +520,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         ) : viewMode === 'CAPAS' ? (
           /* Visualização de Prateleiras com Rolagem Horizontal */
-          <div className="flex flex-col gap-8 pt-4">
-            {groupedShelves.map(([groupKey, shelfBooks]) => {
+          <div key="mode-shelf-covers" className="flex flex-col gap-8 pt-4">
+            {groupedShelves.map(([groupKey, shelfBooks], groupIndex) => {
               const label =
                 groupBy === 'ANO'
                   ? groupKey == null
@@ -527,13 +533,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 shelfBooks.length === 1 ? '1 título' : `${shelfBooks.length} títulos`;
 
               return (
-                <div key={label} className="w-full flex flex-col">
+                <div key={`shelf-group-${groupIndex}-${label}`} className="w-full flex flex-col">
                   {/* Livros em pé sobre a prateleira */}
                   <div className="w-full overflow-x-auto px-6 flex items-end gap-6 pb-0 pt-3 scrollbar-thin">
                     {shelfBooks.map((book) => {
                       return (
                         <div
-                          key={book.id}
+                          key={`shelf-book-${book.id}`}
                           className="flex flex-col items-center flex-shrink-0 group"
                         >
                           <BookCoverView
@@ -563,10 +569,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         ) : (
           /* Visualização em Lista (Cartões de Papel Envelhecido com Letras Maiores) */
-          <div className="px-4 py-4 flex flex-col gap-3.5 max-w-3xl mx-auto w-full">
+          <div key="mode-shelf-list" className="px-4 py-4 flex flex-col gap-3.5 max-w-3xl mx-auto w-full">
             {books.map((book) => (
               <PaperCard
-                key={book.id}
+                key={`list-card-${book.id}`}
                 palette={palette}
                 onClick={() => onSelectBook(book)}
                 onContextMenu={(e) => {
@@ -702,13 +708,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <button
         type="button"
         onClick={onAddBookClick}
-        className="fixed right-5 bottom-20 z-40 w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl cursor-pointer hover:scale-105 active:scale-95 transition-transform"
+        className="fixed z-40 w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl cursor-pointer hover:scale-105 active:scale-95 transition-transform"
         style={{
+          bottom: 'calc(5.25rem + env(safe-area-inset-bottom, 0px))',
+          right: 'calc(1.25rem + env(safe-area-inset-right, 0px))',
           backgroundColor: palette.goldPrimary,
           color: palette.textOnGold,
           boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
         }}
-        title="Adicionar livro à estante"
+        title="Buscar e adicionar livros à estante"
+        aria-label="Buscar e adicionar livros"
       >
         <Plus size={32} strokeWidth={2.5} />
       </button>
