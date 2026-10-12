@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# Se aapt antigo não estiver no PATH, utilizar o pipeline oficial moderno com aapt2, d8 e bundletool
+if ! command -v aapt &> /dev/null; then
+    echo "Executando pipeline oficial com aapt2 e bundletool..."
+    exec bash "$(dirname "$0")/build_android_aab.sh" "$@"
+fi
+
 export PATH="/usr/lib/jvm/java-17-openjdk-amd64/bin:$PATH"
 
 APP_ROOT="$(pwd)"
@@ -9,11 +15,6 @@ WORKDIR="/tmp/android_pkg"
 ANDROID_JAR="/usr/lib/android-sdk/platforms/android-23/android.jar"
 if [ ! -f "$ANDROID_JAR" ]; then
     ANDROID_JAR="/usr/share/java/com.android.android-23.jar"
-fi
-
-if ! command -v aapt &> /dev/null || ! command -v javac &> /dev/null || [ ! -f "$ANDROID_JAR" ]; then
-    echo "Aviso: aapt, javac ou android.jar não encontrados no PATH. Mantendo APK existente."
-    exit 0
 fi
 
 echo "=== INICIANDO COMPILAÇÃO DO ZERO DO APK ==="

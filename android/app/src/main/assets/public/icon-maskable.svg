@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Fundo total azul-marinho para zona segura de ícones adaptativos Android/PWA -->
+  <rect width="512" height="512" fill="#1B2A38" />
+  
+  <g transform="translate(56, 56) scale(0.78)">
+    <!-- Livro Esquerdo (Branco / Off-white) -->
+    <rect x="124" y="140" width="54" height="212" rx="18" ry="18" fill="#F4F5F7" />
+    
+    <!-- Livro Central (Âmbar / Dourado) -->
+    <rect x="229" y="192" width="54" height="160" rx="18" ry="18" fill="#E6A038" />
+    
+    <!-- Livro Direito (Branco / Off-white) -->
+    <rect x="334" y="140" width="54" height="212" rx="18" ry="18" fill="#F4F5F7" />
+    
+    <!-- Prateleira Inferior (Menta / Turquesa suave) -->
+    <rect x="104" y="368" width="304" height="20" rx="10" ry="10" fill="#62B8A6" />
+  </g>
+</svg>

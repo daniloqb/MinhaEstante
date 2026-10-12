@@ -22,6 +22,10 @@ export class ImageService {
     maxHeight = 480,
     quality = 0.82
   ): Promise<string> {
+    if (typeof window === 'undefined' || typeof Image === 'undefined') {
+      return Promise.resolve(sourceUrlOrData);
+    }
+
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';

@@ -16,6 +16,7 @@ export interface GenerateBookSummaryParams {
 
 export function isRunningInAndroidApk(): boolean {
   if (typeof window === 'undefined') return false;
+  if (typeof (window as any).Capacitor !== 'undefined' && (window as any).Capacitor.isNativePlatform?.()) return true;
   const isAppAssets = window.location.origin.includes('appassets') || window.location.protocol === 'file:';
   const hasAndroidBridge = Boolean((window as any).AndroidApp);
   return isAppAssets || hasAndroidBridge;

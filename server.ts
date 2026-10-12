@@ -1,11 +1,15 @@
 import express from 'express';
-import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import path from 'path';
 import fs from 'fs';
 
 const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+
+// Health check endpoint para Cloud Run e monitoramento
+app.get(['/health', '/api/health'], (_req, res) => {
+  res.status(200).json({ status: 'ok', uptime: process.uptime() });
+});
 
 // Configuração segura de CORS: permitir origens da aplicação, esquemas locais do Android e requisições do app
 app.use((req, res, next) => {
@@ -275,8 +279,15 @@ app.get(['/booknook.aab', '/minha-estante.aab'], (req, res) => {
 
 app.get(['/minha-estante.apk', '/app-debug.apk', '/booknook.apk'], (req, res) => {
   const isDebug = req.path.includes('app-debug');
-  const fileName = isDebug ? 'app-debug.apk' : 'minha-estante.apk';
-  const filePath = path.resolve(process.cwd(), fileName);
+  const isBooknook = req.path.includes('booknook');
+  const fileName = isDebug ? 'app-debug.apk' : isBooknook ? 'booknook.apk' : 'minha-estante.apk';
+  let filePath = path.resolve(process.cwd(), fileName);
+  if (!fs.existsSync(filePath)) {
+    filePath = path.resolve(process.cwd(), 'booknook.apk');
+  }
+  if (!fs.existsSync(filePath)) {
+    filePath = path.resolve(process.cwd(), 'minha-estante.apk');
+  }
 
   if (fs.existsSync(filePath)) {
     const stats = fs.statSync(filePath);
@@ -321,8 +332,10 @@ app.get('/booknook-release-key.jks', (req, res) => {
   }
 });
 
+
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
@@ -335,8 +348,11 @@ async function startServer() {
   } else {
     const distPath = path.resolve(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (_req, res) => {
-      res.sendFile(path.resolve(distPath, 'index.html'));
+    app.use((req, res, next) => {
+      if (req.method === 'GET' && !req.path.startsWith('/api')) {
+        return res.sendFile(path.resolve(distPath, 'index.html'));
+      }
+      next();
     });
   }
 

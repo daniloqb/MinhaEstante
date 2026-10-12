@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WoodPalette } from '../theme/woodTheme';
 import { Book, isBookBorrowed } from '../types/book';
 import { Check, Bookmark, Tablet, BookOpen, Handshake } from 'lucide-react';
+import { CoverStorageService } from '../services/storage/coverStorageService';
 
 interface BookCoverViewProps {
   palette: WoodPalette;
@@ -44,6 +45,26 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
   onContextMenu,
 }) => {
   const [imageFailed, setImageFailed] = useState(false);
+  const [displayUrl, setDisplayUrl] = useState<string | null>(() => {
+    return book?.capaLocalPath || coverUrl || null;
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    setImageFailed(false);
+    const resolveUrl = async () => {
+      const localPath = book?.capaLocalPath;
+      const remote = coverUrl || book?.capaUrl;
+      const resolved = await CoverStorageService.getCoverDisplayUrl(localPath, remote);
+      if (isMounted) {
+        setDisplayUrl(resolved);
+      }
+    };
+    resolveUrl();
+    return () => {
+      isMounted = false;
+    };
+  }, [book?.capaLocalPath, book?.capaUrl, coverUrl]);
 
   // Marcadores ordenados solicitados: 1. Lido, 2. Físico/Digital, 3. Emprestado
   const renderBadges = () => {
@@ -140,10 +161,10 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
   }
   const coverBgColor = VINTAGE_BOOK_COVERS[Math.abs(hash) % VINTAGE_BOOK_COVERS.length];
 
-  const hasValidImage = coverUrl && coverUrl.trim().length > 0 && !imageFailed;
-  const normalizedUrl = coverUrl?.startsWith('http://')
-    ? coverUrl.replace('http://', 'https://')
-    : coverUrl;
+  const hasValidImage = displayUrl && displayUrl.trim().length > 0 && !imageFailed;
+  const normalizedUrl = displayUrl?.startsWith('http://')
+    ? displayUrl.replace('http://', 'https://')
+    : displayUrl;
 
   return (
     <div

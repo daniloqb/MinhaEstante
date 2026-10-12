@@ -55,6 +55,7 @@ export const setStoredGoogleUser = (user: CachedGoogleUser | null) => {
 
 export const isLocalAndroidApp = (): boolean => {
   if (typeof window === 'undefined') return false;
+  if (typeof (window as any).Capacitor !== 'undefined' && (window as any).Capacitor.isNativePlatform?.()) return true;
   const win = window as any;
   if (win.AndroidApp) return true;
   if (window.location.hostname === 'appassets') return true;

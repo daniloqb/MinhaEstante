@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Book, BookLoan } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
+import { BookCoverView } from './BookCoverView';
 import {
   Handshake,
   Calendar,
@@ -10,7 +11,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  BookOpen,
 } from 'lucide-react';
 
 interface LoanModalProps {
@@ -166,22 +166,17 @@ export const LoanModal: React.FC<LoanModalProps> = ({
             borderColor: `${palette.woodBorder}30`,
           }}
         >
-          <div
-            className="w-12 h-16 rounded-md overflow-hidden shrink-0 shadow-sm flex items-center justify-center border"
-            style={{
-              backgroundColor: palette.woodBorder,
-              borderColor: `${palette.goldPrimary}50`,
-            }}
-          >
-            {book.capaUrl ? (
-              <img
-                src={book.capaLocalPath || book.capaUrl}
-                alt={book.titulo}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <BookOpen size={20} className="text-amber-200" />
-            )}
+          <div className="shrink-0 shadow-sm">
+            <BookCoverView
+              palette={palette}
+              title={book.titulo}
+              author={book.autores?.[0]}
+              coverUrl={book.capaLocalPath || book.capaUrl}
+              book={book}
+              width={48}
+              height={64}
+              compact
+            />
           </div>
           <div className="min-w-0 flex-1">
             <h4

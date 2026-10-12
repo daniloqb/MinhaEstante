@@ -128,7 +128,7 @@ export function getShelfTabLabel(tab: ShelfTab): string {
   switch (tab) {
     case 'todos':
     case 'meus_livros':
-      return 'Todos';
+      return 'Meus Livros';
     case 'ebook':
       return 'E-books';
     case 'lido':

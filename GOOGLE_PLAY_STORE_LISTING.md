@@ -1,11 +1,11 @@
-# Guia Completo para Publicação na Google Play Console — BookNook
+# Guia Completo para Publicação na Google Play Console — Minha Estante
 
-Este documento contém **todos os campos exatos** que você precisa preencher na Google Play Console para criar e publicar o aplicativo **BookNook**.
+Este documento contém **todos os campos exatos** que você precisa preencher na Google Play Console para criar e publicar o aplicativo **Minha Estante**.
 
 ---
 
 ## 1. Criação do Aplicativo (Painel Inicial)
-* **Nome do aplicativo:** `BookNook`
+* **Nome do aplicativo:** `Minha Estante`
 * **Idioma padrão:** `Português (Brasil) – pt-BR`
 * **Tipo:** `App` (Aplicativo)
 * **Preço:** `Gratuito`
@@ -17,36 +17,38 @@ Este documento contém **todos os campos exatos** que você precisa preencher na
 
 ### Nome do App (Máximo 30 caracteres)
 ```text
-BookNook
+Minha Estante
 ```
-*(8 caracteres)*
+*(13 caracteres)*
 
 ### Breve Descrição (Máximo 80 caracteres)
 ```text
-Organize seus livros com estante de madeira, scanner ISBN e backup seguro.
+Organize seus livros em estante clássica de madeira, scanner ISBN e backup ZIP.
 ```
-*(74 caracteres)*
+*(78 caracteres)*
 
 ### Descrição Completa (Máximo 4000 caracteres)
 ```text
-BookNook é o seu organizador e catálogo pessoal definitivo para quem ama livros físicos e digitais.
+Minha Estante é o seu organizador e catálogo pessoal definitivo para quem ama livros físicos e digitais.
 
-Com uma elegante estante clássica em acabamento de madeira nobre (carvalho claro ou nogueira escura), o BookNook transforma sua coleção em uma experiência visual acolhedora e inspiradora.
+Com uma elegante estante clássica em acabamento de madeira nobre (carvalho claro ou nogueira escura), o Minha Estante transforma sua coleção em uma experiência visual acolhedora e inspiradora.
 
 PRINCIPAIS RECURSOS:
 
 📚 Estante Visual em Madeira Nobre
-• Visualize suas capas padronizadas em proporção 2:3 organizadas em prateleiras realistas.
+• Visualize suas capas padronizadas em proporção 2:3 organizadas em prateleiras realistas de madeira nobre.
 • Alternância dinâmica entre estante de madeira clássica e lista compacta detalhada.
 • Suporte para livros físicos e e-books com filtros rápidos.
+• Persistência ultraveloz em banco relacional SQLite local (suporta dezenas de milhares de obras sem lentidão).
 
 🔍 Cadastro Instantâneo via Código de Barras (ISBN)
 • Aponte a câmera do seu smartphone para a contracapa do livro.
-• Busca automática de título, autores, editora, ano de publicação, quantidade de páginas e capas em alta resolução.
+• Busca automática instantânea em bases públicas (BrasilAPI, Google Books e Open Library).
+• Preenchimento automático de título, autores, editora, ano, número de páginas e capa em alta resolução.
 
 🤝 Controle de Livros Emprestados
 • Nunca mais esqueça com quem está aquele seu exemplar favorito.
-• Registre o nome do amigo, telefone de contato, data de empréstimo e data prevista de devolução.
+• Registre o nome do contato, telefone, data de empréstimo e data prevista de devolução.
 • Aba dedicada com status de empréstimos em andamento e devoluções.
 
 📊 Metas de Leitura & Estatísticas
@@ -54,13 +56,13 @@ PRINCIPAIS RECURSOS:
 • Gráficos de autores mais lidos, distribuição de notas (1 a 10) e gêneros favoritos.
 • Histórico organizado de leituras concluídas.
 
-💾 Seus Dados São 100% Seus (Backup Local Completo)
-• Exportação e importação completa em arquivos JSON e planilhas CSV (compatível com Excel).
+💾 Seus Dados São 100% Seus (Backup Completo Portátil em ZIP)
+• Exportação e restauração completa em pacote .ZIP (contendo o catálogo e todas as imagens físicas de capa).
 • Totalmente funcional mesmo sem internet (100% offline-first).
 • Nenhuma dependência de servidores de terceiros ou nuvens instáveis.
 
 🌍 Internacionalização
-• Altere idioma e preferências de exibição a qualquer momento (Português, Inglês, Espanhol, Francês, Alemão e Italiano).
+• Altere idioma e preferências a qualquer momento (Português, Inglês, Espanhol, Francês, Alemão e Italiano).
 
 Livre de anúncios, sem rastreadores intrusivos e feito com carinho para quem aprecia o prazer da leitura.
 ```
@@ -136,16 +138,15 @@ Livre de anúncios, sem rastreadores intrusivos e feito com carinho para quem ap
 
 ## 6. Produção / Lançamento do Pacote (.AAB)
 
-* **Arquivo para Upload:** `booknook.aab` (localizado na raiz do projeto e pronto para download em `/booknook.aab`).
-* **Package Name:** `com.booknookapp`
-* **Version Code:** `10`
-* **Version Name:** `1.0.10`
+* **Arquivo para Upload:** `minha-estante.aab` / `booknook.aab` (gerado na raiz do projeto).
+* **Package Name (Application ID):** `com.booknookapp`
+* **Version Code:** `18`
+* **Version Name:** `1.0.18`
 * **SDK Mínimo:** `24` (Android 7.0+)
-* **SDK Alvo:** `34` (Android 14+)
+* **SDK Alvo:** `36` (Android 16)
 * **Chave de Assinatura (Keystore):**
-  * Arquivo gerado: `booknook-release-key.jks`
+  * Arquivo padrão: `booknook-release-key.jks` (gerenciado de forma segura via variáveis de ambiente `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`)
   * Alias: `booknook`
-  * Senha: `booknook123`
   * SHA-1: `E3:94:F7:44:A0:27:1C:34:9D:A5:3B:EB:BF:0E:8A:8C:99:C1:CE:E7`
   * SHA-256: `62:FB:C4:A3:F4:04:CD:84:E8:5C:37:06:F5:57:4C:B1:EF:48:79:02:00:92:F0:8A:E2:11:68:47:B2:61:E3:EF`
 
@@ -153,43 +154,40 @@ Livre de anúncios, sem rastreadores intrusivos e feito com carinho para quem ap
 
 ## 7. Como Ativar o GitHub Pages no seu Repositório
 
-1. Crie seu repositório no GitHub com o nome `BookNook` (ou envie estes arquivos para o seu repositório).
-2. No GitHub, abra a aba **Settings** (Configurações) do repositório.
-3. No menu lateral esquerdo, clique em **Pages**.
-4. Em **Build and deployment > Source**, selecione:
+1. No seu repositório no GitHub, abra a aba **Settings** (Configurações).
+2. No menu lateral esquerdo, clique em **Pages**.
+3. Em **Build and deployment > Source**, selecione:
    * **Deploy from a branch**
    * Branch: **main**
    * Pasta: **/docs**
    * Clique em **Save**.
-5. Pronto! Em 1 minuto seu site estará no ar no endereço:
-   `https://daniloqb.github.io/BookNook/`
-   E sua política de privacidade em:
-   `https://daniloqb.github.io/BookNook/privacy-policy.html`
+4. Em 1 minuto seu site estará no ar com a política de privacidade em:
+   `https://daniloqb.github.io/MinhaEstante/privacy-policy.html`
 
 ---
 
-## 8. Notas da Versão (Release Notes — v1.0.10)
+## 8. Notas da Versão (Release Notes — v1.0.18)
 
 *(Limite de 500 caracteres por idioma no Google Play Console)*
 
 ### Formato direto com tags para o Google Play Console:
 ```xml
 <pt-BR>
-🎉 Bem-vindo ao BookNook 1.0.10!
-• Navegação nativa por histórico com o botão voltar do smartphone
-• Marcadores múltiplos na capa (Lido, Formato Físico/Digital e Emprestado)
-• Estante visual com acabamento elegante em madeira nobre
-• Leitor de código de barras (ISBN) e metas de leitura
-• Backup local 100% offline em CSV/JSON
-• Livre de anúncios e rastreadores
+🎉 Bem-vindo ao Minha Estante 1.0.18!
+• Banco de dados relacional SQLite ultraveloz para acervos de milhares de livros
+• Armazenamento físico de capas offline no dispositivo (sem links quebrados)
+• Backup completo portátil em arquivo ZIP com catálogo e imagens
+• Scanner instantâneo de código de barras (ISBN) com câmera
+• Navegação com estante realista em madeira nobre e lista detalhada
+• 100% privado, sem anúncios e sem rastreadores
 </pt-BR>
 <en-US>
-🎉 Welcome to BookNook 1.0.10!
-• Native smartphone back button navigation
-• Multiple cover markers (Read, Format Physical/Digital, and Borrowed)
-• Elegant hardwood bookshelf view
-• Barcode scanner (ISBN) and reading goals
-• 100% offline local backup in CSV/JSON
-• Completely ad-free and privacy-focused
+🎉 Welcome to Minha Estante 1.0.18!
+• High-performance SQLite database supporting thousands of books
+• Offline local cover image storage in private app directory
+• Portable full ZIP backup with book catalog and cover images
+• Instant camera barcode scanner for book ISBNs
+• Realistic hardwood bookshelf view and detailed list
+• 100% private, ad-free and tracker-free
 </en-US>
 ```

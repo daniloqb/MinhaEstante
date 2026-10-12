@@ -1,4 +1,5 @@
 import { Book, EstanteStats, ReadingStatus } from '../types/book';
+import { bookRepository } from './database/bookRepository';
 
 export const STORAGE_KEY_BOOKS = 'minha_estante_livros_v1';
 export const STORAGE_KEY_SCHEMA_VERSION = 'minha_estante_schema_version';
@@ -129,14 +130,19 @@ export function migrateLegacyBooks(rawBooks: any[]): Book[] {
       tenho_fisico = raw.tenho_fisico;
     }
 
-    const legacyIndicator = raw.status_leitura || raw.status || raw.categoria;
+    const legacyIndicator = String(raw.status_leitura || raw.status || raw.categoria || '').toLowerCase().trim();
     if (legacyIndicator === 'lido' || legacyIndicator === 'lidos') {
       status_leitura = 'lido';
       if (typeof raw.tenho_fisico !== 'boolean') tenho_fisico = false;
     } else if (legacyIndicator === 'quero_ler' || legacyIndicator === 'desejo') {
       status_leitura = 'quero_ler';
       if (typeof raw.tenho_fisico !== 'boolean') tenho_fisico = false;
-    } else if (legacyIndicator === 'meus_livros' || legacyIndicator === 'tenho' || legacyIndicator === 'possui') {
+    } else if (
+      legacyIndicator === 'meus_livros' ||
+      legacyIndicator === 'meus livros' ||
+      legacyIndicator === 'tenho' ||
+      legacyIndicator === 'possui'
+    ) {
       tenho_fisico = true;
       status_leitura = 'nenhum';
     } else if (legacyIndicator === 'nenhum') {
@@ -158,6 +164,7 @@ export function migrateLegacyBooks(rawBooks: any[]): Book[] {
       generos: Array.isArray(raw.generos) ? raw.generos : [],
       descricao: raw.descricao || null,
       capaUrl: raw.capaUrl || null,
+      capaLocalPath: raw.capaLocalPath || raw.capa_local_path || null,
       formato: raw.formato === 'ebook' ? 'ebook' : 'fisico',
       tenho_fisico,
       status_leitura,
@@ -230,11 +237,54 @@ export const BookStorage = {
     }
   },
 
+  /**
+   * Carrega a biblioteca diretamente do SQLite nativo
+   */
+  async loadBooksFromDatabase(): Promise<Book[]> {
+    try {
+      await bookRepository.initialize();
+      return await bookRepository.getAll();
+    } catch (err) {
+      console.error('Falha ao carregar livros do SQLite:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Salva ou atualiza um único livro no banco SQLite de forma pontual (sem regravar tudo)
+   */
+  async saveBookToDatabase(book: Book): Promise<Book> {
+    await bookRepository.initialize();
+    if (book.id && book.id > 0) {
+      return await bookRepository.update(book);
+    } else {
+      return await bookRepository.insert(book);
+    }
+  },
+
+  /**
+   * Remove um livro do banco SQLite
+   */
+  async deleteBookFromDatabase(id: number): Promise<boolean> {
+    await bookRepository.initialize();
+    return await bookRepository.delete(id);
+  },
+
+  /**
+   * Persiste lote de livros no SQLite com transação atômica (usado em restauração de backup)
+   */
+  async saveAllBooksToDatabase(books: Book[]): Promise<number> {
+    await bookRepository.initialize();
+    await bookRepository.clearAll();
+    return await bookRepository.bulkInsert(books);
+  },
+
   saveAllBooks(books: Book[]): void {
+    // Mantido como fallback de compatibilidade para exportadores
     try {
       localStorage.setItem(STORAGE_KEY_BOOKS, JSON.stringify(books));
     } catch (e) {
-      console.error('Falha ao salvar livros no localStorage', e);
+      console.warn('Fallback localStorage atingiu cota ou indisponível:', e);
     }
   },
 

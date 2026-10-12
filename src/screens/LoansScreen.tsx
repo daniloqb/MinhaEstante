@@ -672,22 +672,17 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                       borderColor: `${palette.woodBorder}40`,
                     }}
                   >
-                    <div
-                      className="w-10 h-14 rounded overflow-hidden shrink-0 shadow-xs flex items-center justify-center border"
-                      style={{
-                        backgroundColor: palette.woodBorder,
-                        borderColor: `${palette.goldPrimary}50`,
-                      }}
-                    >
-                      {book.capaUrl ? (
-                        <img
-                          src={book.capaLocalPath || book.capaUrl}
-                          alt={book.titulo}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <BookOpen size={16} className="text-amber-200" />
-                      )}
+                    <div className="shrink-0 shadow-xs">
+                      <BookCoverView
+                        palette={palette}
+                        title={book.titulo}
+                        author={book.autores?.[0]}
+                        coverUrl={book.capaLocalPath || book.capaUrl}
+                        book={book}
+                        width={40}
+                        height={56}
+                        compact
+                      />
                     </div>
                     <div className="min-w-0 flex-1">
                       <h4

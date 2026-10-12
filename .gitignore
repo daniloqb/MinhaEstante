@@ -24,4 +24,16 @@ debug.keystore
 *.apk
 *.aab
 *.idsig
+*.pem
+*.key
+*.p12
+
+# Node & Build artifacts
+node_modules/
+dist/
+dev-dist/
+.build-outputs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 

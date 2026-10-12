@@ -12,12 +12,6 @@ import {
   Palette,
   Library,
   X,
-  Check,
-  Copy,
-  Clipboard,
-  HelpCircle,
-  ShieldCheck,
-  FileText,
   Image as ImageIcon,
   CheckCircle2,
   Loader2,
@@ -25,11 +19,12 @@ import {
   AlertTriangle,
   Globe,
   ChevronDown,
-  Package,
+  Archive,
 } from 'lucide-react';
 import { MaShelfLogo } from '../components/MaShelfLogo';
 import { useI18n } from '../i18n/I18nContext';
 import { LocaleId } from '../i18n/types';
+import { BackupService } from '../services/storage/backupService';
 
 interface SettingsBackupScreenProps {
   palette: WoodPalette;
@@ -41,12 +36,12 @@ interface SettingsBackupScreenProps {
   onToggleTheme: () => void;
   apiKey: string;
   onApiKeyChange: (key: string) => void;
-  onExportCsv: () => string;
-  onExportJson: () => string;
-  onImportCsv: (csvContent: string) => { count: number };
-  onImportJson: (jsonContent: string) => { count: number };
+  onExportCsv?: () => string;
+  onExportJson?: () => string;
+  onImportCsv?: (csvContent: string) => { count: number } | Promise<{ count: number }>;
+  onImportJson?: (jsonContent: string) => { count: number } | Promise<{ count: number }>;
   books?: Book[];
-  onUpdateAllBooks?: (books: Book[]) => void;
+  onUpdateAllBooks?: (books: Book[]) => void | Promise<void>;
 }
 
 export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
@@ -59,23 +54,21 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
   onToggleTheme,
   apiKey,
   onApiKeyChange,
-  onExportCsv,
-  onExportJson,
-  onImportCsv,
-  onImportJson,
   books = [],
   onUpdateAllBooks,
 }) => {
   const { locale, setLocale, t, availableLocales, currentLocaleInfo } = useI18n();
-  const [showImportDialog, setShowImportDialog] = useState<'csv' | 'json' | null>(null);
-  const [importText, setImportText] = useState('');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [isPermissionGuideOpen, setIsPermissionGuideOpen] = useState(false);
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
-  const [copiedJson, setCopiedJson] = useState(false);
   const [isBatchCaching, setIsBatchCaching] = useState(false);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isGeneratingZip, setIsGeneratingZip] = useState(false);
+  const [isRestoringZip, setIsRestoringZip] = useState(false);
+  const [zipProgress, setZipProgress] = useState<string | null>(null);
+  const [showZipRestoreModal, setShowZipRestoreModal] = useState(false);
+  const [pendingZipFile, setPendingZipFile] = useState<File | null>(null);
+  const [restoreMode, setRestoreMode] = useState<'replace' | 'merge'>('replace');
+  const zipFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const win = window as any;
@@ -125,95 +118,77 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
     setTimeout(() => setStatusMessage(null), 4000);
   };
 
-  const downloadFile = async (content: string, filename: string, mimeType: string) => {
-    // 1. Android Native App Bridge (com suporte nativo ao Storage Access Framework)
-    const win = window as any;
-    if (win.AndroidApp) {
-      if (typeof win.AndroidApp.createFile === 'function') {
-        try {
-          win.AndroidApp.createFile(content, filename, mimeType);
-          setStatusMessage(`Escolha onde salvar "${filename}" no seu celular...`);
-          return;
-        } catch (err) {
-          console.warn('Erro ao invocar createFile na bridge Android:', err);
-        }
-      } else if (typeof win.AndroidApp.saveOrShareFile === 'function') {
-        try {
-          win.AndroidApp.saveOrShareFile(content, filename, mimeType);
-          setStatusMessage(`Salvando "${filename}"...`);
-          return;
-        } catch (err) {
-          console.warn('Erro ao invocar bridge Android:', err);
-        }
-      }
-    }
 
-    // 2. Web Share API para mobile (PWA ou navegadores que suportam envio de arquivos)
-    if (navigator.share) {
-      try {
-        const file = new File([content], filename, { type: mimeType });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: filename,
-            text: `Backup BookNook: ${filename}`,
-          });
-          setStatusMessage('Arquivo compartilhado com sucesso!');
-          setTimeout(() => setStatusMessage(null), 3000);
-          return;
-        }
-      } catch (e: any) {
-        if (e.name === 'AbortError') return;
-      }
-    }
 
-    // 3. Download convencional via Blob
+
+
+  const handleExportZip = async () => {
     try {
-      const blob = new Blob([content], { type: mimeType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setStatusMessage(`Arquivo ${filename} salvo com sucesso!`);
-      setTimeout(() => setStatusMessage(null), 3000);
-    } catch {
-      // 4. Fallback absoluto: copia para a área de transferência
-      try {
-        await navigator.clipboard.writeText(content);
-        setStatusMessage('Conteúdo do backup copiado para a Área de Transferência!');
-        setTimeout(() => setStatusMessage(null), 3500);
-      } catch {
-        setStatusMessage('Não foi possível salvar o arquivo.');
+      setIsGeneratingZip(true);
+      setZipProgress('Iniciando empacotamento da biblioteca...');
+
+      const backup = await BackupService.exportZipBackup((step, current, total) => {
+        setZipProgress(`${step} (${current}/${total})`);
+      });
+
+      setZipProgress('Entregando arquivo para download/compartilhamento...');
+      const delivered = await BackupService.deliverBackupFile(backup);
+
+      if (delivered) {
+        setStatusMessage(`✓ Backup completo (${backup.booksCount} livros, ${backup.coversCount} capas) gerado com sucesso!`);
+      } else {
+        setStatusMessage(`✓ Arquivo "${backup.fileName}" gerado!`);
       }
+      setTimeout(() => setStatusMessage(null), 5000);
+    } catch (err: any) {
+      alert(`Erro ao gerar backup ZIP: ${err.message}`);
+    } finally {
+      setIsGeneratingZip(false);
+      setZipProgress(null);
     }
   };
 
-  const handleExportCsv = () => {
-    const csv = onExportCsv();
-    downloadFile(csv, `minha_estante_${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8;');
+  const handleSelectZipFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPendingZipFile(file);
+    setShowZipRestoreModal(true);
   };
 
-  const handleExportJson = () => {
-    const json = onExportJson();
-    downloadFile(json, `minha_estante_backup_${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
-  };
+  const handleConfirmRestoreZip = async () => {
+    if (!pendingZipFile) return;
 
-  const handleCopyJsonToClipboard = async () => {
     try {
-      const json = onExportJson();
-      await navigator.clipboard.writeText(json);
-      setCopiedJson(true);
-      setStatusMessage('JSON copiado! Cole no Google Drive, WhatsApp ou Bloco de Notas.');
-      setTimeout(() => {
-        setCopiedJson(false);
-        setStatusMessage(null);
-      }, 4000);
-    } catch {
-      setStatusMessage('Erro ao acessar a área de transferência.');
+      setIsRestoringZip(true);
+      setShowZipRestoreModal(false);
+      setZipProgress('Descompactando arquivo ZIP...');
+
+      const result = await BackupService.restoreFromZip(
+        pendingZipFile,
+        restoreMode,
+        (step) => setZipProgress(step)
+      );
+
+      // Recarrega livros no estado
+      if (onUpdateAllBooks) {
+        const reloaded = await BackupService['getRepo']().getAll();
+        await onUpdateAllBooks(reloaded);
+      }
+
+      setStatusMessage(
+        `✓ Restauração concluída! ${result.booksRestored} livros e ${result.coversRestored} capas restaurados.`
+      );
+      if (result.warnings.length > 0) {
+        console.warn('Avisos durante a restauração:', result.warnings);
+      }
+      setTimeout(() => setStatusMessage(null), 5000);
+    } catch (err: any) {
+      alert(`Falha na restauração: ${err.message}`);
+    } finally {
+      setIsRestoringZip(false);
+      setPendingZipFile(null);
+      setZipProgress(null);
+      if (zipFileInputRef.current) zipFileInputRef.current.value = '';
     }
   };
 
@@ -226,52 +201,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
     setTimeout(() => setStatusMessage(null), 4000);
   };
 
-  const handlePasteFromClipboard = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text && text.trim()) {
-        setImportText(text.trim());
-        setStatusMessage('Texto colado da Área de Transferência!');
-        setTimeout(() => setStatusMessage(null), 3000);
-      } else {
-        alert('A área de transferência está vazia. Copie o texto do backup primeiro.');
-      }
-    } catch {
-      alert('Não foi possível ler automaticamente a área de transferência. Por favor, toque e segure na caixa de texto abaixo e toque em "Colar".');
-    }
-  };
 
-  const handleImportSubmit = () => {
-    try {
-      if (!importText.trim()) return;
-      if (showImportDialog === 'csv') {
-        const { count } = onImportCsv(importText);
-        setStatusMessage(`${count} livros importados via CSV com sucesso!`);
-      } else {
-        const { count } = onImportJson(importText);
-        setStatusMessage(`${count} livros restaurados do JSON com sucesso!`);
-      }
-      setShowImportDialog(null);
-      setImportText('');
-      setTimeout(() => setStatusMessage(null), 4000);
-    } catch (e: any) {
-      alert(`Erro ao importar: ${e.message}`);
-    }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      if (content) {
-        setImportText(content);
-      }
-    };
-    reader.readAsText(file);
-  };
 
   return (
     <div className="flex flex-col w-full flex-1">
@@ -291,17 +221,19 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
         </div>
       )}
 
-      {/* Modal de Importação */}
-      {showImportDialog && (
+
+
+      {/* Modal de Restauração de Backup ZIP */}
+      {showZipRestoreModal && pendingZipFile && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs"
           onClick={() => {
-            setShowImportDialog(null);
-            setImportText('');
+            setShowZipRestoreModal(false);
+            setPendingZipFile(null);
           }}
         >
           <div
-            className="w-full max-w-lg rounded-2xl p-6 shadow-2xl border"
+            className="w-full max-w-md rounded-2xl p-6 shadow-2xl border flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150"
             style={{
               backgroundColor: palette.paperSurface,
               borderColor: palette.woodBorder,
@@ -309,14 +241,17 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: `${palette.woodBorder}40` }}>
-              <h3 className="font-serif font-bold text-xl" style={{ color: palette.textOnPaper }}>
-                {showImportDialog === 'csv' ? 'Importar Livros via CSV' : 'Restaurar Backup JSON'}
-              </h3>
+            <div className="flex items-center justify-between pb-2 border-b" style={{ borderColor: `${palette.woodBorder}40` }}>
+              <div className="flex items-center gap-2">
+                <Archive size={20} className="text-amber-800" />
+                <h3 className="font-serif font-bold text-lg" style={{ color: palette.textOnPaper }}>
+                  Restaurar Backup Completo (.ZIP)
+                </h3>
+              </div>
               <button
                 onClick={() => {
-                  setShowImportDialog(null);
-                  setImportText('');
+                  setShowZipRestoreModal(false);
+                  setPendingZipFile(null);
                 }}
                 className="p-1 rounded-full hover:bg-black/10 transition-colors"
               >
@@ -324,92 +259,111 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
               </button>
             </div>
 
-            <p className="text-xs leading-relaxed my-3" style={{ color: palette.textSecondaryOnPaper }}>
-              {showImportDialog === 'csv'
-                ? 'Cole o conteúdo do CSV abaixo ou selecione um arquivo. As colunas suportadas incluem: titulo, autor, ano_leitura, mes_leitura, nota, paginas, status.'
-                : 'Cole o JSON completo exportado anteriormente ou selecione o arquivo de backup:'}
-            </p>
-
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                accept={showImportDialog === 'csv' ? '.csv,text/csv' : '.json,application/json'}
-                className="hidden"
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex-1 min-w-[150px] px-3 py-2 rounded-lg border text-xs font-serif font-bold flex items-center justify-center gap-1.5 cursor-pointer hover:bg-black/5"
-                style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
-              >
-                <FileText size={14} />
-                Escolher Arquivo do Dispositivo
-              </button>
-
-              <button
-                type="button"
-                onClick={handlePasteFromClipboard}
-                className="px-3 py-2 rounded-lg border text-xs font-serif font-bold flex items-center justify-center gap-1.5 cursor-pointer hover:bg-black/5"
-                style={{
-                  borderColor: palette.goldPrimary,
-                  color: palette.woodBorder,
-                  backgroundColor: `${palette.goldPrimary}15`,
-                }}
-              >
-                <Clipboard size={14} />
-                Colar da Área de Transferência
-              </button>
-            </div>
-
-            <div className="p-2.5 rounded-lg bg-amber-900/10 text-[11px] leading-relaxed mb-3 flex items-start gap-2 text-stone-700">
-              <ShieldCheck size={16} className="shrink-0 text-amber-700 mt-0.5" />
-              <span>
-                <strong>Sem necessidade de permissões manuais:</strong> Você pode selecionar o arquivo ou simplesmente copiar o texto do backup de onde você guardou (WhatsApp, Google Drive ou Bloco de Notas) e tocar em <em>"Colar da Área de Transferência"</em> acima!
+            <div
+              className="p-3 rounded-xl border text-xs flex flex-col gap-1"
+              style={{
+                backgroundColor: palette.paperSurfaceElevated,
+                borderColor: `${palette.woodBorder}30`,
+              }}
+            >
+              <span className="font-bold font-serif text-sm truncate" style={{ color: palette.textOnPaper }}>
+                📦 {pendingZipFile.name}
+              </span>
+              <span className="text-[11px] opacity-75">
+                Tamanho: {(pendingZipFile.size / 1024).toFixed(1)} KB
               </span>
             </div>
 
-            <textarea
-              value={importText}
-              onChange={(e) => setImportText(e.target.value)}
-              placeholder={
-                showImportDialog === 'csv'
-                  ? 'titulo,autor,ano,mes,nota\nDom Casmurro,Machado de Assis,2026,5,10'
-                  : '[\n  {\n    "titulo": "..."\n  }\n]'
-              }
-              rows={6}
-              className="w-full px-3 py-2 rounded-lg border text-xs font-mono focus:outline-none focus:ring-1 resize-none"
-              style={{
-                backgroundColor: palette.paperSurfaceElevated,
-                borderColor: palette.woodBorder,
-                color: palette.textOnPaper,
-              }}
-            />
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-serif font-bold" style={{ color: palette.textOnPaper }}>
+                Escolha o modo de restauração:
+              </label>
 
-            <div className="flex items-center justify-end gap-2 pt-4">
+              {/* Modo Substituir */}
+              <label
+                className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                  restoreMode === 'replace' ? 'ring-2 ring-amber-800 shadow-xs' : 'opacity-80'
+                }`}
+                style={{
+                  backgroundColor: restoreMode === 'replace' ? `${palette.goldPrimary}20` : palette.paperSurfaceElevated,
+                  borderColor: palette.woodBorder,
+                }}
+              >
+                <input
+                  type="radio"
+                  name="restoreMode"
+                  value="replace"
+                  checked={restoreMode === 'replace'}
+                  onChange={() => setRestoreMode('replace')}
+                  className="mt-0.5 accent-amber-800"
+                />
+                <div className="flex flex-col gap-0.5 text-xs">
+                  <span className="font-serif font-bold text-amber-950">
+                    Substituir biblioteca atual (Recomendado para restauração completa)
+                  </span>
+                  <span className="text-[11px] text-stone-600">
+                    A biblioteca atual será substituída integralmente pelos dados do backup, garantindo consistência total de capas e IDs.
+                  </span>
+                </div>
+              </label>
+
+              {/* Modo Mesclar */}
+              <label
+                className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                  restoreMode === 'merge' ? 'ring-2 ring-amber-800 shadow-xs' : 'opacity-80'
+                }`}
+                style={{
+                  backgroundColor: restoreMode === 'merge' ? `${palette.goldPrimary}20` : palette.paperSurfaceElevated,
+                  borderColor: palette.woodBorder,
+                }}
+              >
+                <input
+                  type="radio"
+                  name="restoreMode"
+                  value="merge"
+                  checked={restoreMode === 'merge'}
+                  onChange={() => setRestoreMode('merge')}
+                  className="mt-0.5 accent-amber-800"
+                />
+                <div className="flex flex-col gap-0.5 text-xs">
+                  <span className="font-serif font-bold text-amber-950">
+                    Mesclar com a biblioteca atual
+                  </span>
+                  <span className="text-[11px] text-stone-600">
+                    Preserva os livros que já estão no aparelho e adiciona os registros e capas novos contidos no ZIP.
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            {restoreMode === 'replace' && (
+              <div className="p-2.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-[11px] leading-relaxed flex items-start gap-2 text-amber-950">
+                <AlertTriangle size={15} className="text-amber-700 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Aviso de segurança:</strong> A biblioteca atual será substituída. Em caso de qualquer falha durante a leitura do ZIP, o sistema reverterá automaticamente a ação para manter seus dados seguros.
+                </span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-black/10">
               <button
                 type="button"
                 onClick={() => {
-                  setShowImportDialog(null);
-                  setImportText('');
+                  setShowZipRestoreModal(false);
+                  setPendingZipFile(null);
                 }}
-                className="px-4 py-2 rounded-lg font-serif text-xs border cursor-pointer"
+                className="px-4 py-2 rounded-lg font-serif text-xs border cursor-pointer hover:bg-black/5"
                 style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
               >
                 Cancelar
               </button>
               <button
                 type="button"
-                disabled={!importText.trim()}
-                onClick={handleImportSubmit}
-                className="px-5 py-2 rounded-lg font-serif font-bold text-xs shadow-sm cursor-pointer disabled:opacity-50"
-                style={{
-                  backgroundColor: palette.goldPrimary,
-                  color: palette.textOnGold,
-                }}
+                onClick={handleConfirmRestoreZip}
+                className="px-5 py-2 rounded-lg font-serif font-bold text-xs shadow-md cursor-pointer hover:brightness-105 active:scale-95 transition-all text-white"
+                style={{ backgroundColor: palette.woodBorder }}
               >
-                Importar
+                Iniciar Restauração
               </button>
             </div>
           </div>
@@ -449,17 +403,17 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                 Deseja salvar um backup antes?
               </span>
               <p className="text-[11px] opacity-90 leading-relaxed">
-                Você pode baixar um arquivo JSON agora para não perder sua coleção caso queira restaurá-la mais tarde.
+                Você pode exportar o arquivo de backup completo (.ZIP) com todas as capas agora para não perder sua coleção.
               </p>
               <button
                 type="button"
                 onClick={() => {
-                  handleExportJson();
+                  handleExportZip();
                 }}
                 className="mt-0.5 py-2 px-3 rounded-lg font-serif font-bold text-xs border border-amber-400/80 bg-amber-100 hover:bg-amber-200 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer text-amber-950 shadow-xs"
               >
                 <Download size={14} />
-                <span>Salvar Backup JSON de Segurança Agora</span>
+                <span>Salvar Backup Completo (.ZIP) de Segurança</span>
               </button>
             </div>
 
@@ -908,67 +862,76 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
               borderColor: `${palette.woodBorder}35`,
             }}
           >
-            <ShieldCheck size={16} className="shrink-0 text-emerald-600" />
+            <Archive size={16} className="shrink-0 text-amber-800" />
             <span>
-              <strong>Dica no celular:</strong> ao tocar em <em>Salvar Backup JSON</em>, o Android abrirá a janela para você escolher onde deseja salvar o arquivo (Downloads, Documentos ou Google Drive).
+              <strong>Backup Portátil e Seguro:</strong> Salve o pacote completo (.ZIP) com seus livros e imagens no Google Drive, WhatsApp ou pasta de Downloads do celular.
             </span>
           </div>
 
-          {/* Opções de Exportação e Backup */}
-          <div className="flex flex-col gap-2.5 pt-1">
+          {/* 🌟 BACKUP COMPLETO PORTÁTIL (.ZIP COM CAPAS) */}
+          <div
+            className="p-3.5 rounded-xl border flex flex-col gap-3 shadow-xs"
+            style={{
+              backgroundColor: `${palette.goldPrimary}15`,
+              borderColor: palette.goldPrimary,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-serif font-bold text-sm flex items-center gap-2" style={{ color: palette.textOnPaper }}>
+                <Archive size={18} className="text-amber-800" />
+                Backup Completo Portátil (.ZIP)
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-amber-800 text-white">
+                Recomendado
+              </span>
+            </div>
+
+            <p className="text-xs leading-relaxed" style={{ color: palette.textOnPaper }}>
+              Exporta sua biblioteca inteira com <strong>manifesto estruturado, banco de livros e todos os arquivos de capas físicas</strong>. Compatível entre Android, iOS e Web.
+            </p>
+
+            {/* Progresso de exportação ou restauração do ZIP */}
+            {(isGeneratingZip || isRestoringZip) && (
+              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-black/5 border border-black/10 text-xs font-serif font-bold animate-pulse">
+                <Loader2 size={16} className="animate-spin text-amber-900 shrink-0" />
+                <span>{zipProgress || 'Processando arquivo ZIP...'}</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={handleExportJson}
-                className="py-2.5 px-3 rounded-lg font-serif font-bold text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer hover:brightness-105 active:scale-98 transition-all"
+                onClick={handleExportZip}
+                disabled={isGeneratingZip || isRestoringZip}
+                className="py-3 px-3.5 rounded-xl font-serif font-bold text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer hover:brightness-105 active:scale-98 transition-all disabled:opacity-60"
                 style={{ backgroundColor: palette.goldPrimary, color: palette.textOnGold }}
               >
-                <Download size={15} />
-                Salvar / Compartilhar Backup JSON
+                <Download size={16} />
+                Exportar Backup Completo (.ZIP)
               </button>
 
               <button
                 type="button"
-                onClick={handleCopyJsonToClipboard}
-                className="py-2.5 px-3 rounded-lg font-serif font-bold text-xs flex items-center justify-center gap-1.5 border shadow-xs cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
-                style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
-              >
-                {copiedJson ? <Check size={15} className="text-emerald-600" /> : <Copy size={15} />}
-                {copiedJson ? 'JSON Copiado!' : 'Copiar Texto JSON (Sem arquivo)'}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={handleExportCsv}
-                className="py-2 px-3 rounded-lg font-serif font-semibold text-xs flex items-center justify-center gap-1.5 border cursor-pointer hover:bg-black/5"
-                style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
-              >
-                <FileText size={14} />
-                Exportar CSV
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowImportDialog('json')}
-                className="py-2 px-3 rounded-lg font-serif font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer hover:brightness-105 text-white"
+                onClick={() => zipFileInputRef.current?.click()}
+                disabled={isGeneratingZip || isRestoringZip}
+                className="py-3 px-3.5 rounded-xl font-serif font-bold text-xs flex items-center justify-center gap-2 shadow-sm cursor-pointer hover:brightness-105 active:scale-98 transition-all text-white disabled:opacity-60"
                 style={{ backgroundColor: palette.woodBorder }}
               >
-                <Upload size={14} />
-                Restaurar JSON
+                <Upload size={16} />
+                Restaurar Backup (.ZIP)
               </button>
 
-              <button
-                type="button"
-                onClick={() => setShowImportDialog('csv')}
-                className="py-2 px-3 rounded-lg font-serif font-semibold text-xs flex items-center justify-center gap-1.5 border cursor-pointer hover:bg-black/5"
-                style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
-              >
-                <Upload size={14} />
-                Importar CSV
-              </button>
+              <input
+                ref={zipFileInputRef}
+                type="file"
+                accept=".zip,application/zip"
+                className="hidden"
+                onChange={handleSelectZipFile}
+              />
             </div>
+          </div>
+
+
 
             {/* Gerenciamento / Limpar Tudo */}
             <div className="pt-2.5 mt-1 border-t border-black/10 flex flex-col gap-2">
@@ -1007,148 +970,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                 </button>
               </div>
             </div>
-          </div>
-
-          {/* Dúvidas e Ajuda com Permissões no Celular */}
-          <div className="pt-2 border-t border-black/10">
-            <button
-              type="button"
-              onClick={() => setIsPermissionGuideOpen(!isPermissionGuideOpen)}
-              className="text-xs font-serif font-bold flex items-center justify-between w-full text-left py-1 hover:opacity-80 cursor-pointer"
-              style={{ color: palette.woodBorder }}
-            >
-              <span className="flex items-center gap-1.5">
-                <HelpCircle size={15} />
-                Dúvidas sobre Permissões de Arquivos no Celular?
-              </span>
-              <span className="text-[11px] underline">
-                {isPermissionGuideOpen ? 'Ocultar' : 'Ver como funciona'}
-              </span>
-            </button>
-
-            {isPermissionGuideOpen && (
-              <div
-                className="p-3.5 rounded-xl border flex flex-col gap-2 text-xs animate-in fade-in slide-in-from-top-1 duration-200 mt-2"
-                style={{
-                  backgroundColor: palette.paperSurfaceElevated,
-                  borderColor: `${palette.woodBorder}40`,
-                  color: palette.textOnPaper,
-                }}
-              >
-                <p className="font-semibold text-stone-800">
-                  Por que a permissão de armazenamento não aparece nas configurações do Android?
-                </p>
-                <ul className="list-disc list-inside space-y-1.5 text-xs text-stone-700 leading-relaxed">
-                  <li>
-                    <strong>Novo padrão do Android (Scoped Storage):</strong> Em versões modernas do Android (11, 12, 13 e 14), o Google substituiu a permissão de "Acesso total à memória". O sistema abre diretamente a tela segura de arquivos ou o menu de compartilhamento.
-                  </li>
-                  <li>
-                    <strong>No novo APK (v3.9):</strong> O seletor de arquivos e a permissão de armazenamento foram ativados.
-                  </li>
-                  <li>
-                    <strong>Método mais simples (Sem precisar de arquivo):</strong>
-                    <br />
-                    1. Toque em <strong>"Copiar Texto JSON"</strong> acima.
-                    <br />
-                    2. Cole no seu WhatsApp, bloco de notas ou Google Drive.
-                    <br />
-                    3. Para restaurar, basta abrir <strong>"Restaurar JSON"</strong> e tocar em <strong>"Colar da Área de Transferência"</strong>!
-                  </li>
-                </ul>
-              </div>
-            )}
-          </div>
-        </PaperCard>
-
-        {/* Pacotes de Publicação & Instalação Android */}
-        <PaperCard palette={palette} elevated>
-          <div className="flex items-center gap-2 mb-2">
-            <Package size={20} style={{ color: palette.woodBorder }} />
-            <h3 className="font-serif font-bold text-base" style={{ color: palette.textOnPaper }}>
-              Pacotes de Publicação & Instalação (v1.0.17)
-            </h3>
-          </div>
-          <p className="text-xs mb-3.5" style={{ color: palette.textSecondaryOnPaper }}>
-            Arquivos oficiais compilados para target SDK 36 e assinados com a keystore oficial via jarsigner com timestamp DigiCert.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Download AAB */}
-            <a
-              href="/booknook.aab"
-              download="booknook.aab"
-              className="p-3.5 rounded-xl border flex flex-col gap-1.5 transition-all hover:brightness-105 active:scale-98 shadow-sm no-underline"
-              style={{
-                backgroundColor: `${palette.goldPrimary}20`,
-                borderColor: palette.goldPrimary,
-                color: palette.textOnPaper,
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-serif font-bold text-sm flex items-center gap-1.5">
-                  <Download size={16} />
-                  booknook.aab
-                </span>
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-700 text-white">
-                  1.3 MB
-                </span>
-              </div>
-              <span className="text-[11px]" style={{ color: palette.textSecondaryOnPaper }}>
-                Android App Bundle oficial para upload no <strong>Google Play Console</strong>.
-              </span>
-            </a>
-
-            {/* Download APK */}
-            <a
-              href="/booknook.apk"
-              download="booknook.apk"
-              className="p-3.5 rounded-xl border flex flex-col gap-1.5 transition-all hover:brightness-105 active:scale-98 shadow-sm no-underline"
-              style={{
-                backgroundColor: palette.paperSurfaceElevated,
-                borderColor: `${palette.woodBorder}50`,
-                color: palette.textOnPaper,
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-serif font-bold text-sm flex items-center gap-1.5">
-                  <Download size={16} />
-                  booknook.apk
-                </span>
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-700 text-white">
-                  1.3 MB
-                </span>
-              </div>
-              <span className="text-[11px]" style={{ color: palette.textSecondaryOnPaper }}>
-                APK universal pronto para instalar diretamente no smartphone Android.
-              </span>
-            </a>
-
-            {/* Download PEM Certificate (para Redefinição de Chave no Google Play) */}
-            <a
-              href="/upload_certificate.pem"
-              download="upload_certificate.pem"
-              className="p-3.5 rounded-xl border flex flex-col gap-1.5 transition-all hover:brightness-105 active:scale-98 shadow-sm no-underline sm:col-span-2"
-              style={{
-                backgroundColor: `${palette.goldPrimary}10`,
-                borderColor: `${palette.woodBorder}60`,
-                color: palette.textOnPaper,
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-serif font-bold text-sm flex items-center gap-1.5">
-                  <Download size={16} />
-                  upload_certificate.pem
-                </span>
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-700 text-white">
-                  Certificado Público
-                </span>
-              </div>
-              <span className="text-[11px]" style={{ color: palette.textSecondaryOnPaper }}>
-                Envie este certificado no <strong>Google Play Console</strong> caso precise redefinir a chave de upload (SHA1: 31:DD:AF:DC:73...).
-              </span>
-            </a>
-          </div>
-        </PaperCard>
+          </PaperCard>
         </div>
 
         {/* Sobre o App */}
@@ -1158,7 +980,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
             className="font-serif font-bold text-lg"
             style={{ color: palette.goldPrimary }}
           >
-            BookNook · v3.9
+            Minha Estante · v3.9 (Build 18)
           </span>
           <span
             className="text-xs opacity-80"

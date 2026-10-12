@@ -31,8 +31,8 @@ if [ -z "$KEYSTORE_PASS" ] && [ -f "$KEYSTORE_PATH" ]; then
     KEYSTORE_PASS="booknook123"
 fi
 
-VERSION_CODE="17"
-VERSION_NAME="1.0.17"
+VERSION_CODE="18"
+VERSION_NAME="1.0.18"
 PACKAGE_NAME="com.booknookapp"
 
 echo "=== INICIANDO CONSTRUÇÃO OFICIAL DO ANDROID APP BUNDLE (.AAB) PARA GOOGLE PLAY ==="
@@ -90,7 +90,7 @@ fi
 cat << 'XML' > "$WORKDIR/res/values/strings.xml"
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">BookNook</string>
+    <string name="app_name">Minha Estante</string>
 </resources>
 XML
 
@@ -630,9 +630,26 @@ java -jar "$BUNDLETOOL" build-apks \
     --key-pass=pass:"$KEYSTORE_PASS" \
     --mode=universal
 
-unzip -p "$WORKDIR/test.apks" universal.apk > "$WORKDIR/booknook.apk"
+unzip -p "$WORKDIR/test.apks" universal.apk > "$WORKDIR/booknook-raw.apk"
 
-echo "11. Inspecionando manifesto final do pacote .aab:"
+# Alinhar e assinar o APK com apksigner oficial (v1 + v2 + v3) para compatibilidade perfeita com Android 7.0 até Android 16 (SDK 24 a 36)
+echo "11. Alinhando e assinando APK com apksigner (v1, v2, v3)..."
+zipalign -p -f 4 "$WORKDIR/booknook-raw.apk" "$WORKDIR/booknook-aligned.apk"
+apksigner sign \
+    --ks "$KEYSTORE_PATH" \
+    --ks-pass pass:"$KEYSTORE_PASS" \
+    --ks-key-alias "$KEY_ALIAS" \
+    --key-pass pass:"$KEYSTORE_PASS" \
+    --v1-signing-enabled true \
+    --v2-signing-enabled true \
+    --v3-signing-enabled true \
+    --out "$WORKDIR/booknook.apk" \
+    "$WORKDIR/booknook-aligned.apk"
+
+echo "Verificando assinatura do APK com apksigner verify:"
+apksigner verify -v --print-certs "$WORKDIR/booknook.apk"
+
+echo "12. Inspecionando manifesto final do pacote .aab:"
 java -jar "$BUNDLETOOL" dump manifest --bundle="$WORKDIR/booknook.aab"
 
 # 17. Distribuir pacote oficial assinado (sem NUNCA modificar o arquivo após assinado)

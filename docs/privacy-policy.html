@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Política de Privacidade - BookNook</title>
-  <meta name="description" content="Política de Privacidade do aplicativo BookNook para conformidade com a Google Play Store, LGPD e GDPR." />
+  <title>Política de Privacidade - Minha Estante</title>
+  <meta name="description" content="Política de Privacidade do aplicativo Minha Estante para conformidade com a Google Play Store, LGPD e GDPR." />
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -13,25 +13,25 @@
     
     <div class="flex items-center gap-3 pb-6 border-b border-[#D4AF37]/20 mb-8">
       <a href="index.html" class="text-xs text-[#D4AF37] hover:underline flex items-center gap-1">
-        &larr; Voltar para BookNook
+        &larr; Voltar para Minha Estante
       </a>
     </div>
 
-    <h1 class="text-3xl font-serif font-bold text-[#FFF8ED] mb-2">Política de Privacidade do BookNook</h1>
+    <h1 class="text-3xl font-serif font-bold text-[#FFF8ED] mb-2">Política de Privacidade do Minha Estante</h1>
     <p class="text-xs text-[#D4AF37] mb-8 font-mono">Última atualização: Outubro de 2026</p>
 
     <div class="space-y-6 text-sm text-[#E7D6C1] leading-relaxed">
       <section>
         <h2 class="text-lg font-serif font-bold text-[#D4AF37] mb-2">1. Visão Geral e Compromisso</h2>
         <p>
-          O aplicativo <strong>BookNook</strong> foi desenvolvido por Danilo Queiroz Barbosa com foco primordial na privacidade, simplicidade e soberania dos dados do usuário. Esta Política de Privacidade descreve como as informações são tratadas ao utilizar o aplicativo móvel Android, PWA ou web.
+          O aplicativo <strong>Minha Estante</strong> (identificador <code>com.booknookapp</code>) foi desenvolvido por Danilo Queiroz Barbosa com foco primordial na privacidade, simplicidade e soberania dos dados do leitor. Esta Política de Privacidade descreve como as informações são tratadas ao utilizar o aplicativo móvel Android, PWA ou web.
         </p>
       </section>
 
       <section>
         <h2 class="text-lg font-serif font-bold text-[#D4AF37] mb-2">2. Dados Coletados e Armazenamento</h2>
         <p>
-          O <strong>BookNook não coleta, não transmite e não armazena dados pessoais em servidores próprios de terceiros</strong>. Todas as informações cadastradas por você — incluindo catálogo de livros, notas, avaliações, status de leitura e anotações pessoais — ficam guardadas <strong>estritamente na memória local do seu próprio dispositivo</strong> (armazenamento local / IndexedDB).
+          O <strong>Minha Estante não coleta, não transmite e não armazena dados pessoais em servidores proprietários ou de terceiros</strong>. Todas as informações cadastradas por você — incluindo catálogo de livros, notas, avaliações, status de leitura, histórico de empréstimos e arquivos de capas físicas — ficam guardadas <strong>estritamente na memória e banco de dados relacional SQLite local do seu próprio dispositivo</strong>, em sandbox privado do aplicativo.
         </p>
       </section>
 
@@ -39,17 +39,13 @@
         <h2 class="text-lg font-serif font-bold text-[#D4AF37] mb-2">3. Permissões do Aplicativo (Android)</h2>
         <ul class="list-disc list-inside space-y-2 mt-2">
           <li>
-            <strong>Câmera (<code class="text-[#D4AF37]">android.permission.CAMERA</code>):</strong> Utilizada unicamente para a funcionalidade de escaneamento de código de barras (ISBN) na contracapa dos livros. Nenhuma foto ou vídeo é salvo ou compartilhado. O processamento da imagem do código de barras ocorre localmente no seu aparelho.
+            <strong>Câmera (<code class="text-[#D4AF37]">android.permission.CAMERA</code>):</strong> Utilizada unicamente quando o usuário abre o scanner de código de barras (ISBN) na contracapa dos livros. Nenhuma foto ou vídeo é gravado ou transmitido. O processamento dos códigos de barras ocorre 100% no próprio aparelho.
           </li>
           <li>
-            <strong>Acesso à Internet (<code class="text-[#D4AF37]">android.permission.INTERNET</code>):</strong> Utilizado para:
-            <ul class="list-circle list-inside ml-4 mt-1 space-y-1">
-              <li>Consultar metadados e capas de livros em APIs públicas abertas (Google Books API e Open Library).</li>
-              <li>Permitir a autenticação e sincronização de backup voluntária no seu próprio Google Drive.</li>
-            </ul>
+            <strong>Acesso à Internet (<code class="text-[#D4AF37]">android.permission.INTERNET</code>):</strong> Utilizado estritamente para conexões HTTPS criptografadas com o objetivo de consultar metadados bibliográficos públicos e capas (BrasilAPI, Google Books API e Open Library) mediante solicitação expressa de pesquisa ou scanner.
           </li>
           <li>
-            <strong>Armazenamento / Downloads:</strong> Para permitir que você exporte e salve arquivos de backup nos formatos JSON e CSV para a pasta de Downloads do aparelho quando solicitado.
+            <strong>Armazenamento Privado e Compartilhamento de Backups:</strong> O aplicativo armazena suas capas e dados em diretório privado seguro (Scoped Storage). Para exportação e restauração do arquivo de backup completo (.ZIP), o aplicativo utiliza a folha de compartilhamento oficial do sistema (Android Share Sheet / File Picker), sem solicitar acesso amplo aos arquivos privados do aparelho.
           </li>
         </ul>
       </section>
@@ -101,7 +97,7 @@
       <section class="pt-4 border-t border-[#D4AF37]/20">
         <h2 class="text-lg font-serif font-bold text-[#D4AF37] mb-2">9. Contato do Desenvolvedor</h2>
         <p>
-          Em caso de dúvidas sobre esta política de privacidade ou sobre o aplicativo BookNook, entre em contato diretamente pelo e-mail do desenvolvedor:
+          Em caso de dúvidas sobre esta política de privacidade ou sobre o aplicativo Minha Estante, entre em contato diretamente pelo e-mail do desenvolvedor:
         </p>
         <p class="mt-2 font-mono text-[#D4AF37]">
           E-mail: <a href="mailto:daniloqb@gmail.com" class="underline">daniloqb@gmail.com</a>
@@ -110,7 +106,7 @@
     </div>
 
     <div class="mt-10 pt-6 border-t border-[#D4AF37]/20 text-center text-xs text-stone-400">
-      &copy; 2026 BookNook &middot; Desenvolvido por Danilo Queiroz Barbosa. Todos os direitos reservados.
+      &copy; 2026 Minha Estante &middot; Desenvolvido por Danilo Queiroz Barbosa. Todos os direitos reservados.
     </div>
 
   </div>

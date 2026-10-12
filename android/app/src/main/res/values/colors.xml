@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="wood_dark">#2B1A0F</color>
-    <color name="wood_medium">#3D2415</color>
-    <color name="gold_primary">#E8C98A</color>
-    <color name="status_bar">#1E1008</color>
+    <color name="status_bar">#1A0F08</color>
+    <color name="gold_primary">#D4AF37</color>
+    <color name="paper_surface">#FDFBF7</color>
 </resources>

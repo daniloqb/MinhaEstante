@@ -32,7 +32,7 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     home: {
       title: 'Minha Estante',
       searchPlaceholder: 'Buscar por título, autor, gênero ou ISBN...',
-      filterFormatAll: 'Todos',
+      filterFormatAll: 'Meus Livros',
       filterFormatPhysical: 'Livros Físicos',
       filterFormatEbook: 'E-books',
       emptyShelfTitle: 'Sua estante ainda está vazia',
@@ -141,7 +141,7 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     home: {
       title: 'My Bookshelf',
       searchPlaceholder: 'Search by title, author, genre or ISBN...',
-      filterFormatAll: 'All',
+      filterFormatAll: 'My Books',
       filterFormatPhysical: 'Physical Books',
       filterFormatEbook: 'E-books',
       emptyShelfTitle: 'Your bookshelf is currently empty',
@@ -250,7 +250,7 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     home: {
       title: 'Mi Estantería',
       searchPlaceholder: 'Buscar por título, autor, género o ISBN...',
-      filterFormatAll: 'Todos',
+      filterFormatAll: 'Mis Libros',
       filterFormatPhysical: 'Libros Físicos',
       filterFormatEbook: 'E-books',
       emptyShelfTitle: 'Tu estantería aún está vacía',
@@ -359,7 +359,7 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     home: {
       title: 'Ma Bibliothèque',
       searchPlaceholder: 'Rechercher par titre, auteur, genre ou ISBN...',
-      filterFormatAll: 'Tous',
+      filterFormatAll: 'Mes Livres',
       filterFormatPhysical: 'Livres Physiques',
       filterFormatEbook: 'E-books',
       emptyShelfTitle: 'Votre bibliothèque est vide',
@@ -468,7 +468,7 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     home: {
       title: 'Mein Bücherregal',
       searchPlaceholder: 'Suche nach Titel, Autor, Genre oder ISBN...',
-      filterFormatAll: 'Alle',
+      filterFormatAll: 'Meine Bücher',
       filterFormatPhysical: 'Gedruckte Bücher',
       filterFormatEbook: 'E-Books',
       emptyShelfTitle: 'Dein Bücherregal ist noch leer',
@@ -577,7 +577,7 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     home: {
       title: 'La Mia Libreria',
       searchPlaceholder: 'Cerca per titolo, autore, genere o ISBN...',
-      filterFormatAll: 'Tutti',
+      filterFormatAll: 'I Miei Libri',
       filterFormatPhysical: 'Libri Cartacei',
       filterFormatEbook: 'E-book',
       emptyShelfTitle: 'La tua libreria è ancora vuota',

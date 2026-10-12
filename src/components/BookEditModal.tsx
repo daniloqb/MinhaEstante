@@ -67,7 +67,7 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
   const [genresList, setGenresList] = useState<string[]>(book.generos || []);
   const [newGenreInput, setNewGenreInput] = useState<string>('');
   const [observations, setObservations] = useState<string>(book.observacoes || '');
-  const [capaUrl, setCapaUrl] = useState<string>(book.capaUrl || '');
+  const [capaUrl, setCapaUrl] = useState<string>(book.capaLocalPath || book.capaUrl || '');
   const [isSavingCoverLocal, setIsSavingCoverLocal] = useState<boolean>(false);
   const [coverSaveMessage, setCoverSaveMessage] = useState<string | null>(null);
 
@@ -78,7 +78,7 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
       setSubtitulo(book.subtitulo || '');
       setAutoresText((book.autores || []).join(', '));
       setFormato(book.formato || 'fisico');
-      setCapaUrl(book.capaUrl || '');
+      setCapaUrl(book.capaLocalPath || book.capaUrl || '');
       setTenhoFisico(Boolean(book.tenho_fisico));
       setStatusLeitura(
         book.status_leitura || (book.status === 'lido' ? 'lido' : book.status === 'quero_ler' ? 'quero_ler' : 'nenhum')

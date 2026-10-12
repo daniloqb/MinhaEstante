@@ -1,7 +1,7 @@
 # Guia Oficial de Publicação & Assinatura na Google Play Store
-## Aplicativo: BookNook (`com.booknookapp`)
+## Aplicativo: Minha Estante (`com.booknookapp`)
 
-Este guia detalha o fluxo de compilação, validação, rotação de chaves de assinatura e publicação do arquivo **`booknook.aab`** no Google Play Console.
+Este guia detalha o fluxo de compilação, validação, rotação de chaves de assinatura e publicação do arquivo **`minha-estante.aab`** no Google Play Console.
 
 ---
 
@@ -9,13 +9,13 @@ Este guia detalha o fluxo de compilação, validação, rotação de chaves de a
 
 | Parâmetro | Valor Configurado |
 | :--- | :--- |
-| **Nome Oficial do App** | `BookNook` |
+| **Nome Oficial do App** | `Minha Estante` |
 | **Application ID / Package Name** | `com.booknookapp` |
-| **Versão / VersionCode** | `17` (1.0.17) |
+| **Versão / VersionCode** | `18` (1.0.18) |
 | **SDK Mínimo (minSdkVersion)** | `24` (Android 7.0+) |
-| **SDK de Destino (targetSdkVersion)** | `36` (Android 16 / Compatibilidade total) |
+| **SDK de Destino (targetSdkVersion)** | `36` (Android 16 / Requisitos Google Play) |
 | **Tráfego Seguro (HTTPS)** | `usesCleartextTraffic="false"` (100% criptografado) |
-| **Permissões de Armazenamento** | **Zero permissões obsoletas** (sem `READ_EXTERNAL_STORAGE` ou `WRITE_EXTERNAL_STORAGE`). O app utiliza o moderno **Storage Access Framework (SAF)** via `ACTION_CREATE_DOCUMENT` para exportar backups com segurança e sem alertas de Scoped Storage no Google Play Console. |
+| **Permissões de Armazenamento** | **Zero permissões amplas obsoletas** (sem `READ_EXTERNAL_STORAGE` ou `MANAGE_EXTERNAL_STORAGE`). O app utiliza armazenamento privado em Scoped Storage e a folha de compartilhamento/seleção oficial nativa para backups completos (.ZIP). |
 
 ---
 

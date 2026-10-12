@@ -13,6 +13,7 @@ import {
 import { getPalette } from './theme/woodTheme';
 import { BookStorage } from './services/storage';
 import { BookSearchService } from './services/bookSearch';
+import { NativeService } from './services/nativeService';
 
 // Layout & Components
 import { WoodBackground } from './components/WoodBackground';
@@ -35,8 +36,9 @@ import { SettingsBackupScreen } from './screens/SettingsBackupScreen';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 
 export const App: React.FC = () => {
-  // App Persistent State
-  const [books, setBooks] = useState<Book[]>(() => BookStorage.loadBooks());
+  // App Persistent State (gerenciado via SQLite nativo)
+  const [books, setBooks] = useState<Book[]>([]);
+  const [isDbReady, setIsDbReady] = useState<boolean>(false);
   const [isLightOak, setIsLightOak] = useState<boolean>(() => BookStorage.loadTheme());
   const [viewMode, setViewMode] = useState<ViewMode>(() => BookStorage.loadViewMode());
   const [groupBy, setGroupBy] = useState<GroupByMode>(() => BookStorage.loadGroupBy());
@@ -190,7 +192,13 @@ export const App: React.FC = () => {
       // ignore
     }
 
-    // Registra manipulador nativo chamado pelo MainActivity do Android
+    // Inicializa configurações nativas do Capacitor (StatusBar, Keyboard)
+    NativeService.initNativeEnvironment();
+
+    // Registra listener nativo oficial do Capacitor para o botão Voltar físico
+    const unregisterCapacitorBack = NativeService.registerBackButton(handleNativeBack);
+
+    // Registra manipulador de compatibilidade chamado por WebViews legadas
     (window as any).onAndroidBackPressed = handleNativeBack;
 
     const handlePopState = (e: PopStateEvent) => {
@@ -204,6 +212,7 @@ export const App: React.FC = () => {
 
     window.addEventListener('popstate', handlePopState);
     return () => {
+      unregisterCapacitorBack();
       delete (window as any).onAndroidBackPressed;
       window.removeEventListener('popstate', handlePopState);
     };
@@ -271,35 +280,78 @@ export const App: React.FC = () => {
     BookStorage.saveApiKey(key);
   };
 
-  // CRUD
-  const handleSaveBook = useCallback(
-    (book: Book) => {
-      const { updatedBooks, savedId } = BookStorage.saveBook(book, books);
-      setBooks(updatedBooks);
-
-      // If currently viewing details of this book, update it
-      if (selectedBookDetail && (selectedBookDetail.id === book.id || selectedBookDetail.id === savedId)) {
-        const found = updatedBooks.find((b) => b.id === savedId);
-        if (found) setSelectedBookDetail(found);
+  // Inicialização assíncrona do banco SQLite nativo e carga inicial da biblioteca
+  useEffect(() => {
+    let active = true;
+    const initializeDatabase = async () => {
+      try {
+        const loadedBooks = await BookStorage.loadBooksFromDatabase();
+        if (active) {
+          setBooks(loadedBooks);
+          setIsDbReady(true);
+        }
+      } catch (err) {
+        console.error('Falha ao inicializar banco de dados SQLite:', err);
+        if (active) {
+          setIsDbReady(true);
+          setToastMessage('Falha ao conectar com o banco de dados local.');
+        }
       }
+    };
+    initializeDatabase();
+    return () => {
+      active = false;
+    };
+  }, []);
 
-      setEditingBookInModal(null);
+  // CRUD Assíncrono com SQLite Nativo
+  const handleSaveBook = useCallback(
+    async (book: Book) => {
+      try {
+        const saved = await BookStorage.saveBookToDatabase(book);
+        setBooks((prev) => {
+          const index = prev.findIndex((b) => b.id === saved.id || (book.id && b.id === book.id));
+          if (index >= 0) {
+            const next = [...prev];
+            next[index] = saved;
+            return next;
+          } else {
+            return [saved, ...prev];
+          }
+        });
+
+        if (selectedBookDetail && (selectedBookDetail.id === book.id || selectedBookDetail.id === saved.id)) {
+          setSelectedBookDetail(saved);
+        }
+
+        setEditingBookInModal(null);
+        return saved;
+      } catch (err) {
+        console.error('Falha ao persistir livro no SQLite:', err);
+        setToastMessage('Erro ao salvar livro no banco de dados.');
+        throw err;
+      }
     },
-    [books, selectedBookDetail]
+    [selectedBookDetail]
   );
 
   const handleDeleteBook = useCallback(
-    (book: Book) => {
-      const updated = BookStorage.deleteBook(book.id, books);
-      setBooks(updated);
-      if (selectedBookDetail?.id === book.id) {
-        setSelectedBookDetail(null);
+    async (book: Book) => {
+      try {
+        await BookStorage.deleteBookFromDatabase(book.id);
+        setBooks((prev) => prev.filter((b) => b.id !== book.id));
+        if (selectedBookDetail?.id === book.id) {
+          setSelectedBookDetail(null);
+        }
+        setQuickActionBook(null);
+        setOrphanConflictBook(null);
+        setToastMessage(`"${book.titulo}" removido da estante.`);
+      } catch (err) {
+        console.error('Falha ao excluir livro do SQLite:', err);
+        setToastMessage('Erro ao excluir livro do banco de dados.');
       }
-      setQuickActionBook(null);
-      setOrphanConflictBook(null);
-      setToastMessage(`"${book.titulo}" removido da estante.`);
     },
-    [books, selectedBookDetail]
+    [selectedBookDetail]
   );
 
   // Alternar formato: Físico vs E-book
@@ -686,6 +738,7 @@ export const App: React.FC = () => {
         </div>
       )}
 
+
       {/* Diálogo para Livro Órfão (tenho_fisico = false e status_leitura = 'nenhum') */}
       {orphanConflictBook && (
         <div
@@ -840,7 +893,14 @@ export const App: React.FC = () => {
       />
 
       {/* Telas Principais ou Telas Sobrepostas */}
-      {selectedBookDetail ? (
+      {!isDbReady ? (
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-12 h-12 border-4 border-amber-600/30 border-t-amber-500 rounded-full animate-spin mb-4" />
+          <p className="font-serif text-sm" style={{ color: palette.textSecondaryOnWood }}>
+            Conectando ao banco de dados SQLite...
+          </p>
+        </div>
+      ) : selectedBookDetail ? (
         <BookDetailScreen
           palette={palette}
           book={selectedBookDetail}
@@ -950,21 +1010,23 @@ export const App: React.FC = () => {
               onApiKeyChange={handleApiKeyChange}
               onExportCsv={() => BookStorage.exportCsv(books)}
               onExportJson={() => BookStorage.exportJson(books)}
-              onImportCsv={(csv) => {
+              onImportCsv={async (csv) => {
                 const res = BookStorage.importCsv(csv, books);
+                await BookStorage.saveAllBooksToDatabase(res.updatedBooks);
                 setBooks(res.updatedBooks);
                 setToastMessage(`${res.count} livros importados com sucesso!`);
                 return { count: res.count };
               }}
-              onImportJson={(json) => {
+              onImportJson={async (json) => {
                 const res = BookStorage.importJson(json, books);
+                await BookStorage.saveAllBooksToDatabase(res.updatedBooks);
                 setBooks(res.updatedBooks);
                 setToastMessage(`${res.count} livros importados com sucesso!`);
                 return { count: res.count };
               }}
               books={books}
-              onUpdateAllBooks={(updated) => {
-                BookStorage.saveAllBooks(updated);
+              onUpdateAllBooks={async (updated) => {
+                await BookStorage.saveAllBooksToDatabase(updated);
                 setBooks(updated);
               }}
             />
