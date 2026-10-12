@@ -323,4 +323,41 @@ describe('Fase 4: Backup e Restauração (BackupService)', () => {
     expect(allBooks.some((b) => b.titulo === 'Livro Anterior no App')).toBe(true);
     expect(allBooks.some((b) => b.titulo === 'Livro Importado do Amigo')).toBe(true);
   });
+
+  it('10. Backup exportado contém bytes ZIP binários reais (PK\\x03\\x04) e é descompactável', async () => {
+    await repo.insert({
+      origem: 'manual',
+      titulo: 'Livro Para Validação de Bytes Binários',
+      autores: ['Engenheiro de Software'],
+      tenho_fisico: true,
+      status_leitura: 'lido',
+      generos: ['Tecnologia'],
+      dataCadastro: Date.now(),
+      dataAtualizacao: Date.now(),
+    });
+
+    const backup = await BackupService.exportZipBackup();
+    expect(backup.blob).toBeDefined();
+    expect(backup.base64).toBeDefined();
+
+    // Valida magic bytes de um arquivo ZIP binário real: 0x50, 0x4B, 0x03, 0x04 ("PK\x03\x04")
+    const arrayBuffer = await backup.blob!.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    expect(bytes[0]).toBe(0x50); // 'P'
+    expect(bytes[1]).toBe(0x4b); // 'K'
+    expect(bytes[2]).toBe(0x03);
+    expect(bytes[3]).toBe(0x04);
+
+    // Valida que o base64 começa com "UEsDB" (cabeçalho PK\x03\x04 codificado em Base64)
+    expect(backup.base64!.startsWith('UEsDB')).toBe(true);
+
+    // Valida que o ZIP pode ser carregado diretamente pela biblioteca JSZip sem erros
+    const unzipped = await JSZip.loadAsync(bytes);
+    expect(unzipped.file('manifest.json')).not.toBeNull();
+    expect(unzipped.file('books.json')).not.toBeNull();
+
+    const manifestContent = JSON.parse(await unzipped.file('manifest.json')!.async('string'));
+    expect(manifestContent.booksCount).toBe(1);
+    expect(manifestContent.appId).toBe('com.booknookapp');
+  });
 });

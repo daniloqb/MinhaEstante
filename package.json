@@ -1,7 +1,7 @@
 {
   "name": "minha-estante",
   "private": true,
-  "version": "3.9.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",

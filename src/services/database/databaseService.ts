@@ -273,10 +273,12 @@ class NativeSQLiteDatabaseAdapter implements IDatabaseService {
 
   async execute(sql: string, params: any[] = []): Promise<any> {
     if (!this.db) throw new Error('Banco SQLite não inicializado');
+    const inTx = (await this.db.isTransactionActive()).result;
     if (params.length === 0) {
-      return await this.db.execute(sql);
+      // Se já estiver em transação, executa a instrução sem iniciar uma nova transação automática
+      return await this.db.execute(sql, !inTx);
     }
-    return await this.db.run(sql, params);
+    return await this.db.run(sql, params, !inTx);
   }
 
   async query<T>(sql: string, params: any[] = []): Promise<T[]> {
@@ -287,13 +289,29 @@ class NativeSQLiteDatabaseAdapter implements IDatabaseService {
 
   async runInTransaction<T>(fn: () => Promise<T>): Promise<T> {
     if (!this.db) throw new Error('Banco SQLite não inicializado');
-    await this.db.execute('BEGIN TRANSACTION;');
+    const active = (await this.db.isTransactionActive()).result;
+    if (active) {
+      // Já está em transação, executa diretamente sem aninhar
+      return await fn();
+    }
+
+    await this.db.beginTransaction();
     try {
       const result = await fn();
-      await this.db.execute('COMMIT;');
+      const stillActive = (await this.db.isTransactionActive()).result;
+      if (stillActive) {
+        await this.db.commitTransaction();
+      }
       return result;
     } catch (err) {
-      await this.db.execute('ROLLBACK;');
+      try {
+        const stillActive = (await this.db.isTransactionActive()).result;
+        if (stillActive) {
+          await this.db.rollbackTransaction();
+        }
+      } catch (rollbackErr) {
+        console.warn('Erro ao executar rollback:', rollbackErr);
+      }
       throw err;
     }
   }

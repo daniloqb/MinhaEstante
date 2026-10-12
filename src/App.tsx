@@ -597,18 +597,20 @@ export const App: React.FC = () => {
       if (targetAction === 'lido') {
         handleOpenEditModal(baseBook);
       } else {
-        const { updatedBooks } = BookStorage.saveBook(baseBook, books);
-        setBooks(updatedBooks);
-        setToastMessage(
-          targetAction === 'meus_livros'
-            ? `"${searchedBook.titulo}" adicionado a Livros Físicos!`
-            : targetAction === 'ebook'
-            ? `"${searchedBook.titulo}" adicionado a E-books!`
-            : `"${searchedBook.titulo}" adicionado a Quero Ler!`
-        );
+        handleSaveBook(baseBook).then(() => {
+          setToastMessage(
+            targetAction === 'meus_livros'
+              ? `"${searchedBook.titulo}" adicionado a Livros Físicos!`
+              : targetAction === 'ebook'
+              ? `"${searchedBook.titulo}" adicionado a E-books!`
+              : `"${searchedBook.titulo}" adicionado a Quero Ler!`
+          );
+        }).catch((err) => {
+          console.error('Erro ao adicionar livro da busca no SQLite:', err);
+        });
       }
     },
-    [books, handleSaveBook]
+    [books, handleOpenEditModal, handleSaveBook]
   );
 
   // Filter & Sort books por consulta de aba e filtros avançados
@@ -833,9 +835,11 @@ export const App: React.FC = () => {
             dataCadastro: Date.now(),
             dataAtualizacao: Date.now(),
           };
-          const { updatedBooks } = BookStorage.saveBook(newBookEntity, books);
-          setBooks(updatedBooks);
-          setToastMessage(`"${searchedBook.titulo}" adicionado a Meus Livros!`);
+          handleSaveBook(newBookEntity).then(() => {
+            setToastMessage(`"${searchedBook.titulo}" adicionado a Meus Livros!`);
+          }).catch((err) => {
+            console.error('Erro ao adicionar livro pós-conflito no SQLite:', err);
+          });
         }}
       />
 

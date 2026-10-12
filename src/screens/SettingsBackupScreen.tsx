@@ -25,6 +25,7 @@ import { MaShelfLogo } from '../components/MaShelfLogo';
 import { useI18n } from '../i18n/I18nContext';
 import { LocaleId } from '../i18n/types';
 import { BackupService } from '../services/storage/backupService';
+import { BookStorage } from '../services/storage';
 
 interface SettingsBackupScreenProps {
   palette: WoodPalette;
@@ -169,9 +170,9 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
         (step) => setZipProgress(step)
       );
 
-      // Recarrega livros no estado
+      // Recarrega livros imediatamente da base SQLite restaurada
+      const reloaded = await BookStorage.loadBooksFromDatabase();
       if (onUpdateAllBooks) {
-        const reloaded = await BackupService['getRepo']().getAll();
         await onUpdateAllBooks(reloaded);
       }
 
@@ -924,7 +925,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
               <input
                 ref={zipFileInputRef}
                 type="file"
-                accept=".zip,application/zip"
+                accept=".zip,application/zip,application/x-zip-compressed,application/json,text/json,.json"
                 className="hidden"
                 onChange={handleSelectZipFile}
               />
@@ -980,7 +981,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
             className="font-serif font-bold text-lg"
             style={{ color: palette.goldPrimary }}
           >
-            Minha Estante · v3.9 (Build 18)
+            Minha Estante · v1.0.0 (Build 18)
           </span>
           <span
             className="text-xs opacity-80"

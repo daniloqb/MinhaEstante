@@ -32,7 +32,7 @@ if [ -z "$KEYSTORE_PASS" ] && [ -f "$KEYSTORE_PATH" ]; then
 fi
 
 VERSION_CODE="18"
-VERSION_NAME="1.0.18"
+VERSION_NAME="1.0.0"
 PACKAGE_NAME="com.booknookapp"
 
 echo "=== INICIANDO CONSTRUÇÃO OFICIAL DO ANDROID APP BUNDLE (.AAB) PARA GOOGLE PLAY ==="
@@ -392,7 +392,7 @@ public class MainActivity extends Activity {
                 Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 intent.setType("*/*");
-                String[] mimetypes = {"application/json", "text/csv", "text/plain"};
+                String[] mimetypes = {"application/zip", "application/x-zip-compressed", "application/octet-stream", "application/json", "text/json", "text/csv", "text/plain"};
                 intent.putExtra(Intent.EXTRA_MIME_TYPES, mimetypes);
 
                 try {
@@ -481,10 +481,25 @@ public class MainActivity extends Activity {
                 try {
                     OutputStream os = getContentResolver().openOutputStream(uri);
                     if (os != null && pendingFileContent != null) {
-                        os.write(pendingFileContent.getBytes("UTF-8"));
+                        byte[] bytesToWrite;
+                        // Se o conteúdo for Base64 (típico de backups binários ZIP ou imagens), decodifica para bytes puros
+                        try {
+                            String cleanBase64 = pendingFileContent.trim();
+                            if (cleanBase64.contains(",")) {
+                                cleanBase64 = cleanBase64.substring(cleanBase64.indexOf(",") + 1);
+                            }
+                            if (cleanBase64.startsWith("UEsDB") || (pendingFileName != null && pendingFileName.toLowerCase().endsWith(".zip"))) {
+                                bytesToWrite = android.util.Base64.decode(cleanBase64, android.util.Base64.DEFAULT);
+                            } else {
+                                bytesToWrite = pendingFileContent.getBytes("UTF-8");
+                            }
+                        } catch (Exception decodeEx) {
+                            bytesToWrite = pendingFileContent.getBytes("UTF-8");
+                        }
+                        os.write(bytesToWrite);
                         os.flush();
                         os.close();
-                        Toast.makeText(MainActivity.this, "✓ Backup salvo com sucesso no celular!", Toast.LENGTH_LONG).show();
+                        Toast.makeText(MainActivity.this, "✓ Backup ZIP salvo com sucesso no celular!", Toast.LENGTH_LONG).show();
                         if (webView != null) {
                             webView.evaluateJavascript("window.onAndroidFileSaved && window.onAndroidFileSaved(true, '" + (pendingFileName != null ? pendingFileName : "") + "');", null);
                         }

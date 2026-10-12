@@ -449,24 +449,12 @@ export class BackupService {
    * 5. Compartilha ou faz download do arquivo gerado
    */
   static async deliverBackupFile(backup: BackupResult): Promise<boolean> {
-    if (NativeService.isNative()) {
-      return await NativeService.exportOrShareFile({
-        content: backup.base64 || '',
-        filename: backup.fileName,
-        mimeType: 'application/zip',
-        title: `Minha Estante Backup - ${backup.fileName}`,
-      });
-    } else if (backup.blob) {
-      const url = URL.createObjectURL(backup.blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = backup.fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      return true;
-    }
-    return false;
+    return await NativeService.exportOrShareFile({
+      content: backup.base64 || '',
+      filename: backup.fileName,
+      mimeType: 'application/zip',
+      title: `Minha Estante Backup - ${backup.fileName}`,
+      isBase64: true,
+    });
   }
 }

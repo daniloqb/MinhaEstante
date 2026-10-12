@@ -5,11 +5,14 @@ import { Browser as CapBrowser } from '@capacitor/browser';
 import { StatusBar as CapStatusBar, Style as StatusBarStyle } from '@capacitor/status-bar';
 import { Keyboard as CapKeyboard } from '@capacitor/keyboard';
 
+import { Filesystem, Directory } from '@capacitor/filesystem';
+
 export interface SaveFileOptions {
-  content: string;
+  content: string; // Base64 string para arquivos binários como ZIP, ou texto
   filename: string;
   mimeType: string;
   title?: string;
+  isBase64?: boolean;
 }
 
 export class NativeService {
@@ -98,40 +101,89 @@ export class NativeService {
   }
 
   /**
+   * Converte uma string base64 em um Blob binário real
+   */
+  static base64ToBlob(base64Data: string, mimeType: string): Blob {
+    const clean = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+    const byteCharacters = atob(clean);
+    const byteArrays: Uint8Array[] = [];
+
+    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+      const slice = byteCharacters.slice(offset, offset + 512);
+      const byteNumbers = new Array(slice.length);
+      for (let i = 0; i < slice.length; i++) {
+        byteNumbers[i] = slice.charCodeAt(i);
+      }
+      byteArrays.push(new Uint8Array(byteNumbers));
+    }
+    return new Blob(byteArrays as any, { type: mimeType });
+  }
+
+  /**
    * Exporta ou compartilha arquivo de backup respeitando o ambiente nativo e web
    */
   static async exportOrShareFile(options: SaveFileOptions): Promise<boolean> {
-    const { content, filename, mimeType, title = 'Backup BookNook' } = options;
+    const { content, filename, mimeType, title = 'Minha Estante Backup', isBase64 = false } = options;
 
-    // 1. Tentar compartilhar via Capacitor Share se nativo
+    // 1. Se estiver rodando dentro do WebView nativo com bridge Android personalizada (Storage Access Framework SAF)
+    const win = typeof window !== 'undefined' ? (window as any) : null;
+    if (win && win.AndroidApp && typeof win.AndroidApp.createFile === 'function') {
+      return new Promise<boolean>((resolve) => {
+        let timer: any = null;
+        win.onAndroidFileSaved = (success: boolean) => {
+          if (timer) clearTimeout(timer);
+          delete win.onAndroidFileSaved;
+          resolve(Boolean(success));
+        };
+        // Timeout de fallback para não travar Promise indefinidamente
+        timer = setTimeout(() => {
+          delete win.onAndroidFileSaved;
+          resolve(true);
+        }, 60000);
+
+        win.AndroidApp.createFile(content, filename, mimeType);
+      });
+    }
+
+    // 2. Se for ambiente nativo Capacitor padrão (Capacitor Filesystem + Share nativo de arquivo)
     if (this.isNative()) {
       try {
-        const canShareResult = await CapShare.canShare();
-        if (canShareResult.value) {
-          // Em Capacitor podemos compartilhar texto ou dados diretamente
+        // Grava o arquivo binário no armazenamento de cache do app para obter URI compartilhável
+        const writeResult = await Filesystem.writeFile({
+          path: filename,
+          data: content, // base64 string
+          directory: Directory.Cache,
+          recursive: true,
+        });
+
+        const fileUri = writeResult.uri;
+        const canShare = await CapShare.canShare();
+        if (canShare.value && fileUri) {
           await CapShare.share({
             title,
-            text: content,
-            dialogTitle: `Exportar ${filename}`,
+            dialogTitle: `Salvar ou Compartilhar: ${filename}`,
+            files: [fileUri],
           });
           return true;
         }
       } catch (err: any) {
-        // Se o usuário cancelou o seletor de compartilhamento, não é erro crítico
-        if (err.name === 'AbortError') return false;
-        console.warn('Falha no CapShare, tentando fallback:', err);
+        if (err.name === 'AbortError' || err.message?.includes('canceled')) {
+          return false;
+        }
+        console.warn('Falha ao compartilhar arquivo via Capacitor Filesystem/Share:', err);
       }
     }
 
-    // 2. Tentar Web Share API (se suportada pelo navegador com envio de arquivos)
+    // 3. Tentar Web Share API (se suportada pelo navegador com envio de arquivos)
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
-        const file = new File([content], filename, { type: mimeType });
+        const blob = isBase64 ? this.base64ToBlob(content, mimeType) : new Blob([content], { type: mimeType });
+        const file = new File([blob], filename, { type: mimeType });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
             files: [file],
             title: filename,
-            text: `Backup BookNook: ${filename}`,
+            text: `Backup Minha Estante: ${filename}`,
           });
           return true;
         }
@@ -140,10 +192,10 @@ export class NativeService {
       }
     }
 
-    // 3. Fallback clássico via Blob e elemento âncora (funciona 100% em desktop e WebView)
+    // 4. Download direto via Blob e elemento âncora (Web Desktop & WebViews padrão)
     if (typeof document !== 'undefined') {
       try {
-        const blob = new Blob([content], { type: mimeType });
+        const blob = isBase64 ? this.base64ToBlob(content, mimeType) : new Blob([content], { type: mimeType });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -151,7 +203,7 @@ export class NativeService {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
         return true;
       } catch (e) {
         console.error('Erro no fallback de download:', e);
