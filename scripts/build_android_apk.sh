@@ -40,14 +40,21 @@ export ANDROID_KEY_PASSWORD
 keytool -list -keystore "$KEYSTORE" -alias "$KEY_ALIAS" \
   -storepass:env ANDROID_KEYSTORE_PASSWORD >/dev/null || fail "Não foi possível abrir o keystore/alias."
 
-SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}"
-[[ -d "$SDK/build-tools" ]] || fail "Android SDK Build Tools ausentes em $SDK"
 BUILD_TOOLS="$(find "$SDK/build-tools" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V | tail -n 1)"
 [[ -n "$BUILD_TOOLS" ]] || fail "Nenhuma versão de Android Build Tools instalada."
 ZIPALIGN="$SDK/build-tools/$BUILD_TOOLS/zipalign"
 APKSIGNER="$SDK/build-tools/$BUILD_TOOLS/apksigner"
 [[ -x "$ZIPALIGN" && -x "$APKSIGNER" ]] || fail "zipalign/apksigner não disponíveis em $SDK/build-tools/$BUILD_TOOLS"
 [[ -x "$ROOT/android/gradlew" ]] || fail "android/gradlew não encontrado ou sem permissão de execução."
+
+# Gradle precisa localizar o SDK inclusive quando o script e chamado pelo npm.
+SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}"
+[[ -d "$SDK/platforms" && -d "$SDK/build-tools" ]] || fail "Android SDK invalido: $SDK"
+SDK="$(cd -- "$SDK" && pwd)"
+export ANDROID_HOME="$SDK"
+export ANDROID_SDK_ROOT="$SDK"
+# local.properties e especifico desta maquina e nao deve ser versionado.
+printf 'sdk.dir=%s\n' "$SDK" > "$ROOT/android/local.properties"
 
 printf '\n==> TypeScript, Vite e sincronização Capacitor\n'
 npm run lint

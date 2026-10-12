@@ -39,6 +39,15 @@ keytool -list -keystore "$KEYSTORE" -alias "$KEY_ALIAS" \
 
 [[ -x "$ROOT/android/gradlew" ]] || fail "android/gradlew não encontrado ou sem permissão de execução."
 
+# Gradle precisa localizar o SDK inclusive quando o script e chamado pelo npm.
+SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}"
+[[ -d "$SDK/platforms" && -d "$SDK/build-tools" ]] || fail "Android SDK invalido: $SDK"
+SDK="$(cd -- "$SDK" && pwd)"
+export ANDROID_HOME="$SDK"
+export ANDROID_SDK_ROOT="$SDK"
+# local.properties e especifico desta maquina e nao deve ser versionado.
+printf 'sdk.dir=%s\n' "$SDK" > "$ROOT/android/local.properties"
+
 printf '\n==> TypeScript, Vite e sincronização Capacitor\n'
 npm run lint
 npx vite build
