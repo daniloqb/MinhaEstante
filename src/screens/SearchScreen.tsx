@@ -341,14 +341,6 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                 >
                   {results.length} livros encontrados
                 </span>
-                <button
-                  type="button"
-                  onClick={onOpenManualRegister}
-                  className="font-serif text-xs font-semibold underline cursor-pointer hover:opacity-80"
-                  style={{ color: palette.goldPrimary }}
-                >
-                  + Cadastro manual
-                </button>
               </div>
 
               {results.map((item, idx) => {

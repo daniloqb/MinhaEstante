@@ -648,3 +648,96 @@ describe('8. Testes de Busca de Livros e Autores', () => {
     expect(hasVinteMil).toBe(true);
   });
 });
+
+describe('9. Testes de Ordenação por Data de Leitura', () => {
+  const sortBooksByReadingDate = (booksList: Book[]) => {
+    return [...booksList].sort((a, b) => {
+      const monthA =
+        a.mesLeitura != null && a.mesLeitura >= 1 && a.mesLeitura <= 12
+          ? a.mesLeitura
+          : null;
+      const monthB =
+        b.mesLeitura != null && b.mesLeitura >= 1 && b.mesLeitura <= 12
+          ? b.mesLeitura
+          : null;
+      const yearA = a.anoLeitura != null ? a.anoLeitura : null;
+      const yearB = b.anoLeitura != null ? b.anoLeitura : null;
+
+      const hasValidA = monthA != null && yearA != null;
+      const hasValidB = monthB != null && yearB != null;
+
+      if (hasValidA && !hasValidB) return -1;
+      if (!hasValidA && hasValidB) return 1;
+      if (!hasValidA && !hasValidB) return 0;
+
+      if (monthA !== monthB) {
+        return monthA! - monthB!;
+      }
+      if (yearA !== yearB) {
+        return yearA! - yearB!;
+      }
+      return 0;
+    });
+  };
+
+  const createTestBook = (id: number, titulo: string, mes: number | null, ano: number | null): Book => ({
+    id,
+    origem: 'manual',
+    titulo,
+    subtitulo: null,
+    autores: ['Autor Teste'],
+    formato: 'fisico',
+    tenho_fisico: true,
+    status_leitura: 'lido',
+    mesLeitura: mes,
+    anoLeitura: ano,
+    generos: ['Ficção'],
+    dataCadastro: Date.now(),
+    dataAtualizacao: Date.now(),
+  });
+
+  it('Ordena livros com mês como prioridade absoluta (Janeiro a Dezembro) e desempata por ano crescente', () => {
+    const livroA = createTestBook(1, 'Livro A', 1, 2026); // Janeiro 2026
+    const livroB = createTestBook(2, 'Livro B', 2, 2024); // Fevereiro 2024
+    const livroC = createTestBook(3, 'Livro C', 3, 2025); // Março 2025
+    const livroD = createTestBook(4, 'Livro D', 8, 2023); // Agosto 2023
+    const livroE = createTestBook(5, 'Livro E', 8, 2026); // Agosto 2026
+    const livroF = createTestBook(6, 'Livro F', 12, 2022); // Dezembro 2022
+
+    // Lista desordenada
+    const input = [livroF, livroE, livroB, livroD, livroA, livroC];
+    const sorted = sortBooksByReadingDate(input);
+
+    expect(sorted.map((b) => b.titulo)).toEqual([
+      'Livro A', // Janeiro 2026
+      'Livro B', // Fevereiro 2024
+      'Livro C', // Março 2025
+      'Livro D', // Agosto 2023
+      'Livro E', // Agosto 2026 (mesmo mês que D, ano mais recente)
+      'Livro F', // Dezembro 2022
+    ]);
+  });
+
+  it('Posiciona livros sem data de leitura válida no final da lista', () => {
+    const livroComData = createTestBook(1, 'Com Data', 5, 2024);
+    const livroSemData = createTestBook(2, 'Sem Data', null, null);
+    const livroSoMes = createTestBook(3, 'Só Mês', 2, null);
+    const livroSoAno = createTestBook(4, 'Só Ano', null, 2024);
+
+    const sorted = sortBooksByReadingDate([livroSemData, livroSoMes, livroComData, livroSoAno]);
+
+    expect(sorted[0].titulo).toBe('Com Data');
+    expect(sorted.slice(1).map((b) => b.titulo)).toEqual(
+      expect.arrayContaining(['Sem Data', 'Só Mês', 'Só Ano'])
+    );
+  });
+
+  it('Mantém ordem estável para livros com o mesmo mês e ano', () => {
+    const livro1 = createTestBook(1, 'Obra 1', 6, 2025);
+    const livro2 = createTestBook(2, 'Obra 2', 6, 2025);
+
+    const sorted = sortBooksByReadingDate([livro1, livro2]);
+    expect(sorted[0].titulo).toBe('Obra 1');
+    expect(sorted[1].titulo).toBe('Obra 2');
+  });
+});

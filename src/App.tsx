@@ -660,12 +660,36 @@ export const App: React.FC = () => {
     return [...list].sort((a, b) => {
       switch (sortBy) {
         case 'DATA_LEITURA': {
-          const yearA = a.anoLeitura ?? -1;
-          const yearB = b.anoLeitura ?? -1;
-          if (yearA !== yearB) return yearB - yearA;
-          const monthA = a.mesLeitura ?? -1;
-          const monthB = b.mesLeitura ?? -1;
-          return monthB - monthA;
+          const monthA =
+            a.mesLeitura != null && a.mesLeitura >= 1 && a.mesLeitura <= 12
+              ? a.mesLeitura
+              : null;
+          const monthB =
+            b.mesLeitura != null && b.mesLeitura >= 1 && b.mesLeitura <= 12
+              ? b.mesLeitura
+              : null;
+          const yearA = a.anoLeitura != null ? a.anoLeitura : null;
+          const yearB = b.anoLeitura != null ? b.anoLeitura : null;
+
+          const hasValidA = monthA != null && yearA != null;
+          const hasValidB = monthB != null && yearB != null;
+
+          if (hasValidA && !hasValidB) return -1;
+          if (!hasValidA && hasValidB) return 1;
+          if (!hasValidA && !hasValidB) return 0;
+
+          // Critério principal: Mês em ordem crescente (Janeiro=1 a Dezembro=12)
+          if (monthA !== monthB) {
+            return monthA! - monthB!;
+          }
+
+          // Critério secundário: Ano em ordem crescente (mais antigo ao mais recente)
+          if (yearA !== yearB) {
+            return yearA! - yearB!;
+          }
+
+          // Ordem estável para mesmo mês e ano
+          return 0;
         }
         case 'TITULO':
           return a.titulo.localeCompare(b.titulo);

@@ -324,60 +324,6 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
       />
 
       <div className="flex-1 w-full max-w-2xl mx-auto px-4 py-6 flex flex-col gap-6 pb-16">
-        {/* Escolha do Formato (Livro Físico vs E-book) */}
-        <PaperCard palette={palette} elevated className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-serif font-bold uppercase tracking-wider" style={{ color: palette.woodBorder }}>
-              Formato da Obra na Estante
-            </label>
-            <span className="text-xs font-serif italic text-stone-500">
-              Separa a estante física da digital
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                setFormato('fisico');
-                setTenhoFisico(true);
-              }}
-              className="py-3 px-4 rounded-xl border flex items-center justify-center gap-2.5 font-serif font-bold text-sm sm:text-base cursor-pointer transition-all shadow-sm"
-              style={{
-                backgroundColor: formato === 'fisico' ? palette.goldPrimary : 'transparent',
-                color: formato === 'fisico' ? palette.textOnGold : palette.textOnPaper,
-                borderColor: formato === 'fisico' ? palette.goldPrimary : palette.woodBorder,
-              }}
-            >
-              <BookOpen size={18} />
-              <span>Livro Físico</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setFormato('ebook');
-                setTenhoFisico(false);
-              }}
-              className="py-3 px-4 rounded-xl border flex items-center justify-center gap-2.5 font-serif font-bold text-sm sm:text-base cursor-pointer transition-all shadow-sm"
-              style={{
-                backgroundColor: formato === 'ebook' ? palette.goldPrimary : 'transparent',
-                color: formato === 'ebook' ? palette.textOnGold : palette.textOnPaper,
-                borderColor: formato === 'ebook' ? palette.goldPrimary : palette.woodBorder,
-              }}
-            >
-              <Tablet size={18} />
-              <span>E-book Digital</span>
-            </button>
-          </div>
-
-          <p className="text-xs font-serif leading-relaxed text-stone-600">
-            {formato === 'ebook'
-              ? '📱 Este título ficará na sua aba dedicada de E-books (Kindle, PDF, digital).'
-              : '📚 Este título ficará na sua estante de Livros Físicos que você tem em casa.'}
-          </p>
-        </PaperCard>
-
         {/* Pré-visualização da Capa em Tempo Real */}
         <div className="flex flex-col items-center justify-center">
           <BookCoverView
@@ -673,6 +619,60 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
               }}
             />
           </div>
+        </PaperCard>
+
+        {/* Escolha do Formato (Livro Físico vs E-book) */}
+        <PaperCard palette={palette} elevated className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-serif font-bold uppercase tracking-wider" style={{ color: palette.woodBorder }}>
+              Formato da Obra na Estante
+            </label>
+            <span className="text-xs font-serif italic text-stone-500">
+              Separa a estante física da digital
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setFormato('fisico');
+                setTenhoFisico(true);
+              }}
+              className="py-3 px-4 rounded-xl border flex items-center justify-center gap-2.5 font-serif font-bold text-sm sm:text-base cursor-pointer transition-all shadow-sm"
+              style={{
+                backgroundColor: formato === 'fisico' ? palette.goldPrimary : 'transparent',
+                color: formato === 'fisico' ? palette.textOnGold : palette.textOnPaper,
+                borderColor: formato === 'fisico' ? palette.goldPrimary : palette.woodBorder,
+              }}
+            >
+              <BookOpen size={18} />
+              <span>Livro Físico</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setFormato('ebook');
+                setTenhoFisico(false);
+              }}
+              className="py-3 px-4 rounded-xl border flex items-center justify-center gap-2.5 font-serif font-bold text-sm sm:text-base cursor-pointer transition-all shadow-sm"
+              style={{
+                backgroundColor: formato === 'ebook' ? palette.goldPrimary : 'transparent',
+                color: formato === 'ebook' ? palette.textOnGold : palette.textOnPaper,
+                borderColor: formato === 'ebook' ? palette.goldPrimary : palette.woodBorder,
+              }}
+            >
+              <Tablet size={18} />
+              <span>E-book Digital</span>
+            </button>
+          </div>
+
+          <p className="text-xs font-serif leading-relaxed text-stone-600">
+            {formato === 'ebook'
+              ? '📱 Este título ficará na sua aba dedicada de E-books (Kindle, PDF, digital).'
+              : '📚 Este título ficará na sua estante de Livros Físicos que você tem em casa.'}
+          </p>
         </PaperCard>
 
         {/* Formulário: Posse e Status de Leitura Independentes */}
