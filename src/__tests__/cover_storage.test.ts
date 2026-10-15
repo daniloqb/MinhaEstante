@@ -221,4 +221,26 @@ describe('Fase 3: Armazenamento Local de Capas (CoverStorageService)', () => {
     expect(localPath).toMatch(/^covers\/cover_555_/);
     expect(await CoverStorageService.getCoverDisplayUrl(localPath)).toBe(VALID_JPEG_BASE64);
   });
+
+  it('11. getCoverDisplayUrlSync retorna null para caminhos relativos não resolvidos e URL para dados em cache', async () => {
+    // Caminho relativo não resolvido no cache síncrono retorna null (evita 404 no WebView)
+    const unconvertedPath = 'covers/cover_nonexistent_123.jpg';
+    expect(CoverStorageService.getCoverDisplayUrlSync(unconvertedPath, null)).toBeNull();
+
+    // Data URLs e HTTP URLs são retornadas diretamente
+    expect(CoverStorageService.getCoverDisplayUrlSync(null, 'https://example.com/cover.jpg')).toBe('https://example.com/cover.jpg');
+    expect(CoverStorageService.getCoverDisplayUrlSync(VALID_JPEG_BASE64, null)).toBe(VALID_JPEG_BASE64);
+
+    // Salva uma capa e verifica se o cache síncrono a retorna após salva
+    const { relativePath } = await CoverStorageService.saveCover(VALID_JPEG_BASE64, 777);
+    expect(CoverStorageService.getCoverDisplayUrlSync(relativePath, null)).toBe(VALID_JPEG_BASE64);
+  });
+
+  it('12. warmDisplayCache executa com segurança em lista de livros', async () => {
+    const fakeBooks = [
+      { id: 1, capaLocalPath: 'covers/test_1.jpg' },
+      { id: 2, capaLocalPath: null },
+    ];
+    await expect(CoverStorageService.warmDisplayCache(fakeBooks as any)).resolves.not.toThrow();
+  });
 });

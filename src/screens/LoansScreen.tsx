@@ -429,7 +429,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                       compact={true}
                       title={book.titulo}
                       author={book.autores[0]}
-                      coverUrl={book.capaLocalPath || book.capaUrl}
+                      coverUrl={book.capaUrl}
                       width={56}
                       height={84}
                       onClick={() => onOpenBookDetail(book)}
@@ -677,7 +677,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                         palette={palette}
                         title={book.titulo}
                         author={book.autores?.[0]}
-                        coverUrl={book.capaLocalPath || book.capaUrl}
+                        coverUrl={book.capaUrl}
                         book={book}
                         width={40}
                         height={56}

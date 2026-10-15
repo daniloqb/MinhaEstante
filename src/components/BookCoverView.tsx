@@ -44,22 +44,55 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
   onClick,
   onContextMenu,
 }) => {
+  // Determina URL remota ou data URL segura de fallback (evitando tratar caminhos locais como URLs)
+  const safeRemoteUrl =
+    coverUrl && (coverUrl.startsWith('data:') || coverUrl.startsWith('http'))
+      ? coverUrl
+      : book?.capaUrl && (book.capaUrl.startsWith('data:') || book.capaUrl.startsWith('http'))
+      ? book.capaUrl
+      : null;
+
+  const localPath = book?.capaLocalPath;
+
   const [imageFailed, setImageFailed] = useState(false);
   const [displayUrl, setDisplayUrl] = useState<string | null>(() => {
-    return book?.capaLocalPath || coverUrl || null;
+    return CoverStorageService.getCoverDisplayUrlSync(localPath, safeRemoteUrl);
   });
 
   useEffect(() => {
     let isMounted = true;
-    setImageFailed(false);
+    const currentLocal = book?.capaLocalPath;
+    const currentRemote =
+      coverUrl && (coverUrl.startsWith('data:') || coverUrl.startsWith('http'))
+        ? coverUrl
+        : book?.capaUrl && (book.capaUrl.startsWith('data:') || book.capaUrl.startsWith('http'))
+        ? book.capaUrl
+        : null;
+
+    // Se já estiver disponível de forma síncrona no cache, aplica imediatamente
+    const syncUrl = CoverStorageService.getCoverDisplayUrlSync(currentLocal, currentRemote);
+    if (syncUrl) {
+      setDisplayUrl(syncUrl);
+      setImageFailed(false);
+      return;
+    }
+
     const resolveUrl = async () => {
-      const localPath = book?.capaLocalPath;
-      const remote = coverUrl || book?.capaUrl;
-      const resolved = await CoverStorageService.getCoverDisplayUrl(localPath, remote);
-      if (isMounted) {
-        setDisplayUrl(resolved);
+      try {
+        const resolved = await CoverStorageService.getCoverDisplayUrl(currentLocal, currentRemote);
+        if (isMounted) {
+          setDisplayUrl(resolved);
+          if (resolved) {
+            setImageFailed(false);
+          }
+        }
+      } catch {
+        if (isMounted) {
+          setDisplayUrl(currentRemote || null);
+        }
       }
     };
+
     resolveUrl();
     return () => {
       isMounted = false;
@@ -185,7 +218,14 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
         <img
           src={normalizedUrl}
           alt={`Capa do livro ${title}`}
-          onError={() => setImageFailed(true)}
+          onError={() => {
+            if (safeRemoteUrl && displayUrl !== safeRemoteUrl) {
+              setDisplayUrl(safeRemoteUrl);
+              setImageFailed(false);
+            } else {
+              setImageFailed(true);
+            }
+          }}
           className="w-full h-full object-cover"
           loading="lazy"
         />

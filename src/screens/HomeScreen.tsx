@@ -547,7 +547,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                             book={book}
                             title={book.titulo}
                             author={book.autores[0]}
-                            coverUrl={book.capaLocalPath || book.capaUrl}
+                            coverUrl={book.capaUrl}
                             width={108}
                             height={160}
                             onClick={() => onSelectBook(book)}
@@ -587,7 +587,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     compact={true}
                     title={book.titulo}
                     author={book.autores[0]}
-                    coverUrl={book.capaLocalPath || book.capaUrl}
+                    coverUrl={book.capaUrl}
                     width={64}
                     height={96}
                   />

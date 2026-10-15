@@ -1,5 +1,6 @@
 import { Book, EstanteStats, ReadingStatus } from '../types/book';
 import { bookRepository } from './database/bookRepository';
+import { CoverStorageService } from './storage/coverStorageService';
 
 export const STORAGE_KEY_BOOKS = 'minha_estante_livros_v1';
 export const STORAGE_KEY_SCHEMA_VERSION = 'minha_estante_schema_version';
@@ -238,12 +239,14 @@ export const BookStorage = {
   },
 
   /**
-   * Carrega a biblioteca diretamente do SQLite nativo
+   * Carrega a biblioteca diretamente do SQLite nativo e pré-aquece o cache de capas
    */
   async loadBooksFromDatabase(): Promise<Book[]> {
     try {
       await bookRepository.initialize();
-      return await bookRepository.getAll();
+      const books = await bookRepository.getAll();
+      await CoverStorageService.warmDisplayCache(books);
+      return books;
     } catch (err) {
       console.error('Falha ao carregar livros do SQLite:', err);
       return [];

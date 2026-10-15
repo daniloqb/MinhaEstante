@@ -171,6 +171,16 @@ export class NativeService {
           return false;
         }
         console.warn('Falha ao compartilhar arquivo via Capacitor Filesystem/Share:', err);
+      } finally {
+        // Limpeza garantida do arquivo temporário gerado no cache
+        try {
+          await Filesystem.deleteFile({
+            path: filename,
+            directory: Directory.Cache,
+          });
+        } catch {
+          // Ignora se o arquivo já tiver sido removido
+        }
       }
     }
 

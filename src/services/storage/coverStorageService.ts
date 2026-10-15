@@ -175,6 +175,91 @@ export class CoverStorageService {
   }
 
   /**
+   * Resolução síncrona imediata da URL da capa para evitar qualquer atraso,
+   * tela piscando ou erro 404 no primeiro render dos componentes de capa.
+   */
+  static getCoverDisplayUrlSync(
+    relativePath?: string | null,
+    fallbackUrl?: string | null
+  ): string | null {
+    if (!relativePath && !fallbackUrl) return null;
+
+    // Se já for uma URL utilizável diretamente em tags <img> (data URL, http(s), capacitor:// ou _capacitor_file_)
+    if (
+      relativePath &&
+      (relativePath.startsWith('data:') ||
+        relativePath.startsWith('http://') ||
+        relativePath.startsWith('https://') ||
+        relativePath.startsWith('capacitor://') ||
+        relativePath.startsWith('http://localhost/_capacitor_file_') ||
+        relativePath.startsWith('https://localhost/_capacitor_file_'))
+    ) {
+      return relativePath;
+    }
+
+    if (relativePath) {
+      const cleanPath = relativePath.startsWith('/') ? relativePath.slice(1) : relativePath;
+      if (this.displayUrlCache.has(cleanPath)) {
+        return this.displayUrlCache.get(cleanPath)!;
+      }
+      if (this.displayUrlCache.has(relativePath)) {
+        return this.displayUrlCache.get(relativePath)!;
+      }
+    }
+
+    // Se houver URL remota ou data URL de fallback válida
+    if (
+      fallbackUrl &&
+      (fallbackUrl.startsWith('data:') || fallbackUrl.startsWith('http://') || fallbackUrl.startsWith('https://'))
+    ) {
+      return fallbackUrl;
+    }
+
+    // NUNCA retorna um caminho relativo como "covers/..." aqui, pois quebraria na WebView com 404
+    return null;
+  }
+
+  /**
+   * Pré-aquece o cache de exibição das capas locais assim que a biblioteca é carregada,
+   * garantindo que no primeiro carregamento todas as capas locais já possuam suas URLs
+   * WebView prontas antes da primeira renderização da estante.
+   */
+  static async warmDisplayCache(items: (string | { capaLocalPath?: string | null })[]): Promise<void> {
+    if (!this.isNative() || !Array.isArray(items) || items.length === 0) return;
+
+    await this.initialize();
+
+    const pathsToWarm = new Set<string>();
+    for (const item of items) {
+      const path = typeof item === 'string' ? item : item?.capaLocalPath;
+      if (path && typeof path === 'string') {
+        const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+        if (!cleanPath.startsWith('data:') && !cleanPath.startsWith('http') && !this.displayUrlCache.has(cleanPath)) {
+          pathsToWarm.add(cleanPath);
+        }
+      }
+    }
+
+    if (pathsToWarm.size === 0) return;
+
+    // Converte os caminhos em paralelo
+    await Promise.allSettled(
+      Array.from(pathsToWarm).map(async (path) => {
+        try {
+          const uriResult = await Filesystem.getUri({
+            path,
+            directory: Directory.Data,
+          });
+          const converted = Capacitor.convertFileSrc(uriResult.uri);
+          this.displayUrlCache.set(path, converted);
+        } catch {
+          // Ignora se o arquivo individual não existir
+        }
+      })
+    );
+  }
+
+  /**
    * Resolve a URL de exibição utilizável em tags <img> da interface
    */
   static async getCoverDisplayUrl(
@@ -184,11 +269,24 @@ export class CoverStorageService {
     if (!relativePath && !fallbackUrl) return null;
 
     // Se relativePath for um Data URL direto (transitório) ou URL HTTP
-    if (relativePath && (relativePath.startsWith('data:') || relativePath.startsWith('http'))) {
+    if (
+      relativePath &&
+      (relativePath.startsWith('data:') ||
+        relativePath.startsWith('http://') ||
+        relativePath.startsWith('https://') ||
+        relativePath.startsWith('capacitor://') ||
+        relativePath.startsWith('http://localhost/_capacitor_file_') ||
+        relativePath.startsWith('https://localhost/_capacitor_file_'))
+    ) {
       return relativePath;
     }
 
     if (relativePath) {
+      const cleanPath = relativePath.startsWith('/') ? relativePath.slice(1) : relativePath;
+
+      if (this.displayUrlCache.has(cleanPath)) {
+        return this.displayUrlCache.get(cleanPath)!;
+      }
       if (this.displayUrlCache.has(relativePath)) {
         return this.displayUrlCache.get(relativePath)!;
       }
@@ -196,25 +294,34 @@ export class CoverStorageService {
       if (this.isNative()) {
         try {
           const uriResult = await Filesystem.getUri({
-            path: relativePath,
+            path: cleanPath,
             directory: Directory.Data,
           });
           const converted = Capacitor.convertFileSrc(uriResult.uri);
+          this.displayUrlCache.set(cleanPath, converted);
           this.displayUrlCache.set(relativePath, converted);
           return converted;
         } catch {
           // Arquivo local não encontrado, usa fallback
         }
       } else {
-        const memoryCover = await this.webStore.read(relativePath);
+        const memoryCover = (await this.webStore.read(cleanPath)) || (await this.webStore.read(relativePath));
         if (memoryCover) {
+          this.displayUrlCache.set(cleanPath, memoryCover);
           this.displayUrlCache.set(relativePath, memoryCover);
           return memoryCover;
         }
       }
     }
 
-    return fallbackUrl || null;
+    if (
+      fallbackUrl &&
+      (fallbackUrl.startsWith('data:') || fallbackUrl.startsWith('http://') || fallbackUrl.startsWith('https://'))
+    ) {
+      return fallbackUrl;
+    }
+
+    return null;
   }
 
   /**

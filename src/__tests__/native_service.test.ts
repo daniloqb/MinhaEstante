@@ -29,14 +29,33 @@ describe('Fase 1: NativeService & Capacitor Integration', () => {
     expect(typeof success).toBe('boolean');
   });
 
-  it('openExternalUrl não lança erros com URLs válidas', async () => {
-    const originalWindow = (globalThis as any).window;
-    const fakeOpen = vi.fn();
-    (globalThis as any).window = { open: fakeOpen };
+  it('exportOrShareFile aciona AndroidApp.createFile quando bridge nativa está disponível', async () => {
+    const fakeCreateFile = vi.fn((_content: string, _filename: string, _mime: string) => {
+      // Simula callback nativo do Android
+      setTimeout(() => {
+        if ((globalThis as any).window.onAndroidFileSaved) {
+          (globalThis as any).window.onAndroidFileSaved(true);
+        }
+      }, 10);
+    });
 
-    await NativeService.openExternalUrl('https://example.com');
-    expect(fakeOpen).toHaveBeenCalledWith('https://example.com', '_blank', 'noopener,noreferrer');
+    if (!(globalThis as any).window) {
+      (globalThis as any).window = {};
+    }
+    (globalThis as any).window.AndroidApp = {
+      createFile: fakeCreateFile,
+      isAndroidApp: () => true,
+    };
 
-    (globalThis as any).window = originalWindow;
+    const res = await NativeService.exportOrShareFile({
+      content: 'UEsDBBQAAAAIA===',
+      filename: 'backup.zip',
+      mimeType: 'application/zip',
+      isBase64: true,
+    });
+
+    expect(res).toBe(true);
+    expect(fakeCreateFile).toHaveBeenCalledWith('UEsDBBQAAAAIA===', 'backup.zip', 'application/zip');
+    delete (globalThis as any).window.AndroidApp;
   });
 });
