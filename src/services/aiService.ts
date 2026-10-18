@@ -108,10 +108,11 @@ Qual a mensagem central, reflexão atemporal ou impacto que a obra deixa no leit
 
 Use formatação Markdown limpa com tópicos legíveis e parágrafos fluidos. Seja fiel à obra.`;
 
-  const models = ['gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+  const models = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
   let lastError: Error | null = null;
 
-  for (const model of models) {
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i];
     try {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -161,6 +162,17 @@ Use formatação Markdown limpa com tópicos legíveis e parágrafos fluidos. Se
           );
         }
 
+        if (
+          res.status === 503 ||
+          rawMsg.toLowerCase().includes('demand') ||
+          rawMsg.toLowerCase().includes('overloaded') ||
+          rawMsg.toLowerCase().includes('unavailable')
+        ) {
+          throw new Error(
+            'Os servidores da IA do Google estão experimentando alta demanda no momento. Por favor, aguarde alguns instantes e tente novamente.'
+          );
+        }
+
         throw new Error(rawMsg || `Erro ao consultar a IA do Google (Código ${res.status}).`);
       }
 
@@ -172,6 +184,10 @@ Use formatação Markdown limpa com tópicos legíveis e parágrafos fluidos. Se
     } catch (err: any) {
       lastError = err;
       console.warn(`Tentativa direta com ${model} falhou:`, err?.message || err);
+      // Se houver próximo modelo, espera um breve intervalo para aliviar picos de concorrência
+      if (i < models.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      }
     }
   }
 

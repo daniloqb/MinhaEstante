@@ -18,6 +18,9 @@ import {
   Upload,
   DownloadCloud,
   CheckCircle2,
+  Image,
+  Globe,
+  Trash2,
 } from 'lucide-react';
 
 interface ManualBookScreenProps {
@@ -522,7 +525,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
             />
           </div>
 
-          {/* Gerenciamento da Capa: Link e Upload Local permanente */}
+          {/* Gerenciamento da Capa: Link e Upload Local permanente com Miniatura Padronizada */}
           <div
             className="p-3.5 rounded-xl border flex flex-col gap-2.5"
             style={{
@@ -531,71 +534,112 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
             }}
           >
             <div className="flex items-center justify-between">
-              <label className="text-xs font-serif font-bold uppercase tracking-wider" style={{ color: palette.woodBorder }}>
+              <label className="text-xs font-serif font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: palette.woodBorder }}>
+                <Image size={15} />
                 Imagem / Capa do Livro (Armazenamento Local)
               </label>
-              {ImageService.isLocalImage(capaUrl) && (
-                <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
-                  <CheckCircle2 size={13} /> Salva localmente
-                </span>
-              )}
-            </div>
-
-            <input
-              type="url"
-              value={capaUrl}
-              onChange={(e) => setCapaUrl(e.target.value)}
-              placeholder="Cole a URL da capa (https://...)"
-              className="w-full px-3 py-2 rounded-lg border text-xs font-mono focus:outline-none focus:ring-1"
-              style={{
-                backgroundColor: palette.paperSurfaceElevated,
-                borderColor: palette.woodBorder,
-                color: palette.textOnPaper,
-              }}
-            />
-
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept="image/*"
-              className="hidden"
-            />
-
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="py-1.5 px-3 rounded-lg border text-xs font-serif font-bold flex items-center gap-1.5 cursor-pointer hover:bg-black/5"
-                style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
-              >
-                <Upload size={14} />
-                Escolher foto do aparelho
-              </button>
-
-              {capaUrl.trim() && !ImageService.isLocalImage(capaUrl) && (
-                <button
-                  type="button"
-                  onClick={handleSaveCoverLocal}
-                  disabled={isSavingCoverLocal}
-                  className="py-1.5 px-3 rounded-lg font-serif font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer hover:brightness-105 active:scale-95"
-                  style={{
-                    backgroundColor: palette.goldPrimary,
-                    color: palette.textOnGold,
-                  }}
-                  title="Baixa a imagem agora para ficar salva mesmo se o site original sumir"
+              <div className="flex items-center gap-2">
+                {ImageService.isLocalImage(capaUrl) && (
+                  <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                    <CheckCircle2 size={13} /> Salva localmente
+                  </span>
+                )}
+                <a
+                  href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(
+                    (titulo.trim() || 'Livro') + ' ' + (autoresStr.split(',')[0]?.trim() || '') + ' capa livro'
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-serif font-semibold underline flex items-center gap-1 hover:opacity-80"
+                  style={{ color: palette.isLightOak ? '#5A3D24' : '#8B5A33' }}
+                  title="Buscar imagens da capa no Google em nova aba"
                 >
-                  <DownloadCloud size={14} />
-                  {isSavingCoverLocal ? 'Baixando...' : 'Baixar e guardar localmente'}
-                </button>
-              )}
+                  <Globe size={13} /> Buscar no Google
+                </a>
+              </div>
             </div>
 
-            {coverStatusMessage && (
-              <span className="text-xs font-serif font-bold text-emerald-800">
-                {coverStatusMessage}
-              </span>
-            )}
+            <div className="flex items-start gap-3">
+              {/* Pré-visualização da capa (miniatura padronizada) */}
+              <div className="shrink-0 shadow-md rounded overflow-hidden">
+                <BookCoverView
+                  palette={palette}
+                  title={titulo.trim() || 'Título da Obra'}
+                  author={autoresStr.split(',')[0]?.trim() || 'Autor do Livro'}
+                  coverUrl={capaUrl.trim() || null}
+                  width={64}
+                  height={94}
+                />
+              </div>
+
+              <div className="flex-1 flex flex-col gap-1.5">
+                <input
+                  type="url"
+                  value={capaUrl}
+                  onChange={(e) => setCapaUrl(e.target.value)}
+                  placeholder="Cole a URL da capa (https://...)"
+                  className="w-full px-3 py-2 rounded-lg border text-xs font-mono focus:outline-none focus:ring-1"
+                  style={{
+                    backgroundColor: palette.paperSurfaceElevated,
+                    borderColor: palette.woodBorder,
+                    color: palette.textOnPaper,
+                  }}
+                />
+
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  className="hidden"
+                />
+
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="py-1.5 px-2.5 rounded-lg border text-xs font-serif font-bold flex items-center gap-1.5 cursor-pointer hover:bg-black/5"
+                    style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
+                  >
+                    <Upload size={13} />
+                    Foto do celular
+                  </button>
+
+                  {capaUrl.trim() && !ImageService.isLocalImage(capaUrl) && (
+                    <button
+                      type="button"
+                      onClick={handleSaveCoverLocal}
+                      disabled={isSavingCoverLocal}
+                      className="py-1.5 px-2.5 rounded-lg font-serif font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer hover:brightness-105 active:scale-95"
+                      style={{
+                        backgroundColor: palette.goldPrimary,
+                        color: palette.textOnGold,
+                      }}
+                      title="Baixa a imagem agora para ficar salva mesmo se o site original sumir"
+                    >
+                      <DownloadCloud size={13} />
+                      {isSavingCoverLocal ? 'Baixando...' : 'Salvar no aparelho'}
+                    </button>
+                  )}
+
+                  {capaUrl.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => setCapaUrl('')}
+                      className="text-xs font-serif font-semibold flex items-center gap-1 text-red-600 hover:text-red-800 cursor-pointer"
+                    >
+                      <Trash2 size={13} /> Remover
+                    </button>
+                  )}
+                </div>
+
+                {coverStatusMessage && (
+                  <span className="text-xs font-serif font-bold text-emerald-800">
+                    {coverStatusMessage}
+                  </span>
+                )}
+              </div>
+            </div>
 
             <p className="text-[11px] text-stone-500 italic">
               Imagens salvas localmente são comprimidas (~25 KB) e ficam guardadas no backup do seu celular.

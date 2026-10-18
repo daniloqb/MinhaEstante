@@ -8,6 +8,7 @@ export const STORAGE_KEY_BACKUP_PRE_MIGRATION = 'minha_estante_backup_pre_migrat
 const STORAGE_KEY_THEME = 'minha_estante_light_oak';
 const STORAGE_KEY_VIEW_MODE = 'minha_estante_view_mode';
 const STORAGE_KEY_GROUP_BY = 'minha_estante_group_by';
+const STORAGE_KEY_SORT_BY = 'minha_estante_sort_by';
 const STORAGE_KEY_API_KEY = 'minha_estante_google_api_key';
 
 export const CURRENT_SCHEMA_VERSION = 2;
@@ -718,10 +719,24 @@ export const BookStorage = {
   },
 
   loadGroupBy(): 'ANO' | 'AUTOR' | 'GENERO' {
-    return (localStorage.getItem(STORAGE_KEY_GROUP_BY) as 'ANO' | 'AUTOR' | 'GENERO') || 'ANO';
+    return (localStorage.getItem(STORAGE_KEY_GROUP_BY) as 'ANO' | 'AUTOR' | 'GENERO') || 'AUTOR';
   },
   saveGroupBy(group: 'ANO' | 'AUTOR' | 'GENERO'): void {
     localStorage.setItem(STORAGE_KEY_GROUP_BY, group);
+  },
+
+  loadSortBy(): 'DATA_LEITURA' | 'TITULO' | 'AUTOR' | 'NOTA' | 'DATA_CADASTRO' {
+    return (
+      (localStorage.getItem(STORAGE_KEY_SORT_BY) as
+        | 'DATA_LEITURA'
+        | 'TITULO'
+        | 'AUTOR'
+        | 'NOTA'
+        | 'DATA_CADASTRO') || 'DATA_LEITURA'
+    );
+  },
+  saveSortBy(sort: 'DATA_LEITURA' | 'TITULO' | 'AUTOR' | 'NOTA' | 'DATA_CADASTRO'): void {
+    localStorage.setItem(STORAGE_KEY_SORT_BY, sort);
   },
 
   loadApiKey(): string {

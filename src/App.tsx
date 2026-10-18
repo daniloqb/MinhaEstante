@@ -65,7 +65,7 @@ export const App: React.FC = () => {
   // Shelf Filtering State - Estante unificada (Todos / Lidos / Quero Ler) e formato
   const [statusTab, setStatusTab] = useState<ShelfTab>('todos');
   const [selectedFormat, setSelectedFormat] = useState<'fisico' | 'ebook' | null>(null);
-  const [sortBy, setSortBy] = useState<SortOption>('TITULO');
+  const [sortBy, setSortBy] = useState<SortOption>(() => BookStorage.loadSortBy());
   const [textQuery, setTextQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
@@ -273,6 +273,11 @@ export const App: React.FC = () => {
   const handleGroupByChange = (group: GroupByMode) => {
     setGroupBy(group);
     BookStorage.saveGroupBy(group);
+  };
+
+  const handleSortChange = (sort: SortOption) => {
+    setSortBy(sort);
+    BookStorage.saveSortBy(sort);
   };
 
   const handleApiKeyChange = (key: string) => {
@@ -734,13 +739,17 @@ export const App: React.FC = () => {
     pushNavState(`tab-${tab}`, { tab });
   }, [currentTab, pushNavState]);
 
-  // Limpar filtros
+  // Limpar filtros (restaura padrões: Autor, Data de Leitura, Todos os formatos, Todas as avaliações)
   const clearFilters = () => {
     setTextQuery('');
     setSelectedYear(null);
     setSelectedGenre(null);
     setSelectedRatingMin(null);
     setSelectedFormat(null);
+    setGroupBy('AUTOR');
+    BookStorage.saveGroupBy('AUTOR');
+    setSortBy('DATA_LEITURA');
+    BookStorage.saveSortBy('DATA_LEITURA');
   };
 
   return (
@@ -889,7 +898,7 @@ export const App: React.FC = () => {
         groupBy={groupBy}
         onGroupByChange={handleGroupByChange}
         sortOption={sortBy}
-        onSortChange={setSortBy}
+        onSortChange={handleSortChange}
         selectedRatingMin={selectedRatingMin}
         onRatingFilterChange={setSelectedRatingMin}
         selectedYear={selectedYear}
@@ -969,7 +978,7 @@ export const App: React.FC = () => {
               groupBy={groupBy}
               onGroupByChange={handleGroupByChange}
               sortOption={sortBy}
-              onSortChange={setSortBy}
+              onSortChange={handleSortChange}
               searchQuery={textQuery}
               onSearchQueryChange={setTextQuery}
               selectedYear={selectedYear}

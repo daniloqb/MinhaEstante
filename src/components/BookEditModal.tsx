@@ -353,62 +353,6 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
 
         {/* Corpo do Formulário com Rolagem Independente */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-5 overscroll-contain">
-          {/* Seletor de Formato: Livro Físico vs E-book Digital */}
-          <div
-            className="p-3.5 rounded-xl border flex flex-col gap-2.5"
-            style={{
-              backgroundColor: palette.paperSurfaceElevated,
-              borderColor: `${palette.woodBorder}40`,
-            }}
-          >
-            <label
-              className="text-xs font-serif font-bold uppercase tracking-wider"
-              style={{ color: palette.woodBorder }}
-            >
-              Formato da Obra na Estante
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setFormato('fisico');
-                  setTenhoFisico(true);
-                }}
-                className="py-2.5 px-3 rounded-lg border flex items-center justify-center gap-2 font-serif font-bold text-sm cursor-pointer transition-all shadow-xs"
-                style={{
-                  backgroundColor: formato === 'fisico' ? palette.goldPrimary : 'transparent',
-                  color: formato === 'fisico' ? palette.textOnGold : palette.textOnPaper,
-                  borderColor: formato === 'fisico' ? palette.goldPrimary : palette.woodBorder,
-                }}
-              >
-                <BookOpen size={16} />
-                <span>Livro Físico</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setFormato('ebook');
-                  setTenhoFisico(false);
-                }}
-                className="py-2.5 px-3 rounded-lg border flex items-center justify-center gap-2 font-serif font-bold text-sm cursor-pointer transition-all shadow-xs"
-                style={{
-                  backgroundColor: formato === 'ebook' ? palette.goldPrimary : 'transparent',
-                  color: formato === 'ebook' ? palette.textOnGold : palette.textOnPaper,
-                  borderColor: formato === 'ebook' ? palette.goldPrimary : palette.woodBorder,
-                }}
-              >
-                <Tablet size={16} />
-                <span>E-book Digital</span>
-              </button>
-            </div>
-            <p className="text-[11px] text-stone-600 font-serif italic">
-              {formato === 'ebook'
-                ? '📱 Obra organizada na aba dedicada de E-books da sua estante.'
-                : '📚 Obra organizada na estante física.'}
-            </p>
-          </div>
-
           {/* Edição do Título & Dados da Obra (Permite traduzir ou ajustar para português) */}
           <div
             className="p-3.5 rounded-xl border flex flex-col gap-3"
@@ -513,7 +457,7 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs font-serif font-semibold underline flex items-center gap-1 hover:opacity-80"
-                style={{ color: palette.goldPrimary }}
+                style={{ color: palette.isLightOak ? '#5A3D24' : '#8B5A33' }}
                 title="Buscar imagens da capa no Google em nova aba"
               >
                 <Globe size={13} /> Buscar no Google
@@ -601,6 +545,62 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Formato da Obra na Estante (Livro Físico vs E-book Digital) */}
+          <div
+            className="p-3.5 rounded-xl border flex flex-col gap-2.5"
+            style={{
+              backgroundColor: palette.paperSurfaceElevated,
+              borderColor: `${palette.woodBorder}40`,
+            }}
+          >
+            <label
+              className="text-xs font-serif font-bold uppercase tracking-wider"
+              style={{ color: palette.woodBorder }}
+            >
+              Formato da Obra na Estante
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setFormato('fisico');
+                  setTenhoFisico(true);
+                }}
+                className="py-2.5 px-3 rounded-lg border flex items-center justify-center gap-2 font-serif font-bold text-sm cursor-pointer transition-all shadow-xs"
+                style={{
+                  backgroundColor: formato === 'fisico' ? palette.goldPrimary : 'transparent',
+                  color: formato === 'fisico' ? palette.textOnGold : palette.textOnPaper,
+                  borderColor: formato === 'fisico' ? palette.goldPrimary : palette.woodBorder,
+                }}
+              >
+                <BookOpen size={16} />
+                <span>Livro Físico</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFormato('ebook');
+                  setTenhoFisico(false);
+                }}
+                className="py-2.5 px-3 rounded-lg border flex items-center justify-center gap-2 font-serif font-bold text-sm cursor-pointer transition-all shadow-xs"
+                style={{
+                  backgroundColor: formato === 'ebook' ? palette.goldPrimary : 'transparent',
+                  color: formato === 'ebook' ? palette.textOnGold : palette.textOnPaper,
+                  borderColor: formato === 'ebook' ? palette.goldPrimary : palette.woodBorder,
+                }}
+              >
+                <Tablet size={16} />
+                <span>E-book Digital</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-stone-600 font-serif italic">
+              {formato === 'ebook'
+                ? '📱 Obra organizada na aba dedicada de E-books da sua estante.'
+                : '📚 Obra organizada na estante física.'}
+            </p>
           </div>
 
           {/* Controle Independente 1: Switch de Posse Física (apenas se formato físico) */}

@@ -131,6 +131,11 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => onQueryChange(e.target.value)}
+              onFocus={(e) => {
+                if (e.currentTarget.value.length > 0) {
+                  e.currentTarget.select();
+                }
+              }}
               placeholder={t.search.inputPlaceholder}
               className="w-full pl-10 pr-20 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 shadow-sm font-sans"
               style={{

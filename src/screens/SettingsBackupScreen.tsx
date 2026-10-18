@@ -981,7 +981,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
             className="font-serif font-bold text-lg"
             style={{ color: palette.goldPrimary }}
           >
-            Minha Estante · v1.0.0 (Build 18)
+            Minha Estante · v1.0.0 (Build 20)
           </span>
           <span
             className="text-xs opacity-80"
