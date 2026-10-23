@@ -118,7 +118,7 @@ export class BackupService {
 
     const manifest: BackupManifest = {
       appId: this.APP_IDENTIFIER,
-      appName: 'Minha Estante',
+      appName: 'Booknook',
       version: this.BACKUP_FORMAT_VERSION,
       schemaVersion: CURRENT_SCHEMA_VERSION,
       createdAt: new Date().toISOString(),
@@ -453,7 +453,7 @@ export class BackupService {
       content: backup.base64 || '',
       filename: backup.fileName,
       mimeType: 'application/zip',
-      title: `Minha Estante Backup - ${backup.fileName}`,
+      title: `Booknook Backup - ${backup.fileName}`,
       isBase64: true,
     });
   }

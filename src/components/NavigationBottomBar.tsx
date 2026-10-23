@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Handshake, Search, BarChart3, Settings } from 'lucide-react';
+import { BookOpen, Search, BarChart3, Settings } from 'lucide-react';
 import { WoodPalette } from '../theme/woodTheme';
 import { useI18n } from '../i18n/I18nContext';
 
@@ -18,7 +18,7 @@ export const NavigationBottomBar: React.FC<NavigationBottomBarProps> = ({
   currentTab,
   onTabChange,
   totalCount,
-  borrowedCount,
+  borrowedCount: _borrowedCount,
 }) => {
   const { t } = useI18n();
 
@@ -29,7 +29,6 @@ export const NavigationBottomBar: React.FC<NavigationBottomBarProps> = ({
     count?: number;
   }[] = [
     { id: 'ESTANTE', label: t.nav.bookshelf, icon: BookOpen, count: totalCount },
-    { id: 'EMPRESTADOS', label: t.nav.loans, icon: Handshake, count: borrowedCount },
     { id: 'BUSCAR', label: t.nav.search, icon: Search },
     { id: 'ESTATISTICAS', label: t.nav.stats, icon: BarChart3 },
     { id: 'CONFIG', label: t.nav.settings, icon: Settings },
@@ -54,7 +53,8 @@ export const NavigationBottomBar: React.FC<NavigationBottomBarProps> = ({
         style={{ backgroundColor: palette.woodDark }}
       >
         {tabs.map((tab) => {
-          const isSelected = currentTab === tab.id;
+          const isSelected =
+            currentTab === tab.id || (tab.id === 'ESTANTE' && currentTab === 'EMPRESTADOS');
           const IconComponent = tab.icon;
 
           return (
@@ -84,7 +84,7 @@ export const NavigationBottomBar: React.FC<NavigationBottomBarProps> = ({
                 )}
               </div>
               <span
-                className="font-serif font-semibold text-xs mt-0.5 tracking-wide transition-colors duration-200"
+                className="font-sans font-semibold text-xs mt-0.5 tracking-tight transition-colors duration-200 select-none"
                 style={{
                   color: isSelected ? palette.goldPrimary : palette.textSecondaryOnWood,
                 }}

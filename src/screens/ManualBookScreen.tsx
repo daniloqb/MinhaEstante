@@ -279,7 +279,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                     onBack();
                   }
                 }}
-                className="w-full py-2.5 px-4 rounded-lg font-serif font-bold text-sm bg-red-700 text-white cursor-pointer hover:bg-red-800 active:scale-98 transition-colors"
+                className="w-full py-2.5 px-4 rounded-lg font-sans font-semibold text-sm bg-red-700 text-white cursor-pointer hover:bg-red-800 active:scale-98 transition-colors select-none"
               >
                 Excluir livro definitivamente
               </button>
@@ -290,7 +290,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                   setShowOrphanPrompt(false);
                   executeSave(false, 'nenhum');
                 }}
-                className="w-full py-2.5 px-4 rounded-lg font-serif font-semibold text-sm border cursor-pointer hover:bg-black/5 active:scale-98"
+                className="w-full py-2.5 px-4 rounded-lg font-sans font-medium text-sm border cursor-pointer hover:bg-black/5 active:scale-98 select-none"
                 style={{
                   borderColor: palette.woodBorder,
                   color: palette.textOnPaper,
@@ -357,7 +357,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setIsAiModalOpen(true)}
-                className="py-1.5 px-3 rounded-lg border font-serif font-bold text-xs flex items-center gap-1.5 shadow-xs hover:brightness-105 cursor-pointer"
+                className="py-1.5 px-3 rounded-lg border font-sans font-semibold text-xs flex items-center gap-1.5 shadow-xs hover:brightness-105 cursor-pointer select-none"
                 style={{
                   backgroundColor: `${palette.goldPrimary}20`,
                   borderColor: palette.goldPrimary,
@@ -372,7 +372,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
           </div>
 
           <div>
-            <label className="text-sm font-serif font-bold block mb-1" style={{ color: palette.textOnPaper }}>
+            <label className="text-sm font-sans font-semibold block mb-1" style={{ color: palette.textOnPaper }}>
               Título da Obra *
             </label>
             <input
@@ -383,7 +383,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                 if (tituloError) setTituloError(false);
               }}
               placeholder="Ex: Dom Casmurro"
-              className="w-full px-3.5 py-2.5 rounded-lg border text-base focus:outline-none focus:ring-2 font-serif font-semibold"
+              className="w-full px-3.5 py-2.5 rounded-lg border text-sm sm:text-base focus:outline-none focus:ring-2 font-sans font-medium"
               style={{
                 backgroundColor: palette.paperSurfaceElevated,
                 borderColor: tituloError ? '#ef4444' : palette.woodBorder,
@@ -391,14 +391,14 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
               }}
             />
             {tituloError && (
-              <span className="text-xs text-red-600 mt-1 block font-bold">
+              <span className="text-xs font-sans text-red-600 mt-1 block font-semibold">
                 O título é obrigatório.
               </span>
             )}
           </div>
 
           <div>
-            <label className="text-sm font-serif font-bold block mb-1" style={{ color: palette.textOnPaper }}>
+            <label className="text-sm font-sans font-semibold block mb-1" style={{ color: palette.textOnPaper }}>
               Subtítulo (opcional)
             </label>
             <input
@@ -406,7 +406,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
               value={subtitulo}
               onChange={(e) => setSubtitulo(e.target.value)}
               placeholder="Ex: Edição especial comentada"
-              className="w-full px-3.5 py-2 rounded-lg border text-sm font-serif focus:outline-none focus:ring-1"
+              className="w-full px-3.5 py-2 rounded-lg border text-sm sm:text-base font-sans focus:outline-none focus:ring-1"
               style={{
                 backgroundColor: palette.paperSurfaceElevated,
                 borderColor: palette.woodBorder,
@@ -416,7 +416,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
           </div>
 
           <div>
-            <label className="text-sm font-serif font-bold block mb-1" style={{ color: palette.textOnPaper }}>
+            <label className="text-sm font-sans font-semibold block mb-1" style={{ color: palette.textOnPaper }}>
               Autores (separados por vírgula)
             </label>
             <input
@@ -424,7 +424,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
               value={autoresStr}
               onChange={(e) => setAutoresStr(e.target.value)}
               placeholder="Ex: Machado de Assis"
-              className="w-full px-3.5 py-2 rounded-lg border text-sm font-serif focus:outline-none focus:ring-1"
+              className="w-full px-3.5 py-2 rounded-lg border text-sm sm:text-base font-sans focus:outline-none focus:ring-1"
               style={{
                 backgroundColor: palette.paperSurfaceElevated,
                 borderColor: palette.woodBorder,
@@ -435,7 +435,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-serif font-bold block mb-1" style={{ color: palette.textOnPaper }}>
+              <label className="text-sm font-sans font-semibold block mb-1" style={{ color: palette.textOnPaper }}>
                 Editora
               </label>
               <input
@@ -443,7 +443,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                 value={editora}
                 onChange={(e) => setEditora(e.target.value)}
                 placeholder="Ex: Garnier"
-                className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-1"
+                className="w-full px-3 py-2 rounded-lg border text-sm sm:text-base font-sans focus:outline-none focus:ring-1"
                 style={{
                   backgroundColor: palette.paperSurfaceElevated,
                   borderColor: palette.woodBorder,
@@ -452,7 +452,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
               />
             </div>
             <div>
-              <label className="text-sm font-serif font-bold block mb-1" style={{ color: palette.textOnPaper }}>
+              <label className="text-sm font-sans font-semibold block mb-1" style={{ color: palette.textOnPaper }}>
                 Ano de Publicação
               </label>
               <input
@@ -460,7 +460,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                 value={anoPublicacaoStr}
                 onChange={(e) => setAnoPublicacaoStr(e.target.value)}
                 placeholder="Ex: 1899"
-                className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-1"
+                className="w-full px-3 py-2 rounded-lg border text-sm sm:text-base font-sans focus:outline-none focus:ring-1 tabular-nums"
                 style={{
                   backgroundColor: palette.paperSurfaceElevated,
                   borderColor: palette.woodBorder,
@@ -472,7 +472,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-serif font-bold block mb-1" style={{ color: palette.textOnPaper }}>
+              <label className="text-sm font-sans font-semibold block mb-1" style={{ color: palette.textOnPaper }}>
                 Número de Páginas
               </label>
               <input
@@ -480,7 +480,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                 value={paginasStr}
                 onChange={(e) => setPaginasStr(e.target.value)}
                 placeholder="Ex: 256"
-                className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-1"
+                className="w-full px-3 py-2 rounded-lg border text-sm sm:text-base font-sans focus:outline-none focus:ring-1 tabular-nums"
                 style={{
                   backgroundColor: palette.paperSurfaceElevated,
                   borderColor: palette.woodBorder,
@@ -489,7 +489,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
               />
             </div>
             <div>
-              <label className="text-sm font-serif font-bold block mb-1" style={{ color: palette.textOnPaper }}>
+              <label className="text-sm font-sans font-semibold block mb-1" style={{ color: palette.textOnPaper }}>
                 Código ISBN
               </label>
               <input
@@ -497,7 +497,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                 value={isbnStr}
                 onChange={(e) => setIsbnStr(e.target.value)}
                 placeholder="ISBN-10 ou ISBN-13"
-                className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-1 font-mono"
+                className="w-full px-3 py-2 rounded-lg border text-sm sm:text-base focus:outline-none focus:ring-1 font-mono"
                 style={{
                   backgroundColor: palette.paperSurfaceElevated,
                   borderColor: palette.woodBorder,
@@ -508,7 +508,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
           </div>
 
           <div>
-            <label className="text-sm font-serif font-bold block mb-1" style={{ color: palette.textOnPaper }}>
+            <label className="text-sm font-sans font-semibold block mb-1" style={{ color: palette.textOnPaper }}>
               Gêneros (separados por vírgula)
             </label>
             <input
@@ -516,7 +516,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
               value={generosStr}
               onChange={(e) => setGenerosStr(e.target.value)}
               placeholder="Ex: Ficção, Clássico, Literatura Brasileira"
-              className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-1"
+              className="w-full px-3 py-2 rounded-lg border text-sm sm:text-base font-sans focus:outline-none focus:ring-1"
               style={{
                 backgroundColor: palette.paperSurfaceElevated,
                 borderColor: palette.woodBorder,
@@ -534,13 +534,13 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
             }}
           >
             <div className="flex items-center justify-between">
-              <label className="text-xs font-serif font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: palette.woodBorder }}>
+              <label className="text-xs font-sans font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: palette.woodBorder }}>
                 <Image size={15} />
                 Imagem / Capa do Livro (Armazenamento Local)
               </label>
               <div className="flex items-center gap-2">
                 {ImageService.isLocalImage(capaUrl) && (
-                  <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                  <span className="text-xs font-sans font-semibold text-emerald-700 flex items-center gap-1">
                     <CheckCircle2 size={13} /> Salva localmente
                   </span>
                 )}
@@ -550,7 +550,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs font-serif font-semibold underline flex items-center gap-1 hover:opacity-80"
+                  className="text-xs font-sans font-medium underline flex items-center gap-1 hover:opacity-80"
                   style={{ color: palette.isLightOak ? '#5A3D24' : '#8B5A33' }}
                   title="Buscar imagens da capa no Google em nova aba"
                 >
@@ -598,7 +598,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="py-1.5 px-2.5 rounded-lg border text-xs font-serif font-bold flex items-center gap-1.5 cursor-pointer hover:bg-black/5"
+                    className="py-1.5 px-2.5 rounded-lg border text-xs font-sans font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-black/5 select-none"
                     style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
                   >
                     <Upload size={13} />
@@ -610,7 +610,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                       type="button"
                       onClick={handleSaveCoverLocal}
                       disabled={isSavingCoverLocal}
-                      className="py-1.5 px-2.5 rounded-lg font-serif font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer hover:brightness-105 active:scale-95"
+                      className="py-1.5 px-2.5 rounded-lg font-sans font-semibold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer hover:brightness-105 active:scale-95 select-none"
                       style={{
                         backgroundColor: palette.goldPrimary,
                         color: palette.textOnGold,
@@ -626,7 +626,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setCapaUrl('')}
-                      className="text-xs font-serif font-semibold flex items-center gap-1 text-red-600 hover:text-red-800 cursor-pointer"
+                      className="text-xs font-sans font-medium flex items-center gap-1 text-red-600 hover:text-red-800 cursor-pointer select-none"
                     >
                       <Trash2 size={13} /> Remover
                     </button>
@@ -634,20 +634,20 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                 </div>
 
                 {coverStatusMessage && (
-                  <span className="text-xs font-serif font-bold text-emerald-800">
+                  <span className="text-xs font-sans font-semibold text-emerald-800">
                     {coverStatusMessage}
                   </span>
                 )}
               </div>
             </div>
 
-            <p className="text-[11px] text-stone-500 italic">
+            <p className="text-xs text-stone-500 font-sans">
               Imagens salvas localmente são comprimidas (~25 KB) e ficam guardadas no backup do seu celular.
             </p>
           </div>
 
           <div>
-            <label className="text-sm font-serif font-bold block mb-1" style={{ color: palette.textOnPaper }}>
+            <label className="text-sm font-sans font-semibold block mb-1" style={{ color: palette.textOnPaper }}>
               Sinopse / Descrição
             </label>
             <textarea
@@ -655,7 +655,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
               onChange={(e) => setDescricao(e.target.value)}
               rows={3}
               placeholder="Breve descrição ou sinopse da obra..."
-              className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-1 resize-none"
+              className="w-full px-3 py-2 rounded-lg border text-sm sm:text-base font-sans focus:outline-none focus:ring-1 resize-none"
               style={{
                 backgroundColor: palette.paperSurfaceElevated,
                 borderColor: palette.woodBorder,
@@ -668,10 +668,10 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
         {/* Escolha do Formato (Livro Físico vs E-book) */}
         <PaperCard palette={palette} elevated className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-serif font-bold uppercase tracking-wider" style={{ color: palette.woodBorder }}>
+            <label className="text-xs font-sans font-bold uppercase tracking-wider" style={{ color: palette.woodBorder }}>
               Formato da Obra na Estante
             </label>
-            <span className="text-xs font-serif italic text-stone-500">
+            <span className="text-xs font-sans text-stone-500">
               Separa a estante física da digital
             </span>
           </div>
@@ -683,7 +683,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                 setFormato('fisico');
                 setTenhoFisico(true);
               }}
-              className="py-3 px-4 rounded-xl border flex items-center justify-center gap-2.5 font-serif font-bold text-sm sm:text-base cursor-pointer transition-all shadow-sm"
+              className="py-3 px-4 rounded-xl border flex items-center justify-center gap-2.5 font-sans font-semibold text-sm sm:text-base cursor-pointer transition-all shadow-sm select-none"
               style={{
                 backgroundColor: formato === 'fisico' ? palette.goldPrimary : 'transparent',
                 color: formato === 'fisico' ? palette.textOnGold : palette.textOnPaper,
@@ -700,7 +700,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                 setFormato('ebook');
                 setTenhoFisico(false);
               }}
-              className="py-3 px-4 rounded-xl border flex items-center justify-center gap-2.5 font-serif font-bold text-sm sm:text-base cursor-pointer transition-all shadow-sm"
+              className="py-3 px-4 rounded-xl border flex items-center justify-center gap-2.5 font-sans font-semibold text-sm sm:text-base cursor-pointer transition-all shadow-sm select-none"
               style={{
                 backgroundColor: formato === 'ebook' ? palette.goldPrimary : 'transparent',
                 color: formato === 'ebook' ? palette.textOnGold : palette.textOnPaper,
@@ -712,7 +712,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
             </button>
           </div>
 
-          <p className="text-xs font-serif leading-relaxed text-stone-600">
+          <p className="text-xs font-sans leading-relaxed text-stone-600">
             {formato === 'ebook'
               ? '📱 Este título ficará na sua aba dedicada de E-books (Kindle, PDF, digital).'
               : '📚 Este título ficará na sua estante de Livros Físicos que você tem em casa.'}
@@ -748,7 +748,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                   <span className="font-serif font-bold text-base block" style={{ color: palette.textOnPaper }}>
                     Tenho este livro físico em casa
                   </span>
-                  <span className="text-xs" style={{ color: palette.textSecondaryOnPaper }}>
+                  <span className="text-xs font-sans" style={{ color: palette.textSecondaryOnPaper }}>
                     {tenhoFisico ? 'Exemplar físico no acervo (Aba Físicos)' : 'Não possuo o exemplar físico no momento'}
                   </span>
                 </div>
@@ -773,14 +773,14 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
             </div>
           ) : (
             <div
-              className="p-3.5 rounded-xl border flex items-center gap-3 bg-blue-50/40 border-blue-200"
+              className="p-3.5 rounded-xl border flex items-center gap-3 bg-purple-50/40 border-purple-200"
             >
-              <Tablet size={22} className="text-blue-700" />
+              <Tablet size={22} className="text-purple-700" />
               <div>
-                <span className="font-serif font-bold text-base block text-blue-900">
+                <span className="font-serif font-bold text-base block text-purple-950">
                   E-book Digital na Estante
                 </span>
-                <span className="text-xs text-blue-800">
+                <span className="text-xs font-sans text-purple-800">
                   Gerenciado na aba E-books, separado dos livros físicos.
                 </span>
               </div>
@@ -789,7 +789,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
 
           {/* SegmentedButton: Status de Leitura (Nenhum | Quero ler | Lido) */}
           <div>
-            <label className="text-sm font-serif font-bold block mb-1.5" style={{ color: palette.textOnPaper }}>
+            <label className="text-sm font-sans font-semibold block mb-1.5" style={{ color: palette.textOnPaper }}>
               Status de leitura:
             </label>
             <div className="flex gap-2">
@@ -806,7 +806,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                     key={st}
                     type="button"
                     onClick={() => setStatusLeitura(st)}
-                    className="flex-1 py-2.5 rounded-lg font-serif font-bold text-sm sm:text-base transition-all border cursor-pointer text-center"
+                    className="flex-1 py-2.5 rounded-lg font-sans font-semibold text-sm sm:text-base transition-all border cursor-pointer text-center select-none"
                     style={{
                       backgroundColor: isSelected ? palette.goldPrimary : 'transparent',
                       color: isSelected ? palette.textOnGold : palette.textOnPaper,
@@ -824,7 +824,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
           {statusLeitura === 'lido' && (
             <div className="flex flex-col gap-4 pt-2 border-t border-black/5 animate-in fade-in duration-200">
               <div>
-                <span className="text-sm font-serif font-bold block mb-1.5" style={{ color: palette.textOnPaper }}>
+                <span className="text-sm font-sans font-semibold block mb-1.5" style={{ color: palette.textOnPaper }}>
                   Sua Avaliação (0 a 10):
                 </span>
                 <StarRatingBar
@@ -838,13 +838,13 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-serif font-bold" style={{ color: palette.textOnPaper }}>
+                  <span className="text-sm font-sans font-semibold" style={{ color: palette.textOnPaper }}>
                     Data da Leitura:
                   </span>
                   <button
                     type="button"
                     onClick={() => setIsSemData(!isSemData)}
-                    className="px-3 py-1 rounded-full text-xs font-serif font-semibold border cursor-pointer"
+                    className="px-3 py-1 rounded-full text-xs font-sans font-medium border cursor-pointer select-none"
                     style={{
                       backgroundColor: isSemData ? palette.goldPrimary : 'transparent',
                       color: isSemData ? palette.textOnGold : palette.textSecondaryOnPaper,
@@ -858,7 +858,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                 {!isSemData && (
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs block mb-1 font-semibold" style={{ color: palette.textSecondaryOnPaper }}>
+                      <label className="text-xs block mb-1 font-sans font-semibold" style={{ color: palette.textSecondaryOnPaper }}>
                         Ano de Leitura
                       </label>
                       <input
@@ -866,7 +866,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                         value={anoLeituraStr}
                         onChange={(e) => setAnoLeituraStr(e.target.value.slice(0, 4))}
                         placeholder="Ex: 2026"
-                        className="w-full px-3 py-2 rounded-lg border text-sm"
+                        className="w-full px-3 py-2 rounded-lg border text-sm sm:text-base font-sans tabular-nums"
                         style={{
                           backgroundColor: palette.paperSurfaceElevated,
                           borderColor: palette.woodBorder,
@@ -875,7 +875,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="text-xs block mb-1 font-semibold" style={{ color: palette.textSecondaryOnPaper }}>
+                      <label className="text-xs block mb-1 font-sans font-semibold" style={{ color: palette.textSecondaryOnPaper }}>
                         Mês de Leitura (1-12)
                       </label>
                       <input
@@ -885,7 +885,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
                         value={mesLeituraStr}
                         onChange={(e) => setMesLeituraStr(e.target.value.slice(0, 2))}
                         placeholder="Ex: 10"
-                        className="w-full px-3 py-2 rounded-lg border text-sm"
+                        className="w-full px-3 py-2 rounded-lg border text-sm sm:text-base font-sans tabular-nums"
                         style={{
                           backgroundColor: palette.paperSurfaceElevated,
                           borderColor: palette.woodBorder,
@@ -900,7 +900,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
           )}
 
           <div>
-            <label className="text-sm font-serif font-bold block mb-1" style={{ color: palette.textOnPaper }}>
+            <label className="text-sm font-sans font-semibold block mb-1" style={{ color: palette.textOnPaper }}>
               Observações Pessoais
             </label>
             <textarea
@@ -908,7 +908,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
               onChange={(e) => setObservacoes(e.target.value)}
               rows={3}
               placeholder="Comentários sobre a edição, onde comprou, impressões..."
-              className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-1 resize-none"
+              className="w-full px-3 py-2 rounded-lg border text-sm sm:text-base font-sans focus:outline-none focus:ring-1 resize-none"
               style={{
                 backgroundColor: palette.paperSurfaceElevated,
                 borderColor: palette.woodBorder,
@@ -922,7 +922,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
         <button
           type="button"
           onClick={handleSaveClick}
-          className="w-full py-4 rounded-xl font-serif font-bold text-base shadow-xl flex items-center justify-center gap-2 cursor-pointer hover:brightness-105 active:scale-98 transition-all"
+          className="w-full py-4 rounded-xl font-sans font-semibold text-base shadow-xl flex items-center justify-center gap-2 cursor-pointer hover:brightness-105 active:scale-98 transition-all select-none"
           style={{
             backgroundColor: palette.goldPrimary,
             color: palette.textOnGold,

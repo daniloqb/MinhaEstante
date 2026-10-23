@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Minha Estante</string>
-    <string name="title_activity_main">Minha Estante</string>
+    <string name="app_name">Booknook</string>
+    <string name="title_activity_main">Booknook</string>
     <string name="package_name">com.booknookapp</string>
     <string name="custom_url_scheme">com.booknookapp</string>
 </resources>

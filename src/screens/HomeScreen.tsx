@@ -19,6 +19,7 @@ import {
   Library,
   Check,
   Bookmark,
+  Handshake,
   Tablet,
 } from 'lucide-react';
 
@@ -49,6 +50,7 @@ export interface HomeScreenProps {
   onOpenQuickAction: (book: Book) => void;
   onOpenFiltersModal: () => void;
   onAddBookClick: () => void;
+  onOpenLoans?: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -75,6 +77,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenQuickAction,
   onOpenFiltersModal,
   onAddBookClick,
+  onOpenLoans,
 }) => {
   const { t } = useI18n();
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -91,6 +94,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       todos: allBooks.filter((b) => Boolean(b.tenho_fisico) || b.formato === 'ebook').length,
       lido: allBooks.filter((b) => b.status_leitura === 'lido').length,
       quero_ler: allBooks.filter((b) => b.status_leitura === 'quero_ler').length,
+      emprestados: allBooks.filter((b) => b.emprestimo && !b.emprestimo.devolvido).length,
     };
   }, [allBooks]);
 
@@ -222,19 +226,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           borderColor: `${palette.woodBorder}40`,
         }}
       >
-        {/* Segmented Button com contadores: Todos (Físicos + E-books) | Lidos | Quero Ler */}
+        {/* Segmented Button com contadores: 1. Meus Livros | 2. Lidos | 3. Quero Ler | 4. Emprestados */}
         <div
-          className="flex items-center p-0.5 rounded-xl border overflow-x-auto scrollbar-none gap-0.5"
+          className="flex items-center p-0.5 rounded-xl border overflow-x-auto scrollbar-none gap-0.5 max-w-full"
           style={{
             backgroundColor: palette.woodDark,
             borderColor: `${palette.woodBorder}70`,
           }}
         >
-          {/* Aba 1: Todos os Livros (Estante Unificada: Físicos e E-books) */}
+          {/* Aba 1: Meus Livros */}
           <button
             type="button"
             onClick={() => onStatusTabChange('todos')}
-            className="px-3.5 sm:px-4 py-2 rounded-lg font-serif font-bold text-sm sm:text-base transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+            className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg font-sans font-semibold text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 sm:gap-1.5 shrink-0 select-none"
             style={{
               backgroundColor:
                 statusTab === 'todos' || statusTab === 'meus_livros'
@@ -246,10 +250,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   : palette.textOnWood,
             }}
           >
-            <BookOpen size={16} />
+            <BookOpen size={15} />
             <span>{t.home.filterFormatAll}</span>
             <span
-              className="px-2 py-0.5 rounded-full text-xs font-sans font-bold"
+              className="px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full text-[11px] sm:text-xs font-sans font-bold tabular-nums"
               style={{
                 backgroundColor:
                   statusTab === 'todos' || statusTab === 'meus_livros'
@@ -269,16 +273,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <button
             type="button"
             onClick={() => onStatusTabChange('lido')}
-            className="px-3.5 sm:px-4 py-2 rounded-lg font-serif font-bold text-sm sm:text-base transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+            className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg font-sans font-semibold text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 sm:gap-1.5 shrink-0 select-none"
             style={{
               backgroundColor: statusTab === 'lido' ? palette.goldPrimary : 'transparent',
               color: statusTab === 'lido' ? palette.textOnGold : palette.textOnWood,
             }}
           >
-            <Check size={16} />
+            <Check size={15} />
             <span>{t.status.read}</span>
             <span
-              className="px-2 py-0.5 rounded-full text-xs font-sans font-bold"
+              className="px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full text-[11px] sm:text-xs font-sans font-bold tabular-nums"
               style={{
                 backgroundColor: statusTab === 'lido' ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.18)',
                 color: statusTab === 'lido' ? palette.textOnGold : palette.textOnWood,
@@ -292,22 +296,45 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <button
             type="button"
             onClick={() => onStatusTabChange('quero_ler')}
-            className="px-3.5 sm:px-4 py-2 rounded-lg font-serif font-bold text-sm sm:text-base transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+            className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg font-sans font-semibold text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 sm:gap-1.5 shrink-0 select-none"
             style={{
               backgroundColor: statusTab === 'quero_ler' ? palette.goldPrimary : 'transparent',
               color: statusTab === 'quero_ler' ? palette.textOnGold : palette.textOnWood,
             }}
           >
-            <Bookmark size={16} />
+            <Bookmark size={15} />
             <span>{t.status.wantToRead}</span>
             <span
-              className="px-2 py-0.5 rounded-full text-xs font-sans font-bold"
+              className="px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full text-[11px] sm:text-xs font-sans font-bold tabular-nums"
               style={{
                 backgroundColor: statusTab === 'quero_ler' ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.18)',
                 color: statusTab === 'quero_ler' ? palette.textOnGold : palette.textOnWood,
               }}
             >
               {tabCounts.quero_ler}
+            </span>
+          </button>
+
+          {/* Aba 4: Emprestados */}
+          <button
+            type="button"
+            onClick={onOpenLoans}
+            className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg font-sans font-semibold text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 sm:gap-1.5 shrink-0 select-none"
+            style={{
+              backgroundColor: 'transparent',
+              color: palette.textOnWood,
+            }}
+          >
+            <Handshake size={15} />
+            <span>{t.nav.loans}</span>
+            <span
+              className="px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full text-[11px] sm:text-xs font-sans font-bold tabular-nums"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.18)',
+                color: palette.textOnWood,
+              }}
+            >
+              {tabCounts.emprestados}
             </span>
           </button>
         </div>
@@ -353,13 +380,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           className="w-full px-4 py-2 flex items-center gap-2 overflow-x-auto text-xs"
           style={{ backgroundColor: `${palette.woodDark}90` }}
         >
-          <span className="font-serif text-sm font-semibold opacity-85 shrink-0" style={{ color: palette.textSecondaryOnWood }}>
+          <span className="font-sans text-xs uppercase font-bold tracking-wider shrink-0" style={{ color: palette.textSecondaryOnWood }}>
             Filtros:
           </span>
 
           {searchQuery && (
             <span
-              className="inline-flex items-center gap-1 px-3 py-1 rounded-full border text-xs shrink-0 font-medium"
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-full border text-xs shrink-0 font-sans font-medium"
               style={{
                 backgroundColor: `${palette.goldPrimary}25`,
                 borderColor: palette.goldPrimary,
@@ -376,7 +403,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           {/* Chip de Ano de Leitura */}
           {selectedYear != null && (
             <span
-              className="inline-flex items-center gap-1 px-3 py-1 rounded-full border text-xs font-sans font-semibold shrink-0"
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-full border text-xs font-sans font-medium shrink-0 tabular-nums"
               style={{
                 backgroundColor: `${palette.goldPrimary}25`,
                 borderColor: palette.goldPrimary,
@@ -396,7 +423,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
           {selectedGenre && (
             <span
-              className="inline-flex items-center gap-1 px-3 py-1 rounded-full border text-xs shrink-0 font-medium"
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-full border text-xs shrink-0 font-sans font-medium"
               style={{
                 backgroundColor: `${palette.goldPrimary}25`,
                 borderColor: palette.goldPrimary,
@@ -412,7 +439,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
           {selectedRatingMin != null && (
             <span
-              className="inline-flex items-center gap-1 px-3 py-1 rounded-full border text-xs shrink-0 font-medium"
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-full border text-xs shrink-0 font-sans font-medium tabular-nums"
               style={{
                 backgroundColor: `${palette.goldPrimary}25`,
                 borderColor: palette.goldPrimary,
@@ -429,7 +456,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           {/* Chip de Formato (Físicos vs E-books) */}
           {selectedFormat && (
             <span
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs shrink-0 font-medium"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs shrink-0 font-sans font-medium"
               style={{
                 backgroundColor: selectedFormat === 'ebook' ? '#7c3aed25' : `${palette.goldPrimary}25`,
                 borderColor: selectedFormat === 'ebook' ? '#7c3aed80' : palette.goldPrimary,
@@ -453,7 +480,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
           <button
             onClick={onClearFilters}
-            className="text-xs font-serif font-bold underline cursor-pointer ml-auto whitespace-nowrap hover:opacity-80 px-2 py-0.5"
+            className="text-xs font-sans font-semibold underline cursor-pointer ml-auto whitespace-nowrap hover:opacity-80 px-2 py-0.5"
             style={{ color: palette.goldPrimary }}
           >
             Limpar filtros
@@ -504,7 +531,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <button
               type="button"
               onClick={onAddBookClick}
-              className="px-6 py-3.5 rounded-xl font-serif font-bold text-base shadow-xl flex items-center gap-2 cursor-pointer hover:brightness-105 active:scale-95 transition-transform"
+              className="px-6 py-3.5 rounded-xl font-sans font-semibold text-base shadow-xl flex items-center gap-2 cursor-pointer hover:brightness-105 active:scale-95 transition-transform select-none"
               style={{
                 backgroundColor: palette.goldPrimary,
                 color: palette.textOnGold,
@@ -605,7 +632,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       <div className="flex items-center gap-1 shrink-0">
                         {book.formato === 'ebook' ? (
                           <span
-                            className="text-xs font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1 bg-blue-50 text-blue-800 border-blue-300"
+                            className="text-xs font-sans font-semibold px-2.5 py-0.5 rounded-full border flex items-center gap-1 bg-purple-50 text-purple-900 border-purple-300"
                             title="Formato E-book digital"
                           >
                             <Tablet size={12} />
@@ -613,7 +640,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                           </span>
                         ) : book.tenho_fisico ? (
                           <span
-                            className="text-xs font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1"
+                            className="text-xs font-sans font-semibold px-2.5 py-0.5 rounded-full border flex items-center gap-1"
                             style={{
                               backgroundColor: `${palette.goldPrimary}25`,
                               borderColor: palette.goldPrimary,
@@ -629,7 +656,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     </div>
 
                     <p
-                      className="text-sm truncate mt-1 font-serif font-medium"
+                      className="text-xs sm:text-sm truncate mt-1 font-sans font-normal"
                       style={{ color: palette.textSecondaryOnPaper }}
                     >
                       {book.autores.join(', ') || 'Autor desconhecido'} ·{' '}
@@ -646,7 +673,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                             showLabel={true}
                           />
                           <span
-                            className="font-serif font-bold text-sm"
+                            className="font-sans font-semibold text-xs sm:text-sm tabular-nums"
                             style={{ color: palette.woodBorder }}
                           >
                             {book.anoLeitura != null
@@ -657,20 +684,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       ) : (
                         <div className="w-full flex items-center justify-between">
                           <span
-                            className="font-serif font-bold text-xs sm:text-sm px-3 py-1 rounded-full border flex items-center gap-1.5"
+                            className="font-sans font-semibold text-xs sm:text-sm px-3 py-1 rounded-full border flex items-center gap-1.5"
                             style={{
                               backgroundColor:
                                 book.status_leitura === 'quero_ler'
-                                  ? '#3b82f615'
-                                  : `${palette.goldPrimary}15`,
+                                    ? '#3b82f615'
+                                    : `${palette.goldPrimary}15`,
                               borderColor:
                                 book.status_leitura === 'quero_ler'
-                                  ? '#3b82f660'
-                                  : `${palette.goldPrimary}60`,
+                                    ? '#3b82f660'
+                                    : `${palette.goldPrimary}60`,
                               color:
                                 book.status_leitura === 'quero_ler'
-                                  ? '#1e40af'
-                                  : palette.woodBorder,
+                                    ? '#1e40af'
+                                    : palette.woodBorder,
                             }}
                           >
                             {book.status_leitura === 'quero_ler' ? (
@@ -684,7 +711,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
                           <button
                             type="button"
-                            className="font-serif font-bold text-xs sm:text-sm hover:underline cursor-pointer"
+                            className="font-sans font-semibold text-xs sm:text-sm hover:underline cursor-pointer select-none"
                             style={{ color: palette.woodBorder }}
                             onClick={(e) => {
                               e.stopPropagation();

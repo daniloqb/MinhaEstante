@@ -3,8 +3,8 @@ import { LocaleId, Translations } from './types';
 export const TRANSLATIONS: Record<LocaleId, Translations> = {
   'pt-BR': {
     common: {
-      appName: 'BookNook',
-      bookshelfTitle: 'Minha Estante',
+      appName: 'Booknook',
+      bookshelfTitle: 'Booknook',
       save: 'Salvar',
       cancel: 'Cancelar',
       confirm: 'Confirmar',
@@ -25,12 +25,12 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     nav: {
       bookshelf: 'Estante',
       loans: 'Emprestados',
-      search: 'Buscar',
+      search: 'Explorar',
       stats: 'Estatísticas',
       settings: 'Config',
     },
     home: {
-      title: 'Minha Estante',
+      title: 'Booknook',
       searchPlaceholder: 'Buscar por título, autor, gênero ou ISBN...',
       filterFormatAll: 'Meus Livros',
       filterFormatPhysical: 'Livros Físicos',
@@ -112,8 +112,8 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
   },
   'en-US': {
     common: {
-      appName: 'BookNook',
-      bookshelfTitle: 'My Bookshelf',
+      appName: 'Booknook',
+      bookshelfTitle: 'Booknook',
       save: 'Save',
       cancel: 'Cancel',
       confirm: 'Confirm',
@@ -134,12 +134,12 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     nav: {
       bookshelf: 'Bookshelf',
       loans: 'Loans',
-      search: 'Search',
+      search: 'Explore',
       stats: 'Stats',
       settings: 'Settings',
     },
     home: {
-      title: 'My Bookshelf',
+      title: 'Booknook',
       searchPlaceholder: 'Search by title, author, genre or ISBN...',
       filterFormatAll: 'My Books',
       filterFormatPhysical: 'Physical Books',
@@ -221,8 +221,8 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
   },
   'es-ES': {
     common: {
-      appName: 'BookNook',
-      bookshelfTitle: 'Mi Estantería',
+      appName: 'Booknook',
+      bookshelfTitle: 'Booknook',
       save: 'Guardar',
       cancel: 'Cancelar',
       confirm: 'Confirmar',
@@ -243,12 +243,12 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     nav: {
       bookshelf: 'Estantería',
       loans: 'Préstamos',
-      search: 'Buscar',
+      search: 'Explorar',
       stats: 'Estadísticas',
       settings: 'Ajustes',
     },
     home: {
-      title: 'Mi Estantería',
+      title: 'Booknook',
       searchPlaceholder: 'Buscar por título, autor, género o ISBN...',
       filterFormatAll: 'Mis Libros',
       filterFormatPhysical: 'Libros Físicos',
@@ -330,8 +330,8 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
   },
   'fr-FR': {
     common: {
-      appName: 'BookNook',
-      bookshelfTitle: 'Ma Bibliothèque',
+      appName: 'Booknook',
+      bookshelfTitle: 'Booknook',
       save: 'Enregistrer',
       cancel: 'Annuler',
       confirm: 'Confirmer',
@@ -352,12 +352,12 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     nav: {
       bookshelf: 'Bibliothèque',
       loans: 'Prêts',
-      search: 'Recherche',
+      search: 'Explorer',
       stats: 'Statistiques',
       settings: 'Paramètres',
     },
     home: {
-      title: 'Ma Bibliothèque',
+      title: 'Booknook',
       searchPlaceholder: 'Rechercher par titre, auteur, genre ou ISBN...',
       filterFormatAll: 'Mes Livres',
       filterFormatPhysical: 'Livres Physiques',
@@ -439,8 +439,8 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
   },
   'de-DE': {
     common: {
-      appName: 'BookNook',
-      bookshelfTitle: 'Mein Bücherregal',
+      appName: 'Booknook',
+      bookshelfTitle: 'Booknook',
       save: 'Speichern',
       cancel: 'Abbrechen',
       confirm: 'Bestätigen',
@@ -461,12 +461,12 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     nav: {
       bookshelf: 'Bücherregal',
       loans: 'Verliehen',
-      search: 'Suchen',
+      search: 'Entdecken',
       stats: 'Statistiken',
       settings: 'Einstellungen',
     },
     home: {
-      title: 'Mein Bücherregal',
+      title: 'Booknook',
       searchPlaceholder: 'Suche nach Titel, Autor, Genre oder ISBN...',
       filterFormatAll: 'Meine Bücher',
       filterFormatPhysical: 'Gedruckte Bücher',
@@ -548,8 +548,8 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
   },
   'it-IT': {
     common: {
-      appName: 'BookNook',
-      bookshelfTitle: 'La Mia Libreria',
+      appName: 'Booknook',
+      bookshelfTitle: 'Booknook',
       save: 'Salva',
       cancel: 'Annulla',
       confirm: 'Conferma',
@@ -570,12 +570,12 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     nav: {
       bookshelf: 'Libreria',
       loans: 'Prestiti',
-      search: 'Cerca',
+      search: 'Esplora',
       stats: 'Statistiche',
       settings: 'Impostazioni',
     },
     home: {
-      title: 'La Mia Libreria',
+      title: 'Booknook',
       searchPlaceholder: 'Cerca per titolo, autore, genere o ISBN...',
       filterFormatAll: 'I Miei Libri',
       filterFormatPhysical: 'Libri Cartacei',

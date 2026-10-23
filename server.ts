@@ -3,6 +3,13 @@ import { GoogleGenAI } from '@google/genai';
 import path from 'path';
 import fs from 'fs';
 
+// Carrega variáveis do arquivo .env nativamente no Node.js
+try {
+  process.loadEnvFile?.();
+} catch {
+  // Ignora se .env não existir
+}
+
 const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
@@ -193,6 +200,200 @@ Use formatação Markdown limpa com tópicos legíveis e parágrafos fluidos. Se
     res.status(500).json({
       error: error.message || 'Erro ao consultar a IA para o resumo literário.',
     });
+  }
+});
+
+// API: Recuperar ISBN-13 do livro via Gemini
+app.post('/api/isbn', async (req, res) => {
+  const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+  if (!checkRateLimit(clientIp, 60, 60 * 1000)) {
+    return res.status(429).json({ error: 'Muitas requisições. Aguarde um momento.' });
+  }
+
+  try {
+    const { termo, userApiKey } = req.body;
+    const headerKey = (req.headers['x-goog-api-key'] as string) || '';
+    if (!termo || typeof termo !== 'string' || termo.length > 300) {
+      return res.status(400).json({ error: 'Termo de pesquisa é obrigatório.' });
+    }
+
+    const ai = getAiClient(userApiKey || headerKey);
+    const prompt = `retornar somente o número do isbn 13 do livro ${termo.trim()}`;
+
+    let isbn13 = '';
+    const modelsToTry = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+
+    for (const model of modelsToTry) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+            temperature: 0.1,
+          },
+        });
+        if (response.text) {
+          const match = response.text.replace(/[-\s]/g, '').match(/97[89][0-9]{10}/);
+          if (match) {
+            isbn13 = match[0];
+            break;
+          }
+        }
+      } catch (err: any) {
+        console.warn(`Tentativa de ISBN com ${model} falhou:`, err?.message || err);
+      }
+    }
+
+    res.json({ isbn: isbn13 || null });
+  } catch (error: any) {
+    console.error('Erro ao pesquisar ISBN via IA:', error);
+    res.status(500).json({ error: error.message || 'Erro ao consultar a IA para o ISBN.' });
+  }
+});
+
+// API: Descoberta e pesquisa de livros mundial (Google Books, Open Library, etc.)
+app.get('/api/books/search', async (req, res) => {
+  const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+  if (!checkRateLimit(clientIp, 60, 60 * 1000)) {
+    return res.status(429).json({ error: 'Muitas pesquisas. Aguarde alguns instantes.' });
+  }
+
+  const query = String(req.query.q || '').trim();
+  const cursor = req.query.cursor ? String(req.query.cursor) : undefined;
+  if (!query) {
+    return res.status(400).json({ error: 'Parâmetro q (consulta) é obrigatório.' });
+  }
+
+  const startIndex = cursor ? parseInt(cursor, 10) || 0 : 0;
+  const maxResults = 30;
+  const clientKey = (req.headers['x-goog-api-key'] as string) || (req.query.key as string) || '';
+  const serverKey = process.env.GOOGLE_BOOKS_API_KEY || '';
+  const effectiveKey = clientKey || serverKey;
+  const keyParam = effectiveKey ? `&key=${encodeURIComponent(effectiveKey)}` : '';
+  const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&startIndex=${startIndex}&maxResults=${maxResults}&hl=pt-BR${keyParam}`;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 9000);
+
+    const [googleResp, olResp] = await Promise.allSettled([
+      fetch(googleUrl, { signal: controller.signal }),
+      fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=20`, { signal: controller.signal }),
+    ]);
+    clearTimeout(timeout);
+
+    const items: any[] = [];
+    let googleTotal = 0;
+
+    if (googleResp.status === 'fulfilled' && googleResp.value.ok) {
+      const gData = await googleResp.value.json();
+      googleTotal = gData.totalItems || 0;
+      if (Array.isArray(gData.items)) {
+        for (const item of gData.items) {
+          const info = item.volumeInfo || {};
+          const isbns = info.industryIdentifiers || [];
+          const isbn13 = isbns.find((id: any) => id.type === 'ISBN_13')?.identifier || null;
+          const isbn10 = isbns.find((id: any) => id.type === 'ISBN_10')?.identifier || null;
+          const rawCover = info.imageLinks?.extraLarge || info.imageLinks?.large || info.imageLinks?.medium || info.imageLinks?.thumbnail;
+          const cleanCover = rawCover ? String(rawCover).replace(/^http:\/\//i, 'https://').replace(/([?&])edge=curl&?/gi, '').replace(/[?&]$/, '') : null;
+
+          items.push({
+            origem: 'google',
+            idExterno: item.id,
+            volumeId: item.id,
+            titulo: info.title || 'Sem título',
+            subtitulo: info.subtitle || null,
+            autores: Array.isArray(info.authors) ? info.authors : [],
+            editora: info.publisher || null,
+            anoPublicacao: info.publishedDate ? parseInt(info.publishedDate.slice(0, 4), 10) || null : null,
+            paginas: info.pageCount || null,
+            isbn10,
+            isbn13,
+            generos: Array.isArray(info.categories) ? info.categories : [],
+            descricao: info.description || null,
+            capaUrl: cleanCover,
+            idioma: info.language || null,
+            fontes: ['google'],
+          });
+        }
+      }
+    }
+
+    const nextIndex = startIndex + items.length;
+    const hasMore = nextIndex < googleTotal && items.length > 0;
+
+    res.json({
+      books: items,
+      hasMore,
+      nextCursor: hasMore ? String(nextIndex) : null,
+      totalResults: items.length,
+    });
+  } catch (err: any) {
+    console.error('Erro na pesquisa de livros:', err);
+    res.status(500).json({ error: 'Erro ao consultar catálogo bibliográfico.' });
+  }
+});
+
+// API: Consulta direta de livro por ISBN
+app.get('/api/books/isbn/:isbn', async (req, res) => {
+  const isbn = String(req.params.isbn || '').replace(/[-\s]/g, '');
+  if (!isbn) {
+    return res.status(400).json({ error: 'ISBN inválido.' });
+  }
+
+  try {
+    const brasilResp = await fetch(`https://brasilapi.com.br/api/isbn/v1/${isbn}`);
+    if (brasilResp.ok) {
+      const bData = await brasilResp.json();
+      return res.json({
+        origem: 'brasilapi',
+        idExterno: isbn,
+        titulo: bData.title,
+        subtitulo: bData.subtitle || null,
+        autores: Array.isArray(bData.authors) ? bData.authors : [],
+        editora: bData.publisher || null,
+        anoPublicacao: bData.year || null,
+        paginas: bData.page_count || null,
+        isbn10: isbn.length === 10 ? isbn : null,
+        isbn13: isbn.length === 13 ? isbn : null,
+        generos: Array.isArray(bData.subjects) ? bData.subjects : [],
+        descricao: bData.synopsis || null,
+        capaUrl: bData.cover_url || `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false`,
+        fontes: ['brasilapi'],
+      });
+    }
+
+    const serverKey = process.env.GOOGLE_BOOKS_API_KEY || '';
+    const keyParam = serverKey ? `&key=${encodeURIComponent(serverKey)}` : '';
+    const googleResp = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&hl=pt-BR${keyParam}`);
+    if (googleResp.ok) {
+      const gData = await googleResp.json();
+      const first = gData?.items?.[0];
+      if (first) {
+        const info = first.volumeInfo || {};
+        return res.json({
+          origem: 'google',
+          idExterno: first.id,
+          volumeId: first.id,
+          titulo: info.title,
+          subtitulo: info.subtitle || null,
+          autores: info.authors || [],
+          editora: info.publisher || null,
+          anoPublicacao: info.publishedDate ? parseInt(info.publishedDate.slice(0, 4), 10) || null : null,
+          paginas: info.pageCount || null,
+          isbn10: isbn.length === 10 ? isbn : null,
+          isbn13: isbn.length === 13 ? isbn : null,
+          generos: info.categories || [],
+          descricao: info.description || null,
+          capaUrl: info.imageLinks?.thumbnail?.replace('http://', 'https://') || null,
+          fontes: ['google'],
+        });
+      }
+    }
+
+    res.status(404).json({ error: 'Livro não localizado para este ISBN.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Erro ao buscar ISBN.' });
   }
 });
 

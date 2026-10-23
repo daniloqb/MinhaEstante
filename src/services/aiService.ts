@@ -24,15 +24,21 @@ export function isRunningInAndroidApk(): boolean {
 
 export function getSavedGeminiApiKey(): string {
   if (typeof localStorage === 'undefined') return '';
-  return (localStorage.getItem('minha_estante_google_api_key') || '').trim();
+  return (
+    localStorage.getItem('minha_estante_gemini_api_key') ||
+    localStorage.getItem('minha_estante_google_api_key') ||
+    ''
+  ).trim();
 }
 
 export function setSavedGeminiApiKey(key: string): void {
   if (typeof localStorage !== 'undefined') {
     const trimmed = key.trim();
     if (trimmed) {
+      localStorage.setItem('minha_estante_gemini_api_key', trimmed);
       localStorage.setItem('minha_estante_google_api_key', trimmed);
     } else {
+      localStorage.removeItem('minha_estante_gemini_api_key');
       localStorage.removeItem('minha_estante_google_api_key');
     }
   }

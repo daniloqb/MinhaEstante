@@ -123,7 +123,7 @@ export class NativeService {
    * Exporta ou compartilha arquivo de backup respeitando o ambiente nativo e web
    */
   static async exportOrShareFile(options: SaveFileOptions): Promise<boolean> {
-    const { content, filename, mimeType, title = 'Minha Estante Backup', isBase64 = false } = options;
+    const { content, filename, mimeType, title = 'Booknook Backup', isBase64 = false } = options;
 
     // 1. Se estiver rodando dentro do WebView nativo com bridge Android personalizada (Storage Access Framework SAF)
     const win = typeof window !== 'undefined' ? (window as any) : null;
@@ -193,7 +193,7 @@ export class NativeService {
           await navigator.share({
             files: [file],
             title: filename,
-            text: `Backup Minha Estante: ${filename}`,
+            text: `Backup Booknook: ${filename}`,
           });
           return true;
         }

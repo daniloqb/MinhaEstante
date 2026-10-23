@@ -9,7 +9,9 @@ const STORAGE_KEY_THEME = 'minha_estante_light_oak';
 const STORAGE_KEY_VIEW_MODE = 'minha_estante_view_mode';
 const STORAGE_KEY_GROUP_BY = 'minha_estante_group_by';
 const STORAGE_KEY_SORT_BY = 'minha_estante_sort_by';
-const STORAGE_KEY_API_KEY = 'minha_estante_google_api_key';
+export const STORAGE_KEY_API_KEY = 'minha_estante_google_api_key';
+export const STORAGE_KEY_GOOGLE_BOOKS_API_KEY = 'minha_estante_google_books_api_key';
+export const STORAGE_KEY_GEMINI_API_KEY = 'minha_estante_gemini_api_key';
 
 export const CURRENT_SCHEMA_VERSION = 2;
 
@@ -39,10 +41,18 @@ export function areBooksDuplicate(a: Partial<Book>, b: Partial<Book>): boolean {
   const a10 = cleanIsbn(a.isbn10);
   const b10 = cleanIsbn(b.isbn10);
 
-  if (a13 && b13 && a13 === b13) return true;
-  if (a10 && b10 && a10 === b10) return true;
-  if (a13 && b10 && a13 === b10) return true;
-  if (a10 && b13 && a10 === b13) return true;
+  const aHasIsbn = Boolean(a13 || a10);
+  const bHasIsbn = Boolean(b13 || b10);
+
+  // Se ambos possuem ISBNs identificados
+  if (aHasIsbn && bHasIsbn) {
+    if (a13 && b13 && a13 === b13) return true;
+    if (a10 && b10 && a10 === b10) return true;
+    if (a13 && b10 && a13 === b10) return true;
+    if (a10 && b13 && a10 === b13) return true;
+    // Se ambos possuem ISBNs e são diferentes, são edições distintas
+    return false;
+  }
 
   const normTitleA = normalizeString(a.titulo);
   const normTitleB = normalizeString(b.titulo);
@@ -50,6 +60,11 @@ export function areBooksDuplicate(a: Partial<Book>, b: Partial<Book>): boolean {
     const normAuthorA = normalizeString(a.autores?.[0]);
     const normAuthorB = normalizeString(b.autores?.[0]);
     if (!normAuthorA || !normAuthorB || normAuthorA === normAuthorB) {
+      const normPubA = normalizeString(a.editora);
+      const normPubB = normalizeString(b.editora);
+      if (normPubA && normPubB && normPubA !== normPubB) {
+        return false;
+      }
       return true;
     }
   }
@@ -739,11 +754,41 @@ export const BookStorage = {
     localStorage.setItem(STORAGE_KEY_SORT_BY, sort);
   },
 
+  loadGoogleBooksApiKey(): string {
+    return localStorage.getItem(STORAGE_KEY_GOOGLE_BOOKS_API_KEY) || '';
+  },
+  saveGoogleBooksApiKey(key: string): void {
+    const trimmed = (key || '').trim();
+    if (trimmed) {
+      localStorage.setItem(STORAGE_KEY_GOOGLE_BOOKS_API_KEY, trimmed);
+    } else {
+      localStorage.removeItem(STORAGE_KEY_GOOGLE_BOOKS_API_KEY);
+    }
+  },
+
+  loadGeminiApiKey(): string {
+    return (
+      localStorage.getItem(STORAGE_KEY_GEMINI_API_KEY) ||
+      localStorage.getItem(STORAGE_KEY_API_KEY) ||
+      ''
+    );
+  },
+  saveGeminiApiKey(key: string): void {
+    const trimmed = (key || '').trim();
+    if (trimmed) {
+      localStorage.setItem(STORAGE_KEY_GEMINI_API_KEY, trimmed);
+      localStorage.setItem(STORAGE_KEY_API_KEY, trimmed);
+    } else {
+      localStorage.removeItem(STORAGE_KEY_GEMINI_API_KEY);
+      localStorage.removeItem(STORAGE_KEY_API_KEY);
+    }
+  },
+
   loadApiKey(): string {
-    return localStorage.getItem(STORAGE_KEY_API_KEY) || '';
+    return this.loadGeminiApiKey();
   },
   saveApiKey(key: string): void {
-    localStorage.setItem(STORAGE_KEY_API_KEY, key);
+    this.saveGeminiApiKey(key);
   },
 
   loadLastSyncTime(): number | null {

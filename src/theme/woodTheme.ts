@@ -22,48 +22,49 @@ export interface WoodPalette {
 
 export const DarkWalnutPalette: WoodPalette = {
   isLightOak: false,
-  woodDark: '#2E1A0F',
-  woodMedium: '#4A2C1A',
-  woodShelf: '#7A4A2A',
-  woodShelfHighlight: '#A0683D',
-  woodShelfShadow: '#1E110A',
+  woodDark: '#201007',
+  woodMedium: '#3D2214',
+  woodShelf: '#6E3F21',
+  woodShelfHighlight: '#94582E',
+  woodShelfShadow: '#150A04',
   woodBorder: '#8B5A33',
   goldPrimary: '#E8C98A',
-  textOnGold: '#2E1A0F',
+  textOnGold: '#221006',
   paperSurface: '#F3E6CF',
   paperSurfaceElevated: '#FAF1DF',
-  paperBorder: '#DCC8A7',
-  textOnWood: '#F5E9D6',
-  textSecondaryOnWood: '#D9C3A0',
-  textOnPaper: '#2E1A0F',
-  textSecondaryOnPaper: '#5C4030',
+  paperBorder: '#D0BA95',
+  textOnWood: '#FDF8F0',
+  textSecondaryOnWood: '#DFCAAE',
+  textOnPaper: '#221006',
+  textSecondaryOnPaper: '#523422',
   starGold: '#E8C98A',
   starWood: '#8A4B12',
-  errorRustic: '#E07A5F',
+  errorRustic: '#C93B2B',
 };
 
 export const LightOakPalette: WoodPalette = {
   isLightOak: true,
-  woodDark: '#8A5D3B',
+  woodDark: '#362012', // Rich dark chestnut oak for header and nav to ensure >8:1 contrast
   woodMedium: '#D8C2A7',
   woodShelf: '#B5895D',
   woodShelfHighlight: '#D4A77B',
   woodShelfShadow: '#5A3D24',
-  woodBorder: '#A67C52',
-  goldPrimary: '#D49B45',
-  textOnGold: '#2E1A0F',
+  woodBorder: '#8A5D3B',
+  goldPrimary: '#E8C98A', // High contrast brass gold
+  textOnGold: '#26160B',
   paperSurface: '#FAF4EB',
   paperSurfaceElevated: '#FFFFFF',
   paperBorder: '#D9C8B2',
-  textOnWood: '#2B1A0E',
-  textSecondaryOnWood: '#5C4030',
-  textOnPaper: '#2B1A0E',
-  textSecondaryOnPaper: '#5C4030',
-  starGold: '#D49B45',
+  textOnWood: '#FDF8F0', // High contrast cream on woodDark (>12:1)
+  textSecondaryOnWood: '#DFCAAE', // (>7.5:1 on woodDark)
+  textOnPaper: '#22150C', // Deep ink on paper (>14:1)
+  textSecondaryOnPaper: '#543825', // Warm wood secondary (>7.5:1 on paper)
+  starGold: '#D4881E',
   starWood: '#8A4B12',
-  errorRustic: '#C0392B',
+  errorRustic: '#B82E20',
 };
 
 export function getPalette(isLightOak: boolean): WoodPalette {
   return isLightOak ? LightOakPalette : DarkWalnutPalette;
 }
+

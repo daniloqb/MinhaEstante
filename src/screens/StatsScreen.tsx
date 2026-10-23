@@ -32,19 +32,19 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
           <PaperCard palette={palette} className="flex flex-col text-center p-3">
             <span
-              className="text-xs font-semibold"
+              className="text-xs sm:text-sm font-sans font-semibold"
               style={{ color: palette.textSecondaryOnPaper }}
             >
               📖 Livros Físicos
             </span>
             <span
-              className="font-serif font-bold text-3xl sm:text-4xl my-0.5"
-              style={{ color: palette.goldPrimary }}
+              className="font-serif font-bold text-3xl sm:text-4xl my-0.5 tabular-nums select-none"
+              style={{ color: palette.starWood }}
             >
               {stats.totalMeusLivros}
             </span>
             <span
-              className="text-xs"
+              className="text-xs font-sans"
               style={{ color: palette.textSecondaryOnPaper }}
             >
               Exemplares em casa
@@ -53,19 +53,19 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
 
           <PaperCard palette={palette} className="flex flex-col text-center p-3">
             <span
-              className="text-xs font-semibold"
+              className="text-xs sm:text-sm font-sans font-semibold"
               style={{ color: palette.textSecondaryOnPaper }}
             >
               📱 E-books
             </span>
             <span
-              className="font-serif font-bold text-3xl sm:text-4xl my-0.5"
-              style={{ color: '#7c3aed' }}
+              className="font-serif font-bold text-3xl sm:text-4xl my-0.5 tabular-nums select-none"
+              style={{ color: '#6d28d9' }}
             >
               {stats.totalEbooks ?? 0}
             </span>
             <span
-              className="text-xs"
+              className="text-xs font-sans"
               style={{ color: palette.textSecondaryOnPaper }}
             >
               Digitais
@@ -74,19 +74,19 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
 
           <PaperCard palette={palette} className="flex flex-col text-center p-3">
             <span
-              className="text-xs font-semibold"
+              className="text-xs sm:text-sm font-sans font-semibold"
               style={{ color: palette.textSecondaryOnPaper }}
             >
               ✓ Lidos
             </span>
             <span
-              className="font-serif font-bold text-3xl sm:text-4xl my-0.5"
-              style={{ color: palette.woodBorder }}
+              className="font-serif font-bold text-3xl sm:text-4xl my-0.5 tabular-nums select-none"
+              style={{ color: palette.starWood }}
             >
               {stats.totalLidos}
             </span>
             <span
-              className="text-xs"
+              className="text-xs font-sans"
               style={{ color: palette.textSecondaryOnPaper }}
             >
               Concluídos
@@ -95,19 +95,19 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
 
           <PaperCard palette={palette} className="flex flex-col text-center p-3">
             <span
-              className="text-xs font-semibold"
+              className="text-xs sm:text-sm font-sans font-semibold"
               style={{ color: palette.textSecondaryOnPaper }}
             >
               🔖 Quero Ler
             </span>
             <span
-              className="font-serif font-bold text-3xl sm:text-4xl my-0.5"
-              style={{ color: '#2563eb' }}
+              className="font-serif font-bold text-3xl sm:text-4xl my-0.5 tabular-nums select-none"
+              style={{ color: '#1d4ed8' }}
             >
               {stats.totalQueroLer}
             </span>
             <span
-              className="text-xs"
+              className="text-xs font-sans"
               style={{ color: palette.textSecondaryOnPaper }}
             >
               Lista de desejos
@@ -119,19 +119,19 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
         <div className="grid grid-cols-2 gap-3">
           <PaperCard palette={palette} className="flex flex-col">
             <span
-              className="text-xs font-semibold"
+              className="text-xs sm:text-sm font-sans font-semibold"
               style={{ color: palette.textSecondaryOnPaper }}
             >
               Livros Lidos
             </span>
             <span
-              className="font-serif font-bold text-3xl sm:text-4xl my-1"
-              style={{ color: palette.woodBorder }}
+              className="font-serif font-bold text-3xl sm:text-4xl my-1 tabular-nums select-none"
+              style={{ color: palette.starWood }}
             >
               {stats.totalLidos}
             </span>
             <span
-              className="text-[11px]"
+              className="text-xs font-sans"
               style={{ color: palette.textSecondaryOnPaper }}
             >
               Total registrado
@@ -140,19 +140,19 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
 
           <PaperCard palette={palette} className="flex flex-col">
             <span
-              className="text-xs font-semibold"
+              className="text-xs sm:text-sm font-sans font-semibold"
               style={{ color: palette.textSecondaryOnPaper }}
             >
               Lidos em {currentYear}
             </span>
             <span
-              className="font-serif font-bold text-3xl sm:text-4xl my-1"
-              style={{ color: palette.woodBorder }}
+              className="font-serif font-bold text-3xl sm:text-4xl my-1 tabular-nums select-none"
+              style={{ color: palette.starWood }}
             >
               {stats.livrosLidosAnoAtual}
             </span>
             <span
-              className="text-[11px]"
+              className="text-xs font-sans"
               style={{ color: palette.textSecondaryOnPaper }}
             >
               Neste ano
@@ -163,19 +163,19 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
         <div className="grid grid-cols-2 gap-3">
           <PaperCard palette={palette} className="flex flex-col">
             <span
-              className="text-xs font-semibold"
+              className="text-xs sm:text-sm font-sans font-semibold"
               style={{ color: palette.textSecondaryOnPaper }}
             >
               Páginas Lidas
             </span>
             <span
-              className="font-serif font-bold text-3xl sm:text-4xl my-1"
-              style={{ color: palette.woodBorder }}
+              className="font-serif font-bold text-3xl sm:text-4xl my-1 tabular-nums select-none"
+              style={{ color: palette.starWood }}
             >
               {stats.totalPaginasLidas.toLocaleString()}
             </span>
             <span
-              className="text-[11px]"
+              className="text-xs font-sans"
               style={{ color: palette.textSecondaryOnPaper }}
             >
               {stats.paginasLidasAnoAtual.toLocaleString()} em {currentYear}
@@ -184,19 +184,19 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
 
           <PaperCard palette={palette} className="flex flex-col">
             <span
-              className="text-xs font-semibold"
+              className="text-xs sm:text-sm font-sans font-semibold"
               style={{ color: palette.textSecondaryOnPaper }}
             >
               Nota Média
             </span>
             <span
-              className="font-serif font-bold text-3xl sm:text-4xl my-1"
-              style={{ color: palette.woodBorder }}
+              className="font-serif font-bold text-3xl sm:text-4xl my-1 tabular-nums select-none"
+              style={{ color: palette.starWood }}
             >
               {stats.notaMedia != null ? stats.notaMedia.toFixed(1) : '-'}
             </span>
             <span
-              className="text-[11px]"
+              className="text-xs font-sans"
               style={{ color: palette.textSecondaryOnPaper }}
             >
               {stats.notaMedia != null ? 'de 10 pontos' : 'Sem notas'}
@@ -211,7 +211,7 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
           </h3>
 
           {yearEntries.length === 0 ? (
-            <p className="text-sm py-8 text-center italic" style={{ color: palette.textSecondaryOnPaper }}>
+            <p className="text-sm py-8 text-center italic font-sans" style={{ color: palette.textSecondaryOnPaper }}>
               Cadastre livros com data de leitura para ver o gráfico.
             </p>
           ) : (
@@ -226,7 +226,7 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
                       className="flex-1 max-w-[48px] flex flex-col items-center justify-end h-full group"
                     >
                       <span
-                        className="text-xs font-serif font-bold mb-1 opacity-90 transition-transform group-hover:scale-110"
+                        className="text-xs font-sans font-bold mb-1 opacity-90 transition-transform group-hover:scale-110 tabular-nums"
                         style={{ color: palette.textOnPaper }}
                       >
                         {item.count}
@@ -248,7 +248,7 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
                 {yearEntries.map((item) => (
                   <span
                     key={item.year}
-                    className="flex-1 max-w-[48px] text-center font-serif text-xs font-semibold"
+                    className="flex-1 max-w-[48px] text-center font-sans text-xs font-semibold tabular-nums"
                     style={{ color: palette.textSecondaryOnPaper }}
                   >
                     {item.year}
@@ -266,7 +266,7 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
           </h3>
 
           {stats.topAutores.length === 0 ? (
-            <p className="text-sm py-4 italic text-center" style={{ color: palette.textSecondaryOnPaper }}>
+            <p className="text-sm py-4 italic text-center font-sans" style={{ color: palette.textSecondaryOnPaper }}>
               Nenhum autor registrado ainda.
             </p>
           ) : (
@@ -277,10 +277,10 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
                 return (
                   <div key={autor} className="flex flex-col gap-1">
                     <div className="flex items-center justify-between text-xs sm:text-sm">
-                      <span className="font-serif font-semibold truncate pr-2" style={{ color: palette.textOnPaper }}>
+                      <span className="font-sans font-semibold truncate pr-2" style={{ color: palette.textOnPaper }}>
                         {autor}
                       </span>
-                      <span className="font-serif text-xs whitespace-nowrap" style={{ color: palette.textSecondaryOnPaper }}>
+                      <span className="font-sans text-xs whitespace-nowrap tabular-nums" style={{ color: palette.textSecondaryOnPaper }}>
                         {count} {count === 1 ? 'livro' : 'livros'}
                       </span>
                     </div>
@@ -311,7 +311,7 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
           </h3>
 
           {stats.topGeneros.length === 0 ? (
-            <p className="text-sm py-4 italic text-center" style={{ color: palette.textSecondaryOnPaper }}>
+            <p className="text-sm py-4 italic text-center font-sans" style={{ color: palette.textSecondaryOnPaper }}>
               Nenhum gênero registrado ainda.
             </p>
           ) : (
@@ -322,10 +322,10 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
                 return (
                   <div key={genero} className="flex flex-col gap-1">
                     <div className="flex items-center justify-between text-xs sm:text-sm">
-                      <span className="font-serif font-semibold truncate pr-2" style={{ color: palette.textOnPaper }}>
+                      <span className="font-sans font-semibold truncate pr-2" style={{ color: palette.textOnPaper }}>
                         {genero}
                       </span>
-                      <span className="font-serif text-xs whitespace-nowrap" style={{ color: palette.textSecondaryOnPaper }}>
+                      <span className="font-sans text-xs whitespace-nowrap tabular-nums" style={{ color: palette.textSecondaryOnPaper }}>
                         {count} {count === 1 ? 'livro' : 'livros'}
                       </span>
                     </div>

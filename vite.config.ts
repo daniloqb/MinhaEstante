@@ -64,9 +64,9 @@ export default defineConfig({
       ],
       manifest: {
         id: '/',
-        name: 'BookNook',
-        short_name: 'BookNook',
-        description: 'BookNook - Organizador e catálogo pessoal de livros com estante clássica de madeira.',
+        name: 'Booknook',
+        short_name: 'Booknook',
+        description: 'Booknook - Organizador e catálogo pessoal de livros com estante clássica de madeira.',
         theme_color: '#2B1A0F',
         background_color: '#1E1008',
         display: 'standalone',

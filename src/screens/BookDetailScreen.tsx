@@ -171,7 +171,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-2 px-3 rounded-lg font-serif font-semibold text-sm border cursor-pointer hover:bg-black/5"
+                className="flex-1 py-2 px-3 rounded-lg font-sans font-semibold text-sm border cursor-pointer hover:bg-black/5"
                 style={{ borderColor: palette.woodBorder }}
               >
                 Cancelar
@@ -182,7 +182,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                   setShowDeleteConfirm(false);
                   onDelete();
                 }}
-                className="flex-1 py-2 px-3 rounded-lg font-serif font-bold text-sm bg-red-700 text-white cursor-pointer hover:bg-red-800"
+                className="flex-1 py-2 px-3 rounded-lg font-sans font-semibold text-sm bg-red-700 text-white cursor-pointer hover:bg-red-800"
               >
                 Sim, excluir
               </button>
@@ -246,7 +246,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
             <button
               type="button"
               onClick={() => handleToggleFormat('fisico')}
-              className={`px-3 py-1.5 rounded-lg font-serif text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg font-sans text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer select-none ${
                 !isEbook ? 'shadow-md' : 'opacity-65 hover:opacity-90'
               }`}
               style={{
@@ -260,7 +260,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
             <button
               type="button"
               onClick={() => handleToggleFormat('ebook')}
-              className={`px-3 py-1.5 rounded-lg font-serif text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg font-sans text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer select-none ${
                 isEbook ? 'shadow-md' : 'opacity-65 hover:opacity-90'
               }`}
               style={{
@@ -277,7 +277,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
           {book.capaUrl && (
             <div className="mt-2 flex flex-col items-center">
               {hasLocalCover ? (
-                <span className="inline-flex items-center gap-1.5 text-xs font-serif px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/40 text-emerald-300">
+                <span className="inline-flex items-center gap-1.5 text-xs font-sans font-medium px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/40 text-emerald-300">
                   <CheckCircle2 size={13} />
                   Capa guardada no aparelho (salva no backup)
                 </span>
@@ -286,7 +286,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                   type="button"
                   onClick={handleDownloadCoverLocally}
                   disabled={isCachingCover}
-                  className="inline-flex items-center gap-1.5 text-xs font-serif px-3 py-1 rounded-full border bg-black/30 hover:bg-black/45 text-amber-200 border-amber-400/40 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 text-xs font-sans font-medium px-3 py-1 rounded-full border bg-black/30 hover:bg-black/45 text-amber-200 border-amber-400/40 transition-colors cursor-pointer select-none"
                   title="Baixar a imagem da capa para não depender de link de internet externo"
                 >
                   {isCachingCover ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
@@ -294,7 +294,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                 </button>
               )}
               {cacheSuccessMessage && (
-                <span className="text-xs text-emerald-300 mt-1 font-serif">
+                <span className="text-xs text-emerald-300 mt-1 font-sans">
                   {cacheSuccessMessage}
                 </span>
               )}
@@ -404,7 +404,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                 <button
                   type="button"
                   onClick={onTogglePosse}
-                  className="px-3 py-1.5 rounded-lg font-serif font-bold text-xs shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all flex items-center gap-1"
+                  className="px-3 py-1.5 rounded-lg font-sans font-semibold text-xs shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all flex items-center gap-1 select-none"
                   style={{ backgroundColor: palette.goldPrimary, color: palette.textOnGold }}
                 >
                   <Library size={13} />
@@ -413,7 +413,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => handleToggleFormat('ebook')}
-                  className="px-3 py-1.5 rounded-lg font-serif font-bold text-xs shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all flex items-center gap-1 bg-purple-700 text-white"
+                  className="px-3 py-1.5 rounded-lg font-sans font-semibold text-xs shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all flex items-center gap-1 bg-purple-700 text-white select-none"
                 >
                   <Tablet size={13} />
                   <span>+ E-book</span>
@@ -421,7 +421,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => onSetStatusLeitura('quero_ler')}
-                  className="px-3 py-1.5 rounded-lg font-serif font-bold text-xs shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all flex items-center gap-1 bg-blue-700 text-white"
+                  className="px-3 py-1.5 rounded-lg font-sans font-semibold text-xs shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all flex items-center gap-1 bg-blue-700 text-white select-none"
                 >
                   <Bookmark size={13} />
                   <span>+ Quero Ler</span>
@@ -433,7 +433,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
           <div>
             <div className="flex items-center justify-between gap-2 mb-1">
               <span
-                className="text-xs font-serif font-bold uppercase tracking-wider px-2 py-0.5 rounded-md"
+                className="text-xs font-sans font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md"
                 style={{
                   backgroundColor: isEbook ? '#7c3aed20' : `${palette.goldPrimary}20`,
                   color: isEbook ? '#7c3aed' : palette.goldPrimary,
@@ -486,7 +486,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                 <span className="font-serif font-bold text-base block" style={{ color: palette.textOnPaper }}>
                   Tenho este exemplar em casa
                 </span>
-                <span className="text-xs sm:text-sm" style={{ color: palette.textSecondaryOnPaper }}>
+                <span className="text-xs sm:text-sm font-sans" style={{ color: palette.textSecondaryOnPaper }}>
                   {book.tenho_fisico
                     ? 'Exemplar físico no acervo pessoal (Aba Livros Físicos)'
                     : 'Não possuo o exemplar físico no momento'}
@@ -519,13 +519,13 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
             style={{ borderColor: `${palette.woodBorder}30` }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase font-bold tracking-wider" style={{ color: palette.woodBorder }}>
+              <span className="text-xs uppercase font-bold tracking-wider font-sans" style={{ color: palette.woodBorder }}>
                 Status de leitura:
               </span>
 
               {book.status_leitura === 'lido' ? (
                 <span
-                  className="font-serif font-bold text-xs px-2.5 py-0.5 rounded-full border flex items-center gap-1"
+                  className="font-sans font-semibold text-xs px-2.5 py-0.5 rounded-full border flex items-center gap-1"
                   style={{
                     borderColor: '#10b981',
                     backgroundColor: '#10b98120',
@@ -537,7 +537,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                 </span>
               ) : book.status_leitura === 'quero_ler' ? (
                 <span
-                  className="font-serif font-bold text-xs px-2.5 py-0.5 rounded-full border flex items-center gap-1"
+                  className="font-sans font-semibold text-xs px-2.5 py-0.5 rounded-full border flex items-center gap-1"
                   style={{
                     borderColor: '#3b82f6',
                     backgroundColor: '#3b82f620',
@@ -548,7 +548,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                   Quero Ler
                 </span>
               ) : (
-                <span className="text-xs italic" style={{ color: palette.textSecondaryOnPaper }}>
+                <span className="text-xs italic font-sans" style={{ color: palette.textSecondaryOnPaper }}>
                   Nenhum plano registrado
                 </span>
               )}
@@ -557,7 +557,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
             {book.status_leitura === 'lido' && (
               <div className="flex items-center justify-between pt-2">
                 <div>
-                  <span className="text-xs block font-semibold mb-0.5" style={{ color: palette.textSecondaryOnPaper }}>
+                  <span className="text-xs block font-sans font-semibold mb-0.5" style={{ color: palette.textSecondaryOnPaper }}>
                     Avaliação:
                   </span>
                   <StarRatingBar
@@ -568,10 +568,10 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                   />
                 </div>
                 <div className="text-right">
-                  <span className="text-xs block font-semibold" style={{ color: palette.textSecondaryOnPaper }}>
+                  <span className="text-xs block font-sans font-semibold" style={{ color: palette.textSecondaryOnPaper }}>
                     Lido em:
                   </span>
-                  <span className="font-serif font-bold text-base" style={{ color: palette.textOnPaper }}>
+                  <span className="font-sans font-semibold text-base tabular-nums" style={{ color: palette.textOnPaper }}>
                     {readingDateFormatted}
                   </span>
                 </div>
@@ -627,7 +627,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                 {book.generos.map((gen) => (
                   <span
                     key={gen}
-                    className="px-2.5 py-0.5 rounded-full text-xs font-serif border"
+                    className="px-2.5 py-0.5 rounded-full text-xs font-sans font-medium border"
                     style={{
                       backgroundColor: palette.paperSurfaceElevated,
                       borderColor: `${palette.woodBorder}60`,
@@ -648,7 +648,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                 Suas Observações:
               </h4>
               <div
-                className="p-3 rounded-lg text-sm leading-relaxed border"
+                className="p-3 rounded-lg text-sm leading-relaxed border font-sans"
                 style={{
                   backgroundColor: palette.paperSurfaceElevated,
                   borderColor: palette.paperBorder,
@@ -673,7 +673,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                 {isDescExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
               </button>
               <p
-                className={`text-sm leading-relaxed mt-1.5 transition-all ${
+                className={`text-sm sm:text-base leading-relaxed mt-1.5 font-sans transition-all ${
                   isDescExpanded ? '' : 'line-clamp-3'
                 }`}
                 style={{ color: palette.textSecondaryOnPaper }}
@@ -699,27 +699,27 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                   <h4 className="font-serif font-bold text-base leading-tight" style={{ color: palette.textOnPaper }}>
                     Livro Emprestado
                   </h4>
-                  <p className="text-[11px] opacity-75 font-serif" style={{ color: palette.textSecondaryOnPaper }}>
+                  <p className="text-xs opacity-75 font-sans" style={{ color: palette.textSecondaryOnPaper }}>
                     Este exemplar está com outra pessoa
                   </p>
                 </div>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-900 border border-amber-400/50">
+              <span className="px-2 py-0.5 rounded-full text-xs font-sans font-semibold uppercase tracking-wider bg-amber-500/20 text-amber-900 border border-amber-400/50">
                 Ativo
               </span>
             </div>
 
             <div
-              className="p-3 rounded-xl border flex flex-col gap-1.5 text-xs"
+              className="p-3 rounded-xl border flex flex-col gap-1.5 text-xs font-sans"
               style={{ backgroundColor: palette.paperSurfaceElevated, borderColor: palette.paperBorder }}
             >
-              <div className="flex items-center gap-1.5 font-bold" style={{ color: palette.textOnPaper }}>
+              <div className="flex items-center gap-1.5 font-semibold" style={{ color: palette.textOnPaper }}>
                 <User size={14} className="opacity-70 text-amber-900 shrink-0" />
                 <span>Emprestado para: <strong className="underline decoration-amber-500/50">{book.emprestimo.nomePessoa}</strong></span>
               </div>
 
               {book.emprestimo.emailPessoa && (
-                <div className="flex items-center gap-1.5 text-[11px]">
+                <div className="flex items-center gap-1.5 text-xs">
                   <Mail size={13} className="opacity-70 shrink-0" />
                   <a
                     href={`mailto:${book.emprestimo.emailPessoa}?subject=Livro Emprestado: ${encodeURIComponent(book.titulo)}`}
@@ -730,7 +730,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                 </div>
               )}
 
-              <div className="flex items-center gap-3 flex-wrap text-[11px] pt-0.5">
+              <div className="flex items-center gap-3 flex-wrap text-xs pt-0.5">
                 <span className="flex items-center gap-1 opacity-75">
                   <Calendar size={12} />
                   <span>Desde: {book.emprestimo.dataEmprestimo}</span>
@@ -742,7 +742,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
               </div>
 
               {book.emprestimo.observacoes && (
-                <p className="text-[11px] italic opacity-80 mt-0.5 border-l-2 pl-2 border-amber-600/40">
+                <p className="text-xs italic opacity-80 mt-0.5 border-l-2 pl-2 border-amber-600/40 font-sans">
                   &ldquo;{book.emprestimo.observacoes}&rdquo;
                 </p>
               )}
@@ -753,7 +753,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => onReturnBook(book)}
-                  className="flex-1 py-2.5 px-3 rounded-xl font-serif font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-98 transition-all"
+                  className="flex-1 py-2.5 px-3 rounded-xl font-sans font-semibold text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-98 transition-all select-none"
                 >
                   <CheckCircle2 size={15} />
                   <span>Marcar como Devolvido</span>
@@ -763,7 +763,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => onOpenLoanModal(book)}
-                  className="py-2.5 px-3.5 rounded-xl font-serif font-semibold text-xs border flex items-center justify-center gap-1.5 cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+                  className="py-2.5 px-3.5 rounded-xl font-sans font-medium text-xs sm:text-sm border flex items-center justify-center gap-1.5 cursor-pointer hover:bg-black/5 active:scale-98 transition-all select-none"
                   style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
                 >
                   <Edit size={14} />
@@ -781,7 +781,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
             <button
               type="button"
               onClick={() => onOpenLoanModal(book)}
-              className="w-full py-3 rounded-xl font-serif font-bold text-sm shadow-md flex items-center justify-center gap-2 border cursor-pointer hover:brightness-105 active:scale-98 transition-all"
+              className="w-full py-3 rounded-xl font-sans font-semibold text-sm shadow-md flex items-center justify-center gap-2 border cursor-pointer hover:brightness-105 active:scale-98 transition-all select-none"
               style={{
                 backgroundColor: `${palette.goldPrimary}15`,
                 borderColor: palette.goldPrimary,
@@ -798,7 +798,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
             <button
               type="button"
               onClick={() => onSetStatusLeitura('lido')}
-              className="w-full py-3.5 rounded-xl font-serif font-bold text-base shadow-lg flex items-center justify-center gap-2 cursor-pointer hover:brightness-105 active:scale-98 transition-all"
+              className="w-full py-3.5 rounded-xl font-sans font-semibold text-base shadow-lg flex items-center justify-center gap-2 cursor-pointer hover:brightness-105 active:scale-98 transition-all select-none"
               style={{
                 backgroundColor: palette.goldPrimary,
                 color: palette.textOnGold,
@@ -814,7 +814,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
             <button
               type="button"
               onClick={onEdit}
-              className="w-full py-3 rounded-xl font-serif font-bold text-base shadow-lg cursor-pointer hover:brightness-105 active:scale-98 transition-all"
+              className="w-full py-3 rounded-xl font-sans font-semibold text-base shadow-lg cursor-pointer hover:brightness-105 active:scale-98 transition-all select-none"
               style={{
                 backgroundColor: palette.goldPrimary,
                 color: palette.textOnGold,
@@ -829,7 +829,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
             <button
               type="button"
               onClick={() => onSetStatusLeitura('quero_ler')}
-              className="w-full py-2.5 rounded-xl font-serif font-semibold text-sm border flex items-center justify-center gap-1.5 cursor-pointer hover:bg-white/5 active:scale-98 transition-all"
+              className="w-full py-2.5 rounded-xl font-sans font-medium text-sm border flex items-center justify-center gap-1.5 cursor-pointer hover:bg-white/5 active:scale-98 transition-all select-none"
               style={{
                 borderColor: palette.goldPrimary,
                 color: palette.goldPrimary,
@@ -845,7 +845,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
             <button
               type="button"
               onClick={() => onSetStatusLeitura('nenhum')}
-              className="w-full py-2 rounded-xl font-serif text-xs border flex items-center justify-center gap-1.5 cursor-pointer hover:bg-white/5 active:scale-98 transition-all"
+              className="w-full py-2 rounded-xl font-sans text-xs border flex items-center justify-center gap-1.5 cursor-pointer hover:bg-white/5 active:scale-98 transition-all select-none"
               style={{
                 borderColor: `${palette.woodBorder}60`,
                 color: palette.textSecondaryOnWood,
@@ -860,7 +860,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
           <button
             type="button"
             onClick={onEdit}
-            className="w-full py-2.5 rounded-xl font-serif font-semibold text-sm border flex items-center justify-center gap-1.5 cursor-pointer hover:bg-white/5 active:scale-98 transition-all"
+            className="w-full py-2.5 rounded-xl font-sans font-medium text-sm border flex items-center justify-center gap-1.5 cursor-pointer hover:bg-white/5 active:scale-98 transition-all select-none"
             style={{
               borderColor: palette.woodBorder,
               color: palette.textOnWood,

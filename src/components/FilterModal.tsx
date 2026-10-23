@@ -126,7 +126,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                     key={mode}
                     type="button"
                     onClick={() => onGroupByChange(mode)}
-                    className="px-3.5 py-1.5 rounded-full text-xs font-serif font-bold transition-all border cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-sans font-medium transition-all border cursor-pointer select-none"
                     style={{
                       backgroundColor: isSelected ? palette.goldPrimary : 'transparent',
                       color: isSelected ? palette.textOnGold : palette.textOnPaper,
@@ -158,14 +158,14 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                     key={fmt.label}
                     type="button"
                     onClick={() => onFormatFilterChange && onFormatFilterChange(fmt.val as any)}
-                    className="px-3.5 py-1.5 rounded-full text-xs font-serif font-bold transition-all border cursor-pointer flex items-center gap-1.5"
+                    className="px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-sans font-medium transition-all border cursor-pointer flex items-center gap-1.5 select-none"
                     style={{
                       backgroundColor: isSelected ? palette.goldPrimary : 'transparent',
                       color: isSelected ? palette.textOnGold : palette.textOnPaper,
                       borderColor: palette.woodBorder,
                     }}
                   >
-                    {IconComp && <IconComp size={13} />}
+                    {IconComp && <IconComp size={14} />}
                     <span>{fmt.label}</span>
                   </button>
                 );
@@ -192,7 +192,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                     key={opt.id}
                     type="button"
                     onClick={() => onSortChange(opt.id as SortOption)}
-                    className="px-3.5 py-1.5 rounded-full text-xs font-serif font-bold transition-all border cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-sans font-medium transition-all border cursor-pointer select-none"
                     style={{
                       backgroundColor: isSelected ? palette.woodBorder : 'transparent',
                       color: isSelected ? '#FFFFFF' : palette.textOnPaper,
@@ -225,7 +225,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                     key={item.label}
                     type="button"
                     onClick={() => onRatingFilterChange(item.val)}
-                    className="px-3.5 py-1.5 rounded-full text-xs font-serif font-bold transition-all border cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-sans font-medium transition-all border cursor-pointer select-none tabular-nums"
                     style={{
                       backgroundColor: isSelected ? palette.goldPrimary : 'transparent',
                       color: isSelected ? palette.textOnGold : palette.textOnPaper,
@@ -276,7 +276,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                 {yearError}
               </p>
             ) : (
-              <p className="text-[11px] font-serif italic mt-1" style={{ color: palette.textSecondaryOnPaper }}>
+              <p className="text-xs font-sans mt-1 opacity-80" style={{ color: palette.textSecondaryOnPaper }}>
                 Filtra obras lidas no ano informado (1900 a {currentYear}).
               </p>
             )}
@@ -293,7 +293,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               setYearError(null);
               onDismiss();
             }}
-            className="text-xs font-serif font-semibold underline cursor-pointer hover:opacity-80"
+            className="text-xs sm:text-sm font-sans font-medium underline cursor-pointer hover:opacity-80"
             style={{ color: palette.textSecondaryOnPaper }}
           >
             Limpar filtros
@@ -302,7 +302,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
           <button
             type="button"
             onClick={onDismiss}
-            className="px-5 py-2 rounded-lg font-serif font-bold text-sm shadow-sm cursor-pointer hover:brightness-105 active:scale-95 transition-all"
+            className="px-5 py-2 rounded-lg font-sans font-semibold text-sm shadow-sm cursor-pointer hover:brightness-105 active:scale-95 transition-all select-none"
             style={{
               backgroundColor: palette.goldPrimary,
               color: palette.textOnGold,

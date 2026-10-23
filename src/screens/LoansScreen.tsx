@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Book, BookLoan } from '../types/book';
+import { Book, BookLoan, ShelfTab } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
 import { PaperCard } from '../components/PaperCard';
@@ -15,8 +15,11 @@ import {
   CheckCircle2,
   AlertTriangle,
   BookOpen,
+  Check,
+  Bookmark,
   Edit,
   ArrowRight,
+  ArrowLeft,
   X,
   History,
 } from 'lucide-react';
@@ -28,6 +31,7 @@ interface LoansScreenProps {
   onOpenLoanModal: (book: Book) => void;
   onReturnBook: (book: Book) => void;
   onGoToShelf: () => void;
+  onSelectShelfTab?: (tab: ShelfTab) => void;
 }
 
 export const LoansScreen: React.FC<LoansScreenProps> = ({
@@ -37,6 +41,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
   onOpenLoanModal,
   onReturnBook,
   onGoToShelf,
+  onSelectShelfTab,
 }) => {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<'ativos' | 'historico'>('ativos');
@@ -185,6 +190,16 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
       <WoodTopAppBar
         palette={palette}
         title={t.loans.title}
+        navigationIcon={
+          <button
+            type="button"
+            onClick={onGoToShelf}
+            className="p-1 rounded-full hover:bg-white/10 active:scale-95 transition-all text-amber-300 cursor-pointer"
+            title={t.common.back}
+          >
+            <ArrowLeft size={22} />
+          </button>
+        }
         actions={
           <div className="flex items-center gap-2">
             <button
@@ -193,7 +208,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                 setBookPickerQuery('');
                 setIsBookPickerOpen(true);
               }}
-              className="px-3 py-1.5 rounded-xl font-serif font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer hover:brightness-105 active:scale-95 transition-all"
+              className="px-3 py-1.5 rounded-xl font-sans font-semibold text-xs shadow-md flex items-center gap-1.5 cursor-pointer hover:brightness-105 active:scale-95 transition-all select-none"
               style={{
                 backgroundColor: palette.goldPrimary,
                 color: palette.textOnGold,
@@ -203,7 +218,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
               <span>+ Emprestar</span>
             </button>
             <span
-              className="px-2.5 py-1 rounded-full text-xs font-mono font-bold flex items-center gap-1.5 shadow-inner"
+              className="px-2.5 py-1 rounded-full text-xs font-sans font-bold tabular-nums flex items-center gap-1.5 shadow-inner"
               style={{
                 backgroundColor: `${palette.goldPrimary}25`,
                 color: palette.goldPrimary,
@@ -215,6 +230,114 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
           </div>
         }
       />
+
+      {/* Barra de Navegação de Estantes: 1. Meus Livros | 2. Lidos | 3. Quero Ler | 4. Emprestados */}
+      <div
+        className="w-full px-3 sm:px-4 py-2 flex items-center border-b gap-2 overflow-x-auto"
+        style={{
+          backgroundColor: `${palette.woodDark}ee`,
+          borderColor: `${palette.woodBorder}40`,
+        }}
+      >
+        <div
+          className="flex items-center p-0.5 rounded-xl border overflow-x-auto scrollbar-none gap-0.5 max-w-full"
+          style={{
+            backgroundColor: palette.woodDark,
+            borderColor: `${palette.woodBorder}70`,
+          }}
+        >
+          {/* Aba 1: Meus Livros */}
+          <button
+            type="button"
+            onClick={() => (onSelectShelfTab ? onSelectShelfTab('todos') : onGoToShelf())}
+            className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg font-sans font-semibold text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 sm:gap-1.5 shrink-0 select-none"
+            style={{
+              backgroundColor: 'transparent',
+              color: palette.textOnWood,
+            }}
+          >
+            <BookOpen size={15} />
+            <span>{t.home.filterFormatAll}</span>
+            <span
+              className="px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full text-[11px] sm:text-xs font-sans font-bold tabular-nums"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.18)',
+                color: palette.textOnWood,
+              }}
+            >
+              {books.filter((b) => Boolean(b.tenho_fisico) || b.formato === 'ebook').length}
+            </span>
+          </button>
+
+          {/* Aba 2: Lidos */}
+          <button
+            type="button"
+            onClick={() => (onSelectShelfTab ? onSelectShelfTab('lido') : onGoToShelf())}
+            className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg font-sans font-semibold text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 sm:gap-1.5 shrink-0 select-none"
+            style={{
+              backgroundColor: 'transparent',
+              color: palette.textOnWood,
+            }}
+          >
+            <Check size={15} />
+            <span>{t.status.read}</span>
+            <span
+              className="px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full text-[11px] sm:text-xs font-sans font-bold tabular-nums"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.18)',
+                color: palette.textOnWood,
+              }}
+            >
+              {books.filter((b) => b.status_leitura === 'lido').length}
+            </span>
+          </button>
+
+          {/* Aba 3: Quero Ler */}
+          <button
+            type="button"
+            onClick={() => (onSelectShelfTab ? onSelectShelfTab('quero_ler') : onGoToShelf())}
+            className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg font-sans font-semibold text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 sm:gap-1.5 shrink-0 select-none"
+            style={{
+              backgroundColor: 'transparent',
+              color: palette.textOnWood,
+            }}
+          >
+            <Bookmark size={15} />
+            <span>{t.status.wantToRead}</span>
+            <span
+              className="px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full text-[11px] sm:text-xs font-sans font-bold tabular-nums"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.18)',
+                color: palette.textOnWood,
+              }}
+            >
+              {books.filter((b) => b.status_leitura === 'quero_ler').length}
+            </span>
+          </button>
+
+          {/* Aba 4: Emprestados (Ativo) */}
+          <button
+            type="button"
+            className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg font-sans font-semibold text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 sm:gap-1.5 shrink-0 select-none"
+            style={{
+              backgroundColor: palette.goldPrimary,
+              color: palette.textOnGold,
+            }}
+          >
+            <Handshake size={15} />
+            <span>{t.nav.loans}</span>
+            <span
+              className="px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full text-[11px] sm:text-xs font-sans font-bold tabular-nums"
+              style={{
+                backgroundColor: 'rgba(0,0,0,0.25)',
+                color: palette.textOnGold,
+              }}
+            >
+              {activeBorrowedBooks.length}
+            </span>
+          </button>
+        </div>
+      </div>
 
       {/* Conteúdo Central */}
       <div className="flex-1 w-full max-w-2xl mx-auto px-4 py-5 flex flex-col gap-4">
@@ -228,7 +351,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
               </h3>
             </div>
             <span
-              className="text-[11px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider"
+              className="text-xs font-sans px-2.5 py-0.5 rounded font-bold uppercase tracking-wider"
               style={{
                 backgroundColor: `${palette.goldPrimary}20`,
                 color: palette.goldPrimary,
@@ -238,7 +361,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
             </span>
           </div>
 
-          <p className="text-xs leading-relaxed" style={{ color: palette.textSecondaryOnPaper }}>
+          <p className="text-xs sm:text-sm leading-relaxed" style={{ color: palette.textSecondaryOnPaper }}>
             Acompanhe para quem você emprestou seus livros físicos ou digitais, datas de entrega e histórico de devoluções.
           </p>
 
@@ -250,10 +373,10 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                 borderColor: '#10b98135',
               }}
             >
-              <span className="text-lg font-bold font-mono text-emerald-800">
+              <span className="text-lg sm:text-xl font-bold font-sans tabular-nums text-emerald-800">
                 {stats.noPrazo}
               </span>
-              <span className="text-[10px] font-serif font-semibold text-emerald-950">
+              <span className="text-xs font-sans font-semibold text-emerald-950">
                 No Prazo
               </span>
             </div>
@@ -265,10 +388,10 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                 borderColor: '#f59e0b35',
               }}
             >
-              <span className="text-lg font-bold font-mono text-amber-800">
+              <span className="text-lg sm:text-xl font-bold font-sans tabular-nums text-amber-800">
                 {stats.proximos}
               </span>
-              <span className="text-[10px] font-serif font-semibold text-amber-950">
+              <span className="text-xs font-sans font-semibold text-amber-950">
                 Próximos
               </span>
             </div>
@@ -280,10 +403,10 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                 borderColor: '#ef444435',
               }}
             >
-              <span className="text-lg font-bold font-mono text-red-800">
+              <span className="text-lg sm:text-xl font-bold font-sans tabular-nums text-red-800">
                 {stats.atrasados}
               </span>
-              <span className="text-[10px] font-serif font-semibold text-red-950">
+              <span className="text-xs font-sans font-semibold text-red-950">
                 Atrasados
               </span>
             </div>
@@ -303,7 +426,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('ativos')}
-              className="flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg font-serif font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              className="flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg font-sans font-semibold text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 select-none"
               style={{
                 backgroundColor: activeTab === 'ativos' ? palette.goldPrimary : 'transparent',
                 color: activeTab === 'ativos' ? palette.textOnGold : palette.textOnWood,
@@ -316,7 +439,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('historico')}
-              className="flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg font-serif font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              className="flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg font-sans font-semibold text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 select-none"
               style={{
                 backgroundColor: activeTab === 'historico' ? palette.goldPrimary : 'transparent',
                 color: activeTab === 'historico' ? palette.textOnGold : palette.textOnWood,
@@ -339,7 +462,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar por livro ou pessoa..."
-              className="w-full pl-8 pr-7 py-1.5 rounded-xl border text-xs font-serif focus:outline-none focus:ring-1"
+              className="w-full pl-8 pr-7 py-1.5 rounded-xl border text-xs sm:text-sm font-sans focus:outline-none focus:ring-1"
               style={{
                 backgroundColor: palette.paperSurface,
                 borderColor: `${palette.woodBorder}60`,
@@ -376,7 +499,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                 ? 'Nenhum registro encontrado no histórico'
                 : 'Nenhum histórico de devolução registrado'}
             </h4>
-            <p className="text-xs max-w-sm leading-relaxed" style={{ color: palette.textSecondaryOnPaper }}>
+            <p className="text-xs sm:text-sm max-w-sm leading-relaxed" style={{ color: palette.textSecondaryOnPaper }}>
               {activeTab === 'ativos'
                 ? 'Para emprestar um livro, vá até a sua Estante, clique sobre qualquer livro e selecione "Emprestar Livro" para registrar o nome da pessoa e prazo de devolução.'
                 : 'Quando você marcar um livro emprestado como devolvido, ele aparecerá arquivado nesta lista com a data em que voltou para sua estante.'}
@@ -389,7 +512,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                     setBookPickerQuery('');
                     setIsBookPickerOpen(true);
                   }}
-                  className="py-2.5 px-4 rounded-xl font-serif font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer hover:brightness-105 active:scale-95 transition-all"
+                  className="py-2.5 px-4 rounded-xl font-sans font-semibold text-xs sm:text-sm shadow-md flex items-center gap-2 cursor-pointer hover:brightness-105 active:scale-95 transition-all select-none"
                   style={{ backgroundColor: palette.goldPrimary, color: palette.textOnGold }}
                 >
                   <Handshake size={15} />
@@ -399,7 +522,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                 <button
                   type="button"
                   onClick={onGoToShelf}
-                  className="py-2.5 px-4 rounded-xl font-serif font-semibold text-xs border flex items-center gap-2 cursor-pointer hover:bg-black/5 active:scale-95 transition-all"
+                  className="py-2.5 px-4 rounded-xl font-sans font-semibold text-xs sm:text-sm border flex items-center gap-2 cursor-pointer hover:bg-black/5 active:scale-95 transition-all select-none"
                   style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
                 >
                   <BookOpen size={15} />
@@ -441,17 +564,17 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                         <button
                           type="button"
                           onClick={() => onOpenBookDetail(book)}
-                          className="font-serif font-bold text-sm sm:text-base leading-snug hover:underline text-left cursor-pointer line-clamp-1"
+                          className="font-serif font-bold text-base sm:text-lg leading-snug hover:underline text-left cursor-pointer line-clamp-1"
                           style={{ color: palette.textOnPaper }}
                         >
                           {book.titulo}
                         </button>
                         <span
-                          className="text-[10px] font-mono px-1.5 py-0.5 rounded font-bold"
+                          className="text-[11px] font-sans px-2 py-0.5 rounded font-bold"
                           style={{
                             backgroundColor:
-                              book.formato === 'ebook' ? '#7c3aed20' : `${palette.goldPrimary}20`,
-                            color: book.formato === 'ebook' ? '#7c3aed' : palette.woodBorder,
+                              book.formato === 'ebook' ? '#6d28d925' : `${palette.goldPrimary}25`,
+                            color: book.formato === 'ebook' ? '#6d28d9' : palette.woodDark,
                           }}
                         >
                           {book.formato === 'ebook' ? 'E-book' : 'Físico'}
@@ -459,22 +582,22 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                       </div>
 
                       <p
-                        className="text-xs font-serif italic line-clamp-1 opacity-80"
+                        className="text-xs sm:text-sm font-sans line-clamp-1"
                         style={{ color: palette.textSecondaryOnPaper }}
                       >
                         {book.autores.join(', ') || 'Autor desconhecido'}
                       </p>
 
                       {/* Dados da pessoa e contato */}
-                      <div className="mt-1 flex flex-col gap-0.5 text-xs">
+                      <div className="mt-1 flex flex-col gap-0.5 text-xs sm:text-sm">
                         <div className="flex items-center gap-1.5 font-bold" style={{ color: palette.textOnPaper }}>
-                          <User size={13} className="opacity-70 text-amber-900" />
+                          <User size={14} className="opacity-75 text-amber-900" />
                           <span>Emprestado para: <strong className="underline decoration-amber-500/50">{loan.nomePessoa}</strong></span>
                         </div>
 
                         {loan.emailPessoa && (
-                          <div className="flex items-center gap-1.5 text-[11px] opacity-80">
-                            <Mail size={12} className="opacity-70" />
+                          <div className="flex items-center gap-1.5 text-xs opacity-90 font-sans">
+                            <Mail size={13} className="opacity-75" />
                             <a
                               href={`mailto:${loan.emailPessoa}?subject=Livro Emprestado: ${encodeURIComponent(book.titulo)}`}
                               className="hover:underline text-blue-700 dark:text-blue-400"
@@ -487,33 +610,33 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                       </div>
 
                       {/* Datas e Prazo */}
-                      <div className="mt-1 flex items-center gap-2 flex-wrap text-[11px]">
-                        <span className="flex items-center gap-1 opacity-75">
-                          <Calendar size={12} />
+                      <div className="mt-1 flex items-center gap-2 flex-wrap text-xs font-sans">
+                        <span className="flex items-center gap-1 opacity-80 tabular-nums">
+                          <Calendar size={13} />
                           <span>Desde: {formatDisplayDate(loan.dataEmprestimo)}</span>
                         </span>
 
-                        <span className="flex items-center gap-1 font-semibold">
-                          <Clock size={12} />
+                        <span className="flex items-center gap-1 font-semibold tabular-nums">
+                          <Clock size={13} />
                           <span>Devolução: {formatDisplayDate(loan.dataDevolucao)}</span>
                         </span>
 
                         {/* Selo de Prazo */}
                         <span
-                          className="px-2 py-0.5 rounded-full font-bold text-[10px] border flex items-center gap-1"
+                          className="px-2 py-0.5 rounded-full font-bold text-xs border flex items-center gap-1 font-sans"
                           style={{
                             backgroundColor: dueStatus.bgColor,
                             borderColor: dueStatus.borderColor,
                             color: dueStatus.textColor,
                           }}
                         >
-                          {dueStatus.isOverdue && <AlertTriangle size={11} />}
+                          {dueStatus.isOverdue && <AlertTriangle size={12} />}
                           {dueStatus.label}
                         </span>
                       </div>
 
                       {loan.observacoes && (
-                        <p className="text-[11px] italic opacity-75 mt-0.5 border-l-2 pl-2 border-amber-600/40">
+                        <p className="text-xs font-sans italic opacity-85 mt-0.5 border-l-2 pl-2 border-amber-600/40">
                           &ldquo;{loan.observacoes}&rdquo;
                         </p>
                       )}
@@ -527,10 +650,10 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                         <button
                           type="button"
                           onClick={() => onReturnBook(book)}
-                          className="py-2 px-3 rounded-xl font-serif font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                          className="py-2 px-3 rounded-xl font-sans font-semibold text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all select-none"
                           title="Confirmar que a pessoa devolveu o livro"
                         >
-                          <CheckCircle2 size={14} />
+                          <CheckCircle2 size={15} />
                           <span>Marcar Devolvido</span>
                         </button>
 
@@ -541,17 +664,17 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                           style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
                           title="Editar datas ou dados do empréstimo"
                         >
-                          <Edit size={14} />
+                          <Edit size={15} />
                         </button>
                       </>
                     ) : (
                       <button
                         type="button"
                         onClick={() => onOpenLoanModal(book)}
-                        className="py-1.5 px-3 rounded-xl font-serif font-bold text-xs border hover:bg-black/5 flex items-center gap-1.5 cursor-pointer"
+                        className="py-1.5 px-3 rounded-xl font-sans font-semibold text-xs sm:text-sm border hover:bg-black/5 flex items-center gap-1.5 cursor-pointer select-none"
                         style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
                       >
-                        <Handshake size={13} />
+                        <Handshake size={14} />
                         <span>Emprestar Novamente</span>
                       </button>
                     )}
@@ -563,7 +686,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                       style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
                       title="Ver detalhes da obra"
                     >
-                      <ArrowRight size={14} />
+                      <ArrowRight size={15} />
                     </button>
                   </div>
                 </PaperCard>
@@ -610,7 +733,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                     Selecionar Livro
                   </h3>
                   <p
-                    className="text-xs font-serif opacity-75"
+                    className="text-xs sm:text-sm font-sans opacity-85"
                     style={{ color: palette.textSecondaryOnPaper }}
                   >
                     Escolha um livro da sua estante para emprestar
@@ -638,7 +761,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                 value={bookPickerQuery}
                 onChange={(e) => setBookPickerQuery(e.target.value)}
                 placeholder="Buscar livro por título ou autor..."
-                className="w-full pl-8 pr-3 py-2 rounded-xl border text-xs font-serif focus:outline-none focus:ring-1"
+                className="w-full pl-8 pr-3 py-2 rounded-xl border text-xs sm:text-sm font-sans focus:outline-none focus:ring-1"
                 style={{
                   backgroundColor: palette.paperSurfaceElevated,
                   borderColor: palette.woodBorder,
@@ -650,7 +773,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
             <div className="flex-1 overflow-y-auto flex flex-col gap-2 max-h-[50vh] pr-1">
               {availableBooksToLoan.length === 0 ? (
                 <div
-                  className="text-center py-8 text-xs italic"
+                  className="text-center py-8 text-xs sm:text-sm font-sans italic"
                   style={{ color: palette.textSecondaryOnPaper }}
                 >
                   {books.length === 0
@@ -686,30 +809,30 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                     </div>
                     <div className="min-w-0 flex-1">
                       <h4
-                        className="font-serif font-bold text-xs leading-snug line-clamp-1"
+                        className="font-serif font-bold text-xs sm:text-sm leading-snug line-clamp-1"
                         style={{ color: palette.textOnPaper }}
                       >
                         {book.titulo}
                       </h4>
                       <p
-                        className="text-[11px] font-serif italic line-clamp-1 opacity-75"
+                        className="text-xs font-sans line-clamp-1 opacity-85"
                         style={{ color: palette.textSecondaryOnPaper }}
                       >
                         {book.autores.join(', ') || 'Autor desconhecido'}
                       </p>
                       <span
-                        className="inline-block text-[9px] font-mono px-1.5 py-0.2 rounded mt-1 font-bold"
+                        className="inline-block text-[10px] font-sans px-1.5 py-0.2 rounded mt-1 font-bold"
                         style={{
                           backgroundColor:
-                            book.formato === 'ebook' ? '#7c3aed20' : `${palette.goldPrimary}20`,
-                          color: book.formato === 'ebook' ? '#7c3aed' : palette.woodBorder,
+                            book.formato === 'ebook' ? '#6d28d925' : `${palette.goldPrimary}25`,
+                          color: book.formato === 'ebook' ? '#6d28d9' : palette.woodDark,
                         }}
                       >
                         {book.formato === 'ebook' ? 'E-book' : 'Físico'}
                       </span>
                     </div>
                     <span
-                      className="text-xs font-serif font-bold px-2.5 py-1 rounded-lg shrink-0 shadow-xs"
+                      className="text-xs font-sans font-semibold px-2.5 py-1 rounded-lg shrink-0 shadow-xs select-none"
                       style={{
                         backgroundColor: palette.goldPrimary,
                         color: palette.textOnGold,

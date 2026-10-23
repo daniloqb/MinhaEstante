@@ -12,7 +12,7 @@ import {
 } from './types/book';
 import { getPalette } from './theme/woodTheme';
 import { BookStorage } from './services/storage';
-import { BookSearchService } from './services/bookSearch';
+import { BookDiscoveryEngine, ProviderStatus } from './features/book-discovery';
 import { NativeService } from './services/nativeService';
 
 // Layout & Components
@@ -42,6 +42,8 @@ export const App: React.FC = () => {
   const [isLightOak, setIsLightOak] = useState<boolean>(() => BookStorage.loadTheme());
   const [viewMode, setViewMode] = useState<ViewMode>(() => BookStorage.loadViewMode());
   const [groupBy, setGroupBy] = useState<GroupByMode>(() => BookStorage.loadGroupBy());
+  const [googleBooksApiKey, setGoogleBooksApiKey] = useState<string>(() => BookStorage.loadGoogleBooksApiKey());
+  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => BookStorage.loadGeminiApiKey());
   const [googleApiKey, setGoogleApiKey] = useState<string>(() => BookStorage.loadApiKey());
 
   // Navigation State
@@ -251,8 +253,12 @@ export const App: React.FC = () => {
   // Online Search State
   const [searchInput, setSearchInput] = useState('');
   const [isSearchLoading, setIsSearchLoading] = useState(false);
+  const [isLoadingMoreSearch, setIsLoadingMoreSearch] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResultBook[]>([]);
+  const [searchCursor, setSearchCursor] = useState<string | null>(null);
+  const [hasMoreSearch, setHasMoreSearch] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [providerStatuses, setProviderStatuses] = useState<ProviderStatus[]>([]);
 
   // Palette
   const palette = useMemo(() => getPalette(isLightOak), [isLightOak]);
@@ -280,9 +286,19 @@ export const App: React.FC = () => {
     BookStorage.saveSortBy(sort);
   };
 
-  const handleApiKeyChange = (key: string) => {
+  const handleGoogleBooksApiKeyChange = (key: string) => {
+    setGoogleBooksApiKey(key);
+    BookStorage.saveGoogleBooksApiKey(key);
+  };
+
+  const handleGeminiApiKeyChange = (key: string) => {
+    setGeminiApiKey(key);
     setGoogleApiKey(key);
-    BookStorage.saveApiKey(key);
+    BookStorage.saveGeminiApiKey(key);
+  };
+
+  const handleApiKeyChange = (key: string) => {
+    handleGeminiApiKeyChange(key);
   };
 
   // Inicialização assíncrona do banco SQLite nativo e carga inicial da biblioteca
@@ -417,9 +433,9 @@ export const App: React.FC = () => {
 
   // Regra de negócio: Status de leitura independente
   const handleSetStatusLeitura = useCallback(
-    (book: Book, targetStatus: ReadingStatus) => {
+    async (book: Book, targetStatus: ReadingStatus) => {
       // Se remover status de leitura e não tiver posse física: alerta de livro órfão
-      if (targetStatus === 'nenhum' && !book.tenho_fisico) {
+      if (targetStatus === 'nenhum' && !book.tenho_fisico && book.formato !== 'ebook') {
         setOrphanConflictBook(book);
         return;
       }
@@ -432,23 +448,29 @@ export const App: React.FC = () => {
         mesLeitura: isNowLido ? (book.mesLeitura || new Date().getMonth() + 1) : book.mesLeitura,
         dataAtualizacao: Date.now(),
       };
-      handleSaveBook(updated);
 
-      if (selectedBookDetail && selectedBookDetail.id === book.id) {
-        setSelectedBookDetail(updated);
-      }
+      try {
+        const saved = await handleSaveBook(updated);
 
-      setQuickActionBook(null);
+        if (selectedBookDetail && (selectedBookDetail.id === book.id || selectedBookDetail.id === saved.id || selectedBookDetail.id === 0)) {
+          setSelectedBookDetail(saved);
+        }
 
-      if (targetStatus === 'lido') {
-        setToastMessage(`"${book.titulo}" marcado como Lido!`);
-      } else if (targetStatus === 'quero_ler') {
-        setToastMessage(`"${book.titulo}" marcado como Quero Ler!`);
-      } else {
-        setToastMessage(`Status de leitura removido de "${book.titulo}".`);
+        setQuickActionBook(null);
+
+        if (targetStatus === 'lido') {
+          setToastMessage(`"${saved.titulo}" marcado como Lido!`);
+          handleOpenEditModal(saved);
+        } else if (targetStatus === 'quero_ler') {
+          setToastMessage(`"${saved.titulo}" marcado como Quero Ler!`);
+        } else {
+          setToastMessage(`Status de leitura removido de "${saved.titulo}".`);
+        }
+      } catch (err) {
+        console.error('Erro ao atualizar status de leitura no SQLite:', err);
       }
     },
-    [handleSaveBook, selectedBookDetail]
+    [handleSaveBook, selectedBookDetail, handleOpenEditModal]
   );
 
   // Regra de negócio: Salvar empréstimo para terceiro
@@ -488,7 +510,9 @@ export const App: React.FC = () => {
     [handleSaveBook]
   );
 
-  // Search logic
+  const searchRequestIdRef = React.useRef<number>(0);
+
+  // Search logic: busca bibliográfica mundial via BookDiscoveryEngine com suporte a paginação agregada
   const performSearch = useCallback(
     async (query: string) => {
       const trimmed = query.trim();
@@ -496,21 +520,74 @@ export const App: React.FC = () => {
 
       setIsSearchLoading(true);
       setSearchError(null);
+      const reqId = ++searchRequestIdRef.current;
 
       try {
-        const res = await BookSearchService.search(trimmed, googleApiKey);
-        setSearchResults(res);
-        if (res.length === 0) {
-          setSearchError(`Nenhum livro encontrado para "${trimmed}"`);
+        const engine = BookDiscoveryEngine.getInstance({
+          googleBooksApiKey,
+          geminiApiKey: geminiApiKey || googleApiKey,
+        });
+
+        const response = await engine.search(trimmed);
+
+        if (searchRequestIdRef.current === reqId) {
+          setSearchResults(response.books);
+          setSearchCursor(response.nextCursor);
+          setHasMoreSearch(response.hasMore);
+          setProviderStatuses(response.providerStatuses);
+          setIsSearchLoading(false);
+
+          if (response.books.length === 0) {
+            const googleStatus = response.providerStatuses.find((p) => p.providerId === 'google');
+            if (googleStatus?.httpStatus === 429) {
+              setSearchError(
+                'Limite de requisições anônimas do Google Books atingido (HTTP 429). Configure sua Chave de API Google Books nas Configurações para consultas sem limite.'
+              );
+            } else if (googleStatus?.httpStatus === 401 || googleStatus?.httpStatus === 403) {
+              setSearchError(
+                `Chave de API do Google Books inválida ou sem permissão (HTTP ${googleStatus.httpStatus}). Verifique sua chave nas Configurações.`
+              );
+            } else {
+              setSearchError(`Nenhum livro encontrado para "${trimmed}"`);
+            }
+          } else {
+            setSearchError(null);
+          }
         }
       } catch {
-        setSearchError('Erro ao buscar livros na internet. Verifique sua conexão e tente novamente.');
-      } finally {
-        setIsSearchLoading(false);
+        if (searchRequestIdRef.current === reqId) {
+          setSearchError('Erro ao buscar livros na internet. Verifique sua conexão e tente novamente.');
+          setIsSearchLoading(false);
+        }
       }
     },
-    [googleApiKey]
+    [googleBooksApiKey, geminiApiKey, googleApiKey]
   );
+
+  const handleLoadMoreSearch = useCallback(async () => {
+    if (!hasMoreSearch || !searchCursor || isSearchLoading || isLoadingMoreSearch || !searchInput.trim()) {
+      return;
+    }
+
+    setIsLoadingMoreSearch(true);
+    try {
+      const engine = BookDiscoveryEngine.getInstance({
+        googleBooksApiKey,
+        geminiApiKey: geminiApiKey || googleApiKey,
+      });
+
+      const response = await engine.search(searchInput.trim(), searchCursor);
+
+      setSearchResults((prev) => [...prev, ...response.books]);
+      setSearchCursor(response.nextCursor);
+      setHasMoreSearch(response.hasMore);
+      setProviderStatuses(response.providerStatuses);
+    } catch (err) {
+      console.warn('Erro ao carregar mais livros:', err);
+    } finally {
+      setIsLoadingMoreSearch(false);
+    }
+  }, [hasMoreSearch, searchCursor, isSearchLoading, isLoadingMoreSearch, searchInput, googleBooksApiKey, geminiApiKey, googleApiKey]);
 
   // Add searched book with duplicate detection and independent status
   const handleSelectBookToAdd = useCallback(
@@ -549,14 +626,22 @@ export const App: React.FC = () => {
         }
 
         if (targetAction === 'lido') {
-          // Abre edição para preencher avaliação e data, mantendo a posse do livro
-          const forEdit: Book = {
+          // Persiste como lido no SQLite e abre edição para preencher avaliação e data
+          const updated: Book = {
             ...existing,
             status_leitura: 'lido',
             anoLeitura: existing.anoLeitura || new Date().getFullYear(),
             mesLeitura: existing.mesLeitura || (new Date().getMonth() + 1),
+            dataAtualizacao: Date.now(),
           };
-          handleOpenEditModal(forEdit);
+          handleSaveBook(updated)
+            .then((saved) => {
+              setToastMessage(`"${saved.titulo}" marcado como Lido!`);
+              handleOpenEditModal(saved);
+            })
+            .catch((err) => {
+              console.error('Erro ao atualizar livro lido no SQLite:', err);
+            });
           return;
         }
 
@@ -600,7 +685,14 @@ export const App: React.FC = () => {
       };
 
       if (targetAction === 'lido') {
-        handleOpenEditModal(baseBook);
+        handleSaveBook(baseBook)
+          .then((saved) => {
+            setToastMessage(`"${saved.titulo}" salvo e marcado como Lido!`);
+            handleOpenEditModal(saved);
+          })
+          .catch((err) => {
+            console.error('Erro ao adicionar livro da busca como lido no SQLite:', err);
+          });
       } else {
         handleSaveBook(baseBook).then(() => {
           setToastMessage(
@@ -994,6 +1086,7 @@ export const App: React.FC = () => {
               onOpenQuickAction={(book) => handleOpenQuickAction(book)}
               onOpenFiltersModal={() => handleOpenFilterModal(true)}
               onAddBookClick={() => handleBottomTabChange('BUSCAR')}
+              onOpenLoans={() => handleBottomTabChange('EMPRESTADOS')}
             />
           )}
 
@@ -1005,6 +1098,10 @@ export const App: React.FC = () => {
               onOpenLoanModal={(book) => handleOpenLoanModal(book)}
               onReturnBook={handleReturnLoan}
               onGoToShelf={() => handleBottomTabChange('ESTANTE')}
+              onSelectShelfTab={(tab) => {
+                setStatusTab(tab);
+                handleBottomTabChange('ESTANTE');
+              }}
             />
           )}
 
@@ -1017,6 +1114,9 @@ export const App: React.FC = () => {
                 if (!val.trim()) {
                   setSearchResults([]);
                   setSearchError(null);
+                  setSearchCursor(null);
+                  setHasMoreSearch(false);
+                  setProviderStatuses([]);
                 }
               }}
               onSearch={performSearch}
@@ -1027,6 +1127,11 @@ export const App: React.FC = () => {
               onSelectBookDetail={(book) => handleOpenBookDetail(book)}
               onOpenManualRegister={() => handleOpenManualRegister()}
               userBooks={books}
+              onLoadMore={handleLoadMoreSearch}
+              hasMore={hasMoreSearch}
+              isLoadingMore={isLoadingMoreSearch}
+              providerStatuses={providerStatuses}
+              onGoToSettings={() => handleBottomTabChange('CONFIG')}
             />
           )}
 
@@ -1043,8 +1148,12 @@ export const App: React.FC = () => {
               onGroupByChange={handleGroupByChange}
               isLightOak={isLightOak}
               onToggleTheme={toggleTheme}
-              apiKey={googleApiKey}
+              apiKey={geminiApiKey || googleApiKey}
               onApiKeyChange={handleApiKeyChange}
+              googleBooksApiKey={googleBooksApiKey}
+              onGoogleBooksApiKeyChange={handleGoogleBooksApiKeyChange}
+              geminiApiKey={geminiApiKey}
+              onGeminiApiKeyChange={handleGeminiApiKeyChange}
               onExportCsv={() => BookStorage.exportCsv(books)}
               onExportJson={() => BookStorage.exportJson(books)}
               onImportCsv={async (csv) => {

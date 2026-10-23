@@ -20,7 +20,7 @@ export type ShelfTab = 'todos' | 'meus_livros' | 'ebook' | 'lido' | 'quero_ler';
 // Legado para compatibilidade retroativa com código existente
 export type BookStatus = 'todos' | 'meus_livros' | 'ebook' | 'lido' | 'quero_ler';
 
-export type BookOrigin = 'google' | 'openlibrary' | 'brasilapi' | 'manual';
+export type BookOrigin = 'google' | 'openlibrary' | 'brasilapi' | 'inventaire' | 'isbndb' | 'manual' | 'local';
 
 export interface Book {
   id: number;
@@ -70,6 +70,7 @@ export interface SearchResultBook {
   titulo: string;
   subtitulo?: string | null;
   autores: string[];
+  tradutores?: string[];
   editora?: string | null;
   anoPublicacao?: number | null;
   paginas?: number | null;
@@ -79,6 +80,14 @@ export interface SearchResultBook {
   descricao?: string | null;
   capaUrl?: string | null;
   formato?: BookFormat;
+  idioma?: string | null;
+  edicaoId?: string | null;
+  obraId?: string | null;
+  fontes?: string[];
+  relevanceScore?: number;
+  volumeId?: string | null;
+  wikidataId?: string | null;
+  inventaireUri?: string | null;
 }
 
 export interface EstanteStats {

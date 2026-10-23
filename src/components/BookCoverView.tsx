@@ -112,8 +112,8 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
         <span
           key="lido"
           className={`${
-            compact ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[9px] sm:text-[10px]'
-          } rounded-full font-serif font-bold shadow-md flex items-center gap-0.5 border bg-emerald-700 text-white border-white/80`}
+            compact ? 'px-1 py-0.5 text-[9px]' : 'px-1.5 py-0.5 text-[10px] sm:text-[11px]'
+          } rounded-full font-sans font-bold shadow-md flex items-center gap-0.5 border bg-emerald-700 text-white border-white/80 tracking-tight`}
           title={`Lido ${book.nota != null ? `(★ ${book.nota})` : ''}`}
         >
           <Check size={compact ? 8 : 10} strokeWidth={3} />
@@ -125,8 +125,8 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
         <span
           key="quero"
           className={`${
-            compact ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[9px] sm:text-[10px]'
-          } rounded-full font-serif font-bold shadow-md flex items-center gap-0.5 border bg-blue-700 text-white border-white/80`}
+            compact ? 'px-1 py-0.5 text-[9px]' : 'px-1.5 py-0.5 text-[10px] sm:text-[11px]'
+          } rounded-full font-sans font-bold shadow-md flex items-center gap-0.5 border bg-blue-700 text-white border-white/80 tracking-tight`}
           title="Na lista Quero Ler"
         >
           <Bookmark size={compact ? 8 : 10} />
@@ -141,8 +141,8 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
         <span
           key="digital"
           className={`${
-            compact ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[9px] sm:text-[10px]'
-          } rounded-full font-sans font-bold shadow-md flex items-center gap-0.5 border bg-purple-950 text-purple-100 border-purple-300/70`}
+            compact ? 'px-1 py-0.5 text-[9px]' : 'px-1.5 py-0.5 text-[10px] sm:text-[11px]'
+          } rounded-full font-sans font-bold shadow-md flex items-center gap-0.5 border bg-purple-950 text-purple-100 border-purple-300/70 tracking-tight`}
           title="E-book Digital"
         >
           <Tablet size={compact ? 8 : 10} />
@@ -154,8 +154,8 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
         <span
           key="fisico"
           className={`${
-            compact ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[9px] sm:text-[10px]'
-          } rounded-full font-serif font-bold shadow-md flex items-center gap-0.5 border bg-amber-950 text-amber-100 border-amber-300/70`}
+            compact ? 'px-1 py-0.5 text-[9px]' : 'px-1.5 py-0.5 text-[10px] sm:text-[11px]'
+          } rounded-full font-sans font-bold shadow-md flex items-center gap-0.5 border bg-amber-950 text-amber-100 border-amber-300/70 tracking-tight`}
           title={book.tenho_fisico ? 'Livro Físico (tenho em casa)' : 'Livro Físico'}
         >
           <BookOpen size={compact ? 8 : 10} />
@@ -170,8 +170,8 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
         <span
           key="emprestado"
           className={`${
-            compact ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[9px] sm:text-[10px]'
-          } rounded-full font-serif font-bold shadow-lg flex items-center gap-0.5 border bg-amber-500 text-stone-950 border-amber-200`}
+            compact ? 'px-1 py-0.5 text-[9px]' : 'px-1.5 py-0.5 text-[10px] sm:text-[11px]'
+          } rounded-full font-sans font-bold shadow-lg flex items-center gap-0.5 border bg-amber-500 text-stone-950 border-amber-200 tracking-tight`}
           title={`Emprestado para ${book.emprestimo?.nomePessoa}`}
         >
           <Handshake size={compact ? 8 : 10} strokeWidth={2.5} />
@@ -254,7 +254,7 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
 
             {author && (
               <div className="pb-1 px-1 w-full">
-                <span className="font-serif text-[10px] leading-tight block line-clamp-2 text-white/90">
+                <span className="font-sans font-medium text-[11px] sm:text-xs leading-tight block line-clamp-2 text-white/95 drop-shadow-sm">
                   {author}
                 </span>
               </div>

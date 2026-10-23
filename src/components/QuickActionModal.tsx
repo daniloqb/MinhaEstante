@@ -81,7 +81,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-2.5 px-3 rounded-lg font-serif font-semibold text-base border cursor-pointer hover:bg-black/5"
+                className="flex-1 py-2.5 px-3 rounded-lg font-sans font-semibold text-sm border cursor-pointer hover:bg-black/5"
                 style={{ borderColor: palette.woodBorder }}
               >
                 Cancelar
@@ -93,7 +93,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
                   onDismiss();
                   onDelete(book);
                 }}
-                className="flex-1 py-2.5 px-3 rounded-lg font-serif font-bold text-base bg-red-700 text-white cursor-pointer hover:bg-red-800"
+                className="flex-1 py-2.5 px-3 rounded-lg font-sans font-semibold text-sm bg-red-700 text-white cursor-pointer hover:bg-red-800"
               >
                 Sim, excluir
               </button>
@@ -119,7 +119,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
             >
               {book.titulo}
             </h3>
-            <p className="font-serif text-base italic mt-0.5" style={{ color: palette.textSecondaryOnPaper }}>
+            <p className="font-sans font-medium text-sm sm:text-base mt-0.5" style={{ color: palette.textSecondaryOnPaper }}>
               {book.autores.join(', ') || 'Autor desconhecido'}
             </p>
           </div>
@@ -203,7 +203,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
               onDismiss();
               onViewDetails(book);
             }}
-            className="w-full py-3 px-4 rounded-xl font-serif font-bold text-base flex items-center justify-center gap-2 shadow-sm cursor-pointer hover:brightness-105 active:scale-98 transition-all"
+            className="w-full py-3 px-4 rounded-xl font-sans font-semibold text-sm sm:text-base flex items-center justify-center gap-2 shadow-sm cursor-pointer hover:brightness-105 active:scale-98 transition-all select-none"
             style={{
               backgroundColor: palette.goldPrimary,
               color: palette.textOnGold,
@@ -220,7 +220,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
                 onDismiss();
                 onOpenLoanModal(book);
               }}
-              className="w-full py-2.5 px-4 rounded-xl font-serif font-bold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+              className="w-full py-2.5 px-4 rounded-xl font-sans font-semibold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all select-none"
               style={{
                 borderColor: isBookBorrowed(book) ? '#f59e0b' : palette.woodBorder,
                 backgroundColor: isBookBorrowed(book) ? '#f59e0b15' : 'transparent',
@@ -242,7 +242,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
               onClick={() => {
                 onToggleFormato(book);
               }}
-              className="w-full py-2 px-4 rounded-xl font-serif font-medium text-xs sm:text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+              className="w-full py-2.5 px-4 rounded-xl font-sans font-medium text-xs sm:text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all select-none"
               style={{
                 borderColor: `${palette.woodBorder}70`,
                 color: palette.textOnPaper,
@@ -250,11 +250,11 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
             >
               {isEbook ? (
                 <>
-                  <BookOpen size={14} /> Mudar para Livro Físico
+                  <BookOpen size={15} /> Mudar para Livro Físico
                 </>
               ) : (
                 <>
-                  <Tablet size={14} /> Mudar para E-book Digital
+                  <Tablet size={15} /> Mudar para E-book Digital
                 </>
               )}
             </button>
@@ -267,7 +267,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
                 onDismiss();
                 onTogglePosse(book);
               }}
-              className="w-full py-2 px-4 rounded-xl font-serif font-semibold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+              className="w-full py-2.5 px-4 rounded-xl font-sans font-medium text-xs sm:text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all select-none"
               style={{
                 borderColor: palette.woodBorder,
                 color: palette.textOnPaper,
@@ -294,7 +294,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
                 onDismiss();
                 onSetStatusLeitura(book, 'lido');
               }}
-              className="w-full py-2 px-4 rounded-xl font-serif font-semibold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+              className="w-full py-2.5 px-4 rounded-xl font-sans font-medium text-xs sm:text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all select-none"
               style={{
                 borderColor: palette.woodBorder,
                 color: palette.textOnPaper,
@@ -312,7 +312,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
                 onDismiss();
                 onSetStatusLeitura(book, 'quero_ler');
               }}
-              className="w-full py-2 px-4 rounded-xl font-serif font-semibold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+              className="w-full py-2.5 px-4 rounded-xl font-sans font-medium text-xs sm:text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all select-none"
               style={{
                 borderColor: palette.woodBorder,
                 color: palette.textOnPaper,
@@ -330,7 +330,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
                 onDismiss();
                 onSetStatusLeitura(book, 'nenhum');
               }}
-              className="w-full py-2 px-4 rounded-xl font-serif text-xs flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+              className="w-full py-2 px-4 rounded-xl font-sans text-xs flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all select-none"
               style={{
                 borderColor: `${palette.woodBorder}60`,
                 color: palette.textSecondaryOnPaper,
@@ -346,7 +346,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
               onDismiss();
               onEdit(book);
             }}
-            className="w-full py-2 px-4 rounded-xl font-serif font-semibold text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98"
+            className="w-full py-2.5 px-4 rounded-xl font-sans font-medium text-xs sm:text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 select-none"
             style={{
               borderColor: `${palette.woodBorder}80`,
               color: palette.textOnPaper,
@@ -359,7 +359,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
           {/* Excluir da Estante */}
           <button
             onClick={() => setShowDeleteConfirm(true)}
-            className="w-full py-2 px-4 rounded-xl font-serif font-medium text-xs flex items-center justify-center gap-2 transition-colors hover:bg-red-50 text-red-700 cursor-pointer mt-1"
+            className="w-full py-2.5 px-4 rounded-xl font-sans font-medium text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors hover:bg-red-50 text-red-700 cursor-pointer mt-1 select-none"
           >
             <Trash2 size={15} />
             Excluir da Estante

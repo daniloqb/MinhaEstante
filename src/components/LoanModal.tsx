@@ -216,7 +216,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
           {/* Nome da Pessoa (Obrigatório) */}
           <div>
             <label
-              className="block text-xs font-serif font-bold mb-1 flex items-center gap-1.5"
+              className="block text-xs font-sans font-semibold mb-1 flex items-center gap-1.5"
               style={{ color: palette.textOnPaper }}
             >
               <User size={14} className="opacity-80" />
@@ -232,7 +232,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
                 if (error) setError(null);
               }}
               placeholder="Ex: João Silva, Maria, Primo Carlos..."
-              className="w-full px-3 py-2 rounded-xl border text-sm font-serif focus:outline-none focus:ring-2 transition-all"
+              className="w-full px-3 py-2 rounded-xl border text-sm font-sans focus:outline-none focus:ring-2 transition-all"
               style={{
                 backgroundColor: palette.paperSurfaceElevated,
                 borderColor: palette.woodBorder,
@@ -244,7 +244,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
           {/* E-mail da Pessoa (Opcional) */}
           <div>
             <label
-              className="block text-xs font-serif font-bold mb-1 flex items-center justify-between"
+              className="block text-xs font-sans font-semibold mb-1 flex items-center justify-between"
               style={{ color: palette.textOnPaper }}
             >
               <span className="flex items-center gap-1.5">
@@ -260,7 +260,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
               value={emailPessoa}
               onChange={(e) => setEmailPessoa(e.target.value)}
               placeholder="exemplo@email.com (para contato ou lembrete)"
-              className="w-full px-3 py-2 rounded-xl border text-sm font-serif focus:outline-none focus:ring-2 transition-all"
+              className="w-full px-3 py-2 rounded-xl border text-sm font-sans focus:outline-none focus:ring-2 transition-all"
               style={{
                 backgroundColor: palette.paperSurfaceElevated,
                 borderColor: palette.woodBorder,
@@ -273,7 +273,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label
-                className="block text-xs font-serif font-bold mb-1 flex items-center gap-1.5"
+                className="block text-xs font-sans font-semibold mb-1 flex items-center gap-1.5"
                 style={{ color: palette.textOnPaper }}
               >
                 <Calendar size={14} className="opacity-80" />
@@ -284,7 +284,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
                 required
                 value={dataEmprestimo}
                 onChange={(e) => setDataEmprestimo(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-3 py-2 rounded-xl border text-xs sm:text-sm font-sans focus:outline-none focus:ring-2 transition-all"
                 style={{
                   backgroundColor: palette.paperSurfaceElevated,
                   borderColor: palette.woodBorder,
@@ -295,7 +295,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
 
             <div>
               <label
-                className="block text-xs font-serif font-bold mb-1 flex items-center gap-1.5"
+                className="block text-xs font-sans font-semibold mb-1 flex items-center gap-1.5"
                 style={{ color: palette.textOnPaper }}
               >
                 <Clock size={14} className="opacity-80" />
@@ -306,7 +306,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
                 required
                 value={dataDevolucao}
                 onChange={(e) => setDataDevolucao(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-3 py-2 rounded-xl border text-xs sm:text-sm font-sans focus:outline-none focus:ring-2 transition-all"
                 style={{
                   backgroundColor: palette.paperSurfaceElevated,
                   borderColor: palette.woodBorder,
@@ -318,11 +318,11 @@ export const LoanModal: React.FC<LoanModalProps> = ({
 
           {/* Atalhos rápidos de prazo */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] font-serif opacity-75 mr-1">Prazo sugerido:</span>
+            <span className="text-xs font-sans opacity-75 mr-1">Prazo sugerido:</span>
             <button
               type="button"
               onClick={() => setDaysAhead(15)}
-              className="px-2.5 py-1 rounded-lg text-xs font-serif border hover:bg-black/5 cursor-pointer active:scale-95 transition-all"
+              className="px-2.5 py-1 rounded-lg text-xs font-sans font-medium border hover:bg-black/5 cursor-pointer active:scale-95 transition-all select-none"
               style={{ borderColor: `${palette.woodBorder}60`, color: palette.textOnPaper }}
             >
               +15 dias
@@ -330,7 +330,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
             <button
               type="button"
               onClick={() => setDaysAhead(30)}
-              className="px-2.5 py-1 rounded-lg text-xs font-serif border hover:bg-black/5 cursor-pointer active:scale-95 transition-all"
+              className="px-2.5 py-1 rounded-lg text-xs font-sans font-medium border hover:bg-black/5 cursor-pointer active:scale-95 transition-all select-none"
               style={{ borderColor: `${palette.woodBorder}60`, color: palette.textOnPaper }}
             >
               +30 dias
@@ -338,7 +338,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
             <button
               type="button"
               onClick={() => setDaysAhead(60)}
-              className="px-2.5 py-1 rounded-lg text-xs font-serif border hover:bg-black/5 cursor-pointer active:scale-95 transition-all"
+              className="px-2.5 py-1 rounded-lg text-xs font-sans font-medium border hover:bg-black/5 cursor-pointer active:scale-95 transition-all select-none"
               style={{ borderColor: `${palette.woodBorder}60`, color: palette.textOnPaper }}
             >
               +60 dias
@@ -348,7 +348,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
           {/* Observações Opcionais */}
           <div>
             <label
-              className="block text-xs font-serif font-bold mb-1"
+              className="block text-xs font-sans font-semibold mb-1"
               style={{ color: palette.textOnPaper }}
             >
               Observações (Opcional)
@@ -358,7 +358,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}
               placeholder="Ex: Emprestado durante o clube do livro, cuidar da capa..."
-              className="w-full px-3 py-2 rounded-xl border text-xs font-serif focus:outline-none focus:ring-2 resize-none"
+              className="w-full px-3 py-2 rounded-xl border text-xs sm:text-sm font-sans focus:outline-none focus:ring-2 resize-none"
               style={{
                 backgroundColor: palette.paperSurfaceElevated,
                 borderColor: palette.woodBorder,
@@ -376,7 +376,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
                   onReturnBook(book);
                   onClose();
                 }}
-                className="w-full sm:w-auto px-3.5 py-2 rounded-xl font-serif font-bold text-xs border border-emerald-600 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                className="w-full sm:w-auto px-3.5 py-2 rounded-xl font-sans font-semibold text-xs border border-emerald-600 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all select-none"
               >
                 <CheckCircle2 size={15} />
                 <span>Marcar como Devolvido</span>
@@ -387,7 +387,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 sm:flex-none px-4 py-2 rounded-xl font-serif text-xs border cursor-pointer hover:bg-black/5"
+                className="flex-1 sm:flex-none px-4 py-2 rounded-xl font-sans font-medium text-xs sm:text-sm border cursor-pointer hover:bg-black/5 select-none"
                 style={{
                   borderColor: palette.woodBorder,
                   color: palette.textOnPaper,
@@ -398,7 +398,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
 
               <button
                 type="submit"
-                className="flex-1 sm:flex-none px-5 py-2 rounded-xl font-serif font-bold text-xs shadow-md flex items-center justify-center gap-1.5 cursor-pointer hover:brightness-105 active:scale-95 transition-all"
+                className="flex-1 sm:flex-none px-5 py-2 rounded-xl font-sans font-semibold text-xs sm:text-sm shadow-md flex items-center justify-center gap-1.5 cursor-pointer hover:brightness-105 active:scale-95 transition-all select-none"
                 style={{
                   backgroundColor: palette.goldPrimary,
                   color: palette.textOnGold,

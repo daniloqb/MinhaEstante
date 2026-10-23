@@ -35,8 +35,12 @@ interface SettingsBackupScreenProps {
   onGroupByChange: (mode: GroupByMode) => void;
   isLightOak: boolean;
   onToggleTheme: () => void;
-  apiKey: string;
-  onApiKeyChange: (key: string) => void;
+  apiKey?: string;
+  onApiKeyChange?: (key: string) => void;
+  googleBooksApiKey?: string;
+  onGoogleBooksApiKeyChange?: (key: string) => void;
+  geminiApiKey?: string;
+  onGeminiApiKeyChange?: (key: string) => void;
   onExportCsv?: () => string;
   onExportJson?: () => string;
   onImportCsv?: (csvContent: string) => { count: number } | Promise<{ count: number }>;
@@ -53,8 +57,12 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
   onGroupByChange,
   isLightOak,
   onToggleTheme,
-  apiKey,
+  apiKey = '',
   onApiKeyChange,
+  googleBooksApiKey = '',
+  onGoogleBooksApiKeyChange,
+  geminiApiKey = '',
+  onGeminiApiKeyChange,
   books = [],
   onUpdateAllBooks,
 }) => {
@@ -267,16 +275,16 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                 borderColor: `${palette.woodBorder}30`,
               }}
             >
-              <span className="font-bold font-serif text-sm truncate" style={{ color: palette.textOnPaper }}>
+              <span className="font-semibold font-sans text-sm truncate" style={{ color: palette.textOnPaper }}>
                 📦 {pendingZipFile.name}
               </span>
-              <span className="text-[11px] opacity-75">
+              <span className="text-xs font-sans tabular-nums opacity-80">
                 Tamanho: {(pendingZipFile.size / 1024).toFixed(1)} KB
               </span>
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-serif font-bold" style={{ color: palette.textOnPaper }}>
+              <label className="text-xs sm:text-sm font-sans font-semibold" style={{ color: palette.textOnPaper }}>
                 Escolha o modo de restauração:
               </label>
 
@@ -298,11 +306,11 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                   onChange={() => setRestoreMode('replace')}
                   className="mt-0.5 accent-amber-800"
                 />
-                <div className="flex flex-col gap-0.5 text-xs">
-                  <span className="font-serif font-bold text-amber-950">
+                <div className="flex flex-col gap-0.5 text-xs sm:text-sm font-sans">
+                  <span className="font-semibold text-amber-950">
                     Substituir biblioteca atual (Recomendado para restauração completa)
                   </span>
-                  <span className="text-[11px] text-stone-600">
+                  <span className="text-xs text-stone-700">
                     A biblioteca atual será substituída integralmente pelos dados do backup, garantindo consistência total de capas e IDs.
                   </span>
                 </div>
@@ -326,11 +334,11 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                   onChange={() => setRestoreMode('merge')}
                   className="mt-0.5 accent-amber-800"
                 />
-                <div className="flex flex-col gap-0.5 text-xs">
-                  <span className="font-serif font-bold text-amber-950">
+                <div className="flex flex-col gap-0.5 text-xs sm:text-sm font-sans">
+                  <span className="font-semibold text-amber-950">
                     Mesclar com a biblioteca atual
                   </span>
-                  <span className="text-[11px] text-stone-600">
+                  <span className="text-xs text-stone-700">
                     Preserva os livros que já estão no aparelho e adiciona os registros e capas novos contidos no ZIP.
                   </span>
                 </div>
@@ -338,8 +346,8 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
             </div>
 
             {restoreMode === 'replace' && (
-              <div className="p-2.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-[11px] leading-relaxed flex items-start gap-2 text-amber-950">
-                <AlertTriangle size={15} className="text-amber-700 shrink-0 mt-0.5" />
+              <div className="p-2.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-xs font-sans leading-relaxed flex items-start gap-2 text-amber-950">
+                <AlertTriangle size={16} className="text-amber-800 shrink-0 mt-0.5" />
                 <span>
                   <strong>Aviso de segurança:</strong> A biblioteca atual será substituída. Em caso de qualquer falha durante a leitura do ZIP, o sistema reverterá automaticamente a ação para manter seus dados seguros.
                 </span>
@@ -353,7 +361,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                   setShowZipRestoreModal(false);
                   setPendingZipFile(null);
                 }}
-                className="px-4 py-2 rounded-lg font-serif text-xs border cursor-pointer hover:bg-black/5"
+                className="px-4 py-2 rounded-lg font-sans font-semibold text-xs sm:text-sm border cursor-pointer hover:bg-black/5 select-none"
                 style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
               >
                 Cancelar
@@ -361,7 +369,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
               <button
                 type="button"
                 onClick={handleConfirmRestoreZip}
-                className="px-5 py-2 rounded-lg font-serif font-bold text-xs shadow-md cursor-pointer hover:brightness-105 active:scale-95 transition-all text-white"
+                className="px-5 py-2 rounded-lg font-sans font-semibold text-xs sm:text-sm shadow-md cursor-pointer hover:brightness-105 active:scale-95 transition-all text-white select-none"
                 style={{ backgroundColor: palette.woodBorder }}
               >
                 Iniciar Restauração
@@ -382,28 +390,28 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
               color: palette.textOnPaper,
             }}
           >
-            <div className="flex items-center gap-2.5 font-serif font-bold text-base text-red-900">
+            <div className="flex items-center gap-2.5 font-serif font-bold text-base sm:text-lg text-red-900">
               <span className="p-2 rounded-xl bg-red-100 text-red-600 flex items-center justify-center">
                 <Trash2 size={20} />
               </span>
               <div>
                 <h4 className="leading-tight">Atenção: Limpar todos os livros?</h4>
-                <p className="text-[11px] font-sans font-normal opacity-70" style={{ color: palette.textSecondaryOnPaper }}>
+                <p className="text-xs font-sans font-normal opacity-75" style={{ color: palette.textSecondaryOnPaper }}>
                   Ação destrutiva irreversível sem backup
                 </p>
               </div>
             </div>
 
-            <p className="text-xs leading-relaxed" style={{ color: palette.textOnPaper }}>
+            <p className="text-xs sm:text-sm font-sans leading-relaxed" style={{ color: palette.textOnPaper }}>
               Você está prestes a apagar permanentemente todos os <strong>{books.length} {books.length === 1 ? 'livro' : 'livros'}</strong> da sua estante neste dispositivo.
             </p>
 
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-950 text-xs flex flex-col gap-2">
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-950 text-xs sm:text-sm font-sans flex flex-col gap-2">
               <span className="font-bold flex items-center gap-1.5 text-amber-900">
-                <AlertTriangle size={15} className="text-amber-700 shrink-0" />
+                <AlertTriangle size={16} className="text-amber-700 shrink-0" />
                 Deseja salvar um backup antes?
               </span>
-              <p className="text-[11px] opacity-90 leading-relaxed">
+              <p className="text-xs opacity-90 leading-relaxed">
                 Você pode exportar o arquivo de backup completo (.ZIP) com todas as capas agora para não perder sua coleção.
               </p>
               <button
@@ -411,7 +419,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                 onClick={() => {
                   handleExportZip();
                 }}
-                className="mt-0.5 py-2 px-3 rounded-lg font-serif font-bold text-xs border border-amber-400/80 bg-amber-100 hover:bg-amber-200 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer text-amber-950 shadow-xs"
+                className="mt-0.5 py-2 px-3 rounded-lg font-sans font-semibold text-xs sm:text-sm border border-amber-400/80 bg-amber-100 hover:bg-amber-200 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer text-amber-950 shadow-xs select-none"
               >
                 <Download size={14} />
                 <span>Salvar Backup Completo (.ZIP) de Segurança</span>
@@ -422,7 +430,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setIsClearModalOpen(false)}
-                className="px-4 py-2 rounded-lg font-serif text-xs border cursor-pointer hover:bg-black/5"
+                className="px-4 py-2 rounded-lg font-sans font-semibold text-xs sm:text-sm border cursor-pointer hover:bg-black/5 select-none"
                 style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
               >
                 Cancelar
@@ -430,7 +438,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
               <button
                 type="button"
                 onClick={handleConfirmClearAll}
-                className="px-4 py-2 rounded-lg font-serif font-bold text-xs bg-red-600 hover:bg-red-700 text-white shadow-sm cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+                className="px-4 py-2 rounded-lg font-sans font-semibold text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white shadow-sm cursor-pointer active:scale-95 transition-all flex items-center gap-1.5 select-none"
               >
                 <Trash2 size={14} />
                 <span>Sim, Limpar Tudo</span>
@@ -458,13 +466,13 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
               </div>
               <div>
                 <h3
-                  className="font-serif font-bold text-lg leading-tight"
+                  className="font-serif font-bold text-lg sm:text-xl leading-tight"
                   style={{ color: palette.textOnPaper }}
                 >
                   {t.settings.languageAndRegion}
                 </h3>
                 <p
-                  className="text-xs font-serif opacity-80"
+                  className="text-xs sm:text-sm font-sans opacity-85"
                   style={{ color: palette.textSecondaryOnPaper }}
                 >
                   {t.settings.languageAndRegionDesc}
@@ -473,7 +481,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
             </div>
 
             <span
-              className="px-2.5 py-1 rounded-full text-xs font-serif font-bold border flex items-center gap-1.5 shrink-0"
+              className="px-2.5 py-1 rounded-full text-xs font-sans font-bold border flex items-center gap-1.5 shrink-0"
               style={{
                 backgroundColor: `${palette.goldPrimary}20`,
                 borderColor: palette.goldPrimary,
@@ -489,11 +497,11 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
           <div className="flex flex-col gap-2 pt-1">
             <label
               htmlFor="country-language-combobox"
-              className="text-xs font-serif font-bold flex items-center justify-between"
+              className="text-xs sm:text-sm font-sans font-semibold flex items-center justify-between"
               style={{ color: palette.textOnPaper }}
             >
               <span>{t.settings.currentLanguage}:</span>
-              <span className="text-[11px] font-sans font-normal opacity-75">
+              <span className="text-xs font-sans font-normal opacity-80">
                 {currentLocaleInfo.name}
               </span>
             </label>
@@ -509,7 +517,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                   setStatusMessage(`Idioma alterado para ${locInfo ? locInfo.name : newLoc}!`);
                   setTimeout(() => setStatusMessage(null), 3000);
                 }}
-                className="w-full appearance-none pl-11 pr-10 py-3 rounded-xl border text-sm sm:text-base font-serif font-bold shadow-xs focus:outline-none focus:ring-2 cursor-pointer transition-all"
+                className="w-full appearance-none pl-11 pr-10 py-3 rounded-xl border text-sm sm:text-base font-sans font-semibold shadow-xs focus:outline-none focus:ring-2 cursor-pointer transition-all"
                 style={{
                   backgroundColor: palette.paperSurfaceElevated,
                   borderColor: palette.woodBorder,
@@ -542,7 +550,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
             </div>
 
             <div
-              className="flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-serif"
+              className="flex items-center justify-between px-3 py-2 rounded-lg border text-xs sm:text-sm font-sans"
               style={{
                 backgroundColor: `${palette.goldPrimary}12`,
                 borderColor: `${palette.goldPrimary}35`,
@@ -550,10 +558,10 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
               }}
             >
               <span className="flex items-center gap-1.5 font-medium">
-                <CheckCircle2 size={14} className="text-emerald-700" />
+                <CheckCircle2 size={15} className="text-emerald-700" />
                 <span>Ativo: <strong>{currentLocaleInfo.country}</strong> ({currentLocaleInfo.language})</span>
               </span>
-              <span className="opacity-75 font-mono text-[11px]">{locale}</span>
+              <span className="opacity-80 font-mono text-xs">{locale}</span>
             </div>
           </div>
         </PaperCard>
@@ -569,10 +577,10 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
 
           <div className="flex items-center justify-between pt-1">
             <div>
-              <p className="font-semibold text-sm" style={{ color: palette.textOnPaper }}>
+              <p className="font-semibold text-sm sm:text-base font-sans" style={{ color: palette.textOnPaper }}>
                 {isLightOak ? 'Carvalho Claro (Light Oak)' : 'Nogueira Escura Clássica'}
               </p>
-              <p className="text-xs" style={{ color: palette.textSecondaryOnPaper }}>
+              <p className="text-xs sm:text-sm font-sans" style={{ color: palette.textSecondaryOnPaper }}>
                 {isLightOak
                   ? 'Madeira suave com iluminação dourada'
                   : 'Madeira nobre escura de biblioteca clássica'}
@@ -606,14 +614,14 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
           </div>
 
           <div>
-            <label className="text-xs font-semibold block mb-2" style={{ color: palette.textOnPaper }}>
+            <label className="text-xs sm:text-sm font-sans font-semibold block mb-2" style={{ color: palette.textOnPaper }}>
               Modo de Exibição Padrão:
             </label>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => onViewModeChange('CAPAS')}
-                className="flex-1 py-2 rounded-lg font-serif font-semibold text-xs border cursor-pointer transition-colors"
+                className="flex-1 py-2 sm:py-2.5 rounded-lg font-sans font-semibold text-xs sm:text-sm border cursor-pointer transition-colors select-none"
                 style={{
                   backgroundColor: currentViewMode === 'CAPAS' ? palette.goldPrimary : 'transparent',
                   color: currentViewMode === 'CAPAS' ? palette.textOnGold : palette.textOnPaper,
@@ -625,7 +633,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
               <button
                 type="button"
                 onClick={() => onViewModeChange('LISTA')}
-                className="flex-1 py-2 rounded-lg font-serif font-semibold text-xs border cursor-pointer transition-colors"
+                className="flex-1 py-2 sm:py-2.5 rounded-lg font-sans font-semibold text-xs sm:text-sm border cursor-pointer transition-colors select-none"
                 style={{
                   backgroundColor: currentViewMode === 'LISTA' ? palette.goldPrimary : 'transparent',
                   color: currentViewMode === 'LISTA' ? palette.textOnGold : palette.textOnPaper,
@@ -638,7 +646,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
           </div>
 
           <div>
-            <label className="text-xs font-semibold block mb-2" style={{ color: palette.textOnPaper }}>
+            <label className="text-xs sm:text-sm font-sans font-semibold block mb-2" style={{ color: palette.textOnPaper }}>
               Agrupamento das Prateleiras:
             </label>
             <div className="flex gap-2">
@@ -653,7 +661,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                     key={m.id}
                     type="button"
                     onClick={() => onGroupByChange(m.id as GroupByMode)}
-                    className="flex-1 py-2 rounded-lg font-serif font-semibold text-xs border cursor-pointer transition-colors"
+                    className="flex-1 py-2 sm:py-2.5 rounded-lg font-sans font-semibold text-xs sm:text-sm border cursor-pointer transition-colors select-none"
                     style={{
                       backgroundColor: isSelected ? palette.woodBorder : 'transparent',
                       color: isSelected ? '#FFFFFF' : palette.textOnPaper,
@@ -668,30 +676,104 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
           </div>
         </PaperCard>
 
-        {/* Chave da API Google Gemini & Google Books */}
-        <PaperCard palette={palette} elevated className="flex flex-col gap-2">
+        {/* Chaves de API: Google Books e Google Gemini */}
+        <PaperCard palette={palette} elevated className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
             <Key size={20} color={palette.woodBorder} />
             <h3 className="font-serif font-bold text-xl" style={{ color: palette.textOnPaper }}>
-              Chave da API Google Gemini & Books (Opcional)
+              Chaves de API & Integrações
             </h3>
           </div>
-          <p className="text-xs leading-relaxed" style={{ color: palette.textSecondaryOnPaper }}>
-            O aplicativo já conta com inteligência artificial e busca integradas gratuitamente. Se desejar prioridade máxima e resumos literários sem filas ou limites compartilhados de cota, você pode inserir sua própria chave gratuita gerada em <strong>aistudio.google.com</strong>.
-          </p>
 
-          <input
-            type="text"
-            value={apiKey}
-            onChange={(e) => onApiKeyChange(e.target.value)}
-            placeholder="AIzaSy... (Chave gratuita do Google AI Studio)"
-            className="w-full px-3 py-2 rounded-lg border text-sm font-mono focus:outline-none focus:ring-1 mt-1"
-            style={{
-              backgroundColor: palette.paperSurfaceElevated,
-              borderColor: palette.woodBorder,
-              color: palette.textOnPaper,
-            }}
-          />
+          {/* 1. Google Books API Key (Camada D - BYOK Chave Pessoal) */}
+          <div className="flex flex-col gap-2 p-3.5 rounded-xl border" style={{ backgroundColor: palette.paperSurfaceElevated, borderColor: `${palette.woodBorder}40` }}>
+            <div className="flex items-center justify-between">
+              <label className="text-xs sm:text-sm font-semibold font-sans flex items-center gap-1.5" style={{ color: palette.textOnPaper }}>
+                <span>📚 Chave Pessoal da API Google Books</span>
+                <span className={`text-[10px] font-sans font-semibold px-2 py-0.5 rounded ${googleBooksApiKey ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-200 text-stone-800'}`}>
+                  {googleBooksApiKey ? '✓ Ativa' : 'Opcional (BYOK)'}
+                </span>
+              </label>
+              <span className="text-[10px] opacity-75 font-mono">Pesquisa Textual & Capas HD</span>
+            </div>
+
+            <p className="text-xs leading-relaxed font-sans" style={{ color: palette.textSecondaryOnPaper }}>
+              Sua chave pessoal garante acesso prioritário e <strong>evita erros de limite anônimo (HTTP 429)</strong>. A chave fica gravada exclusivamente na memória segura do seu dispositivo.
+            </p>
+
+            <div className="flex gap-2 items-center">
+              <input
+                type="text"
+                value={googleBooksApiKey}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (onGoogleBooksApiKeyChange) onGoogleBooksApiKeyChange(val);
+                }}
+                placeholder="Cole sua chave: AIzaSy..."
+                className="flex-1 px-3 py-2 rounded-lg border text-xs sm:text-sm font-mono focus:outline-none focus:ring-1"
+                style={{
+                  backgroundColor: palette.paperSurface,
+                  borderColor: palette.woodBorder,
+                  color: palette.textOnPaper,
+                }}
+              />
+              {googleBooksApiKey && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onGoogleBooksApiKeyChange) onGoogleBooksApiKeyChange('');
+                  }}
+                  className="px-3 py-2 rounded-lg border text-xs sm:text-sm font-sans font-semibold opacity-80 hover:opacity-100 hover:bg-black/5 cursor-pointer transition-colors select-none"
+                  style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
+                  title="Remover chave"
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
+
+            <details className="text-[11px] mt-1 font-sans opacity-85 cursor-pointer">
+              <summary className="font-semibold underline hover:opacity-100" style={{ color: palette.woodBorder }}>
+                Como criar sua chave gratuita em 1 minuto no Google Cloud?
+              </summary>
+              <ol className="list-decimal pl-4 mt-2 space-y-1 text-[10.5px] leading-normal" style={{ color: palette.textOnPaper }}>
+                <li>Acesse <strong>console.cloud.google.com/apis/credentials</strong></li>
+                <li>Clique em <strong>+ Criar credenciais &gt; Chave de API</strong></li>
+                <li>Em <strong>APIs e Serviços &gt; Biblioteca</strong>, ative a <strong>Books API</strong> (gratuita)</li>
+                <li>Copie a chave gerada e cole no campo acima</li>
+              </ol>
+            </details>
+          </div>
+
+          {/* 2. Google Gemini API Key */}
+          <div className="flex flex-col gap-1.5 p-3 rounded-xl border" style={{ backgroundColor: palette.paperSurfaceElevated, borderColor: `${palette.woodBorder}40` }}>
+            <div className="flex items-center justify-between">
+              <label className="text-xs sm:text-sm font-semibold font-sans flex items-center gap-1.5" style={{ color: palette.textOnPaper }}>
+                <span>✨ Chave da API Google Gemini</span>
+                <span className="text-[10px] font-sans font-medium px-2 py-0.5 rounded bg-amber-100 text-amber-900">IA / Resumos</span>
+              </label>
+              <span className="text-[10px] opacity-75 font-mono">aistudio.google.com</span>
+            </div>
+            <p className="text-xs leading-relaxed font-sans" style={{ color: palette.textSecondaryOnPaper }}>
+              Utilizada para gerar <strong>resumos literários</strong> detalhados na estante e como mecanismo complementar excepcional de descoberta bibliográfica quando uma obra não for localizada nas fontes convencionais.
+            </p>
+            <input
+              type="text"
+              value={geminiApiKey || apiKey}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (onGeminiApiKeyChange) onGeminiApiKeyChange(val);
+                if (onApiKeyChange) onApiKeyChange(val);
+              }}
+              placeholder="Ex: AIzaSy... (Chave gratuita do Google AI Studio)"
+              className="w-full px-3 py-2 rounded-lg border text-xs sm:text-sm font-mono focus:outline-none focus:ring-1 mt-1"
+              style={{
+                backgroundColor: palette.paperSurface,
+                borderColor: palette.woodBorder,
+                color: palette.textOnPaper,
+              }}
+            />
+          </div>
         </PaperCard>
 
         {/* Armazenamento de Capas e Backup Offline */}
@@ -704,7 +786,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
               </h3>
             </div>
             <span
-              className="text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider"
+              className="text-[10px] font-sans px-2.5 py-0.5 rounded font-bold uppercase tracking-wider"
               style={{
                 backgroundColor: '#10b98120',
                 color: '#065f46',
@@ -716,7 +798,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
           </div>
 
           <div
-            className="p-3 rounded-xl border text-xs sm:text-sm leading-relaxed"
+            className="p-3 rounded-xl border text-xs sm:text-sm leading-relaxed font-sans"
             style={{
               backgroundColor: palette.paperSurfaceElevated,
               borderColor: `${palette.woodBorder}40`,
@@ -745,10 +827,10 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                 borderColor: palette.goldPrimary,
               }}
             >
-              <span className="font-bold text-base font-serif" style={{ color: palette.woodBorder }}>
+              <span className="font-bold text-lg font-sans tabular-nums" style={{ color: palette.woodBorder }}>
                 {localCoversCount}
               </span>
-              <span className="text-[11px]" style={{ color: palette.textSecondaryOnPaper }}>
+              <span className="text-xs font-sans" style={{ color: palette.textSecondaryOnPaper }}>
                 Capas salvas localmente (seguras no backup)
               </span>
             </div>
@@ -760,10 +842,10 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                 borderColor: remoteCoversCount > 0 ? '#f59e0b' : palette.paperBorder,
               }}
             >
-              <span className="font-bold text-base font-serif" style={{ color: palette.woodBorder }}>
+              <span className="font-bold text-lg font-sans tabular-nums" style={{ color: palette.woodBorder }}>
                 {remoteCoversCount}
               </span>
-              <span className="text-[11px]" style={{ color: palette.textSecondaryOnPaper }}>
+              <span className="text-xs font-sans" style={{ color: palette.textSecondaryOnPaper }}>
                 {remoteCoversCount > 0
                   ? 'Ainda puxando por link externo da internet'
                   : 'Nenhum link externo pendente'}
@@ -774,12 +856,12 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
           {/* Barra de progresso se estiver baixando em lote */}
           {isBatchCaching && batchProgress && (
             <div className="flex flex-col gap-1.5 p-3 rounded-lg bg-black/5 border border-black/10">
-              <div className="flex items-center justify-between text-xs font-serif font-bold">
+              <div className="flex items-center justify-between text-xs font-sans font-bold">
                 <span className="flex items-center gap-1.5 text-amber-900">
                   <Loader2 size={13} className="animate-spin" />
                   Baixando e comprimindo capas...
                 </span>
-                <span>
+                <span className="tabular-nums">
                   {batchProgress.current} / {batchProgress.total}
                 </span>
               </div>
@@ -801,7 +883,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
               type="button"
               onClick={handleBatchCacheCovers}
               disabled={isBatchCaching}
-              className="w-full py-3 px-4 rounded-xl font-serif font-bold text-sm shadow-md flex items-center justify-center gap-2 cursor-pointer hover:brightness-105 active:scale-98 transition-all disabled:opacity-60"
+              className="w-full py-3 px-4 rounded-xl font-sans font-semibold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 cursor-pointer hover:brightness-105 active:scale-98 transition-all disabled:opacity-60 select-none"
               style={{
                 backgroundColor: palette.goldPrimary,
                 color: palette.textOnGold,
@@ -823,7 +905,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
           )}
 
           {remoteCoversCount === 0 && localCoversCount > 0 && (
-            <div className="flex items-center gap-2 text-xs font-serif font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 rounded-lg p-2.5">
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-sans font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 rounded-lg p-2.5">
               <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
               <span>Todas as capas da sua biblioteca já estão guardadas no aparelho e serão exportadas no backup JSON!</span>
             </div>
@@ -841,23 +923,23 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
               </h3>
             </div>
             <span
-              className="text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider"
+              className="text-[10px] font-sans px-2.5 py-0.5 rounded font-bold uppercase tracking-wider"
               style={{
                 backgroundColor: `${palette.goldPrimary}20`,
-                color: palette.goldPrimary,
-                border: `1px solid ${palette.goldPrimary}40`,
+                color: palette.woodDark,
+                border: `1px solid ${palette.goldPrimary}60`,
               }}
             >
               100% Offline
             </span>
           </div>
 
-          <p className="text-xs leading-relaxed" style={{ color: palette.textSecondaryOnPaper }}>
+          <p className="text-xs sm:text-sm font-sans leading-relaxed" style={{ color: palette.textSecondaryOnPaper }}>
             Salve ou restaure sua biblioteca inteira quando quiser. Funciona diretamente no seu aparelho, sem depender de nuvem de terceiros.
           </p>
 
           <div
-            className="p-2.5 rounded-lg border text-[11px] leading-relaxed flex items-center gap-2"
+            className="p-2.5 rounded-lg border text-xs font-sans leading-relaxed flex items-center gap-2"
             style={{
               backgroundColor: palette.paperSurfaceElevated,
               borderColor: `${palette.woodBorder}35`,
@@ -878,22 +960,22 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="font-serif font-bold text-sm flex items-center gap-2" style={{ color: palette.textOnPaper }}>
+              <span className="font-serif font-bold text-base flex items-center gap-2" style={{ color: palette.textOnPaper }}>
                 <Archive size={18} className="text-amber-800" />
                 Backup Completo Portátil (.ZIP)
               </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-amber-800 text-white">
+              <span className="text-[10px] font-sans px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-amber-800 text-white">
                 Recomendado
               </span>
             </div>
 
-            <p className="text-xs leading-relaxed" style={{ color: palette.textOnPaper }}>
+            <p className="text-xs sm:text-sm font-sans leading-relaxed" style={{ color: palette.textOnPaper }}>
               Exporta sua biblioteca inteira com <strong>manifesto estruturado, banco de livros e todos os arquivos de capas físicas</strong>. Compatível entre Android, iOS e Web.
             </p>
 
             {/* Progresso de exportação ou restauração do ZIP */}
             {(isGeneratingZip || isRestoringZip) && (
-              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-black/5 border border-black/10 text-xs font-serif font-bold animate-pulse">
+              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-black/5 border border-black/10 text-xs font-sans font-semibold animate-pulse">
                 <Loader2 size={16} className="animate-spin text-amber-900 shrink-0" />
                 <span>{zipProgress || 'Processando arquivo ZIP...'}</span>
               </div>
@@ -904,7 +986,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                 type="button"
                 onClick={handleExportZip}
                 disabled={isGeneratingZip || isRestoringZip}
-                className="py-3 px-3.5 rounded-xl font-serif font-bold text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer hover:brightness-105 active:scale-98 transition-all disabled:opacity-60"
+                className="py-3 px-3.5 rounded-xl font-sans font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md cursor-pointer hover:brightness-105 active:scale-98 transition-all disabled:opacity-60 select-none"
                 style={{ backgroundColor: palette.goldPrimary, color: palette.textOnGold }}
               >
                 <Download size={16} />
@@ -915,7 +997,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                 type="button"
                 onClick={() => zipFileInputRef.current?.click()}
                 disabled={isGeneratingZip || isRestoringZip}
-                className="py-3 px-3.5 rounded-xl font-serif font-bold text-xs flex items-center justify-center gap-2 shadow-sm cursor-pointer hover:brightness-105 active:scale-98 transition-all text-white disabled:opacity-60"
+                className="py-3 px-3.5 rounded-xl font-sans font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer hover:brightness-105 active:scale-98 transition-all text-white disabled:opacity-60 select-none"
                 style={{ backgroundColor: palette.woodBorder }}
               >
                 <Upload size={16} />
@@ -932,16 +1014,14 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
             </div>
           </div>
 
-
-
             {/* Gerenciamento / Limpar Tudo */}
             <div className="pt-2.5 mt-1 border-t border-black/10 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs font-serif font-bold text-red-900">
+                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-sans font-semibold text-red-900">
                   <Trash2 size={14} className="text-red-600" />
                   <span>Gerenciamento da Estante</span>
                 </div>
-                <span className="text-[11px] font-mono opacity-70" style={{ color: palette.textSecondaryOnPaper }}>
+                <span className="text-xs font-sans tabular-nums opacity-75" style={{ color: palette.textSecondaryOnPaper }}>
                   {books.length} {books.length === 1 ? 'livro salvo' : 'livros salvos'}
                 </span>
               </div>
@@ -953,9 +1033,9 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                   borderColor: '#ef444430',
                 }}
               >
-                <div className="text-xs font-serif flex flex-col gap-0.5">
-                  <span className="font-bold text-red-950">Limpar Tudo</span>
-                  <span className="text-[11px] opacity-80" style={{ color: palette.textOnPaper }}>
+                <div className="text-xs sm:text-sm font-sans flex flex-col gap-0.5">
+                  <span className="font-semibold text-red-950">Limpar Tudo</span>
+                  <span className="text-xs opacity-80" style={{ color: palette.textOnPaper }}>
                     Apaga todos os livros locais da estante para recomeçar sua biblioteca do zero.
                   </span>
                 </div>
@@ -964,7 +1044,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                   type="button"
                   onClick={() => setIsClearModalOpen(true)}
                   disabled={books.length === 0}
-                  className="px-3.5 py-2 rounded-lg font-serif font-bold text-xs flex items-center justify-center gap-1.5 border border-red-300 bg-red-100/90 text-red-900 hover:bg-red-200 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs"
+                  className="px-3.5 py-2 rounded-lg font-sans font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 border border-red-300 bg-red-100/90 text-red-900 hover:bg-red-200 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-xs select-none"
                 >
                   <Trash2 size={14} className="text-red-700" />
                   <span>Limpar Tudo</span>
@@ -981,7 +1061,7 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
             className="font-serif font-bold text-lg"
             style={{ color: palette.goldPrimary }}
           >
-            Minha Estante · v1.0.0 (Build 20)
+            Booknook · v1.0.0 (Build 20)
           </span>
           <span
             className="text-xs opacity-80"

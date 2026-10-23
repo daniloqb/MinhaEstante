@@ -63,7 +63,7 @@ export const StarRatingBar: React.FC<StarRatingBarProps> = ({
 
       {showLabel && (
         <span
-          className="font-serif font-semibold text-sm ml-1"
+          className="font-sans font-semibold text-sm ml-1.5 tabular-nums select-none"
           style={{ color: textColor }}
         >
           {rating != null ? `${rating}/10` : 'Sem nota'}
