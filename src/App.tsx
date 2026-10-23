@@ -11,7 +11,7 @@ import {
   isBookInTab,
 } from './types/book';
 import { getPalette } from './theme/woodTheme';
-import { BookStorage } from './services/storage';
+import { BookStorage, areBooksDuplicate } from './services/storage';
 import { BookDiscoveryEngine, ProviderStatus } from './features/book-discovery';
 import { NativeService } from './services/nativeService';
 
@@ -26,6 +26,7 @@ import { DuplicateConflictModal } from './components/DuplicateConflictModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 
 // Screens
+import { LandingHomeScreen } from './screens/LandingHomeScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { LoansScreen } from './screens/LoansScreen';
 import { BookDetailScreen } from './screens/BookDetailScreen';
@@ -47,7 +48,7 @@ export const App: React.FC = () => {
   const [googleApiKey, setGoogleApiKey] = useState<string>(() => BookStorage.loadApiKey());
 
   // Navigation State
-  const [currentTab, setCurrentTab] = useState<MainTab>('ESTANTE');
+  const [currentTab, setCurrentTab] = useState<MainTab>('INICIO');
   const [selectedBookDetail, setSelectedBookDetail] = useState<Book | null>(null);
   const [isManualRegisterOpen, setIsManualRegisterOpen] = useState(false);
 
@@ -85,7 +86,7 @@ export const App: React.FC = () => {
   }, [toastMessage]);
 
   // Navegação Histórica para Botão Voltar do Smartphone (Android & Navegador)
-  const tabStackRef = React.useRef<MainTab[]>(['ESTANTE']);
+  const tabStackRef = React.useRef<MainTab[]>(['INICIO']);
   const historyDepthRef = React.useRef<number>(0);
   const navStateRef = React.useRef({
     orphanConflictBook,
@@ -168,28 +169,28 @@ export const App: React.FC = () => {
       return true;
     }
 
-    // 3. Voltar para a aba anterior até chegar na tela principal (ESTANTE)
+    // 3. Voltar para a aba anterior até chegar na tela principal (INICIO)
     if (tabStackRef.current.length > 1) {
       tabStackRef.current.pop();
-      const prevTab = tabStackRef.current[tabStackRef.current.length - 1] || 'ESTANTE';
+      const prevTab = tabStackRef.current[tabStackRef.current.length - 1] || 'INICIO';
       setCurrentTab(prevTab);
       return true;
     }
 
-    if (s.currentTab !== 'ESTANTE') {
-      tabStackRef.current = ['ESTANTE'];
-      setCurrentTab('ESTANTE');
+    if (s.currentTab !== 'INICIO') {
+      tabStackRef.current = ['INICIO'];
+      setCurrentTab('INICIO');
       return true;
     }
 
-    // 4. Já está na tela principal (ESTANTE) sem nada sobreposto -> sinaliza que pode sair
+    // 4. Já está na tela principal (INICIO) sem nada sobreposto -> sinaliza que pode sair
     return false;
   }, []);
 
   useEffect(() => {
     try {
       historyDepthRef.current = 0;
-      window.history.replaceState({ screen: 'root', tab: 'ESTANTE', depth: 0 }, '', '#estante');
+      window.history.replaceState({ screen: 'root', tab: 'INICIO', depth: 0 }, '', '#inicio');
     } catch {
       // ignore
     }
@@ -873,6 +874,70 @@ export const App: React.FC = () => {
     pushNavState(`tab-${tab}`, { tab });
   }, [currentTab, pushNavState]);
 
+  // Abertura da estante por atalhos rápidos com filtro limpo e previsível
+  const handleOpenShelfWithStatus = useCallback(
+    (targetStatus: ShelfTab) => {
+      // Limpa filtro textual residual para garantir que a coleção seja exibida
+      setTextQuery('');
+      setSelectedYear(null);
+      setSelectedGenre(null);
+      setSelectedRatingMin(null);
+      setSelectedFormat(null);
+      setStatusTab(targetStatus);
+      handleBottomTabChange('ESTANTE');
+    },
+    [handleBottomTabChange]
+  );
+
+  // Abertura de prévia de livro externo vindo da Home com detecção de duplicatas
+  const handleSelectExternalBook = useCallback(
+    (item: SearchResultBook) => {
+      const existingInLibrary = (books || []).find((b) => areBooksDuplicate(b, item));
+      if (existingInLibrary) {
+        handleOpenBookDetail(existingInLibrary);
+      } else {
+        const previewBook: Book = {
+          id: 0,
+          origem: item.origem || 'openlibrary',
+          idExterno: item.idExterno,
+          titulo: item.titulo,
+          subtitulo: item.subtitulo,
+          autores: item.autores || [],
+          editora: item.editora,
+          anoPublicacao: item.anoPublicacao,
+          paginas: item.paginas,
+          isbn10: item.isbn10,
+          isbn13: item.isbn13,
+          generos: item.generos || [],
+          descricao: item.descricao,
+          capaUrl: item.capaUrl,
+          formato: 'fisico',
+          tenho_fisico: false,
+          status_leitura: 'nenhum',
+          anoLeitura: null,
+          mesLeitura: null,
+          nota: null,
+          dataCadastro: Date.now(),
+          dataAtualizacao: Date.now(),
+        };
+        handleOpenBookDetail(previewBook);
+      }
+    },
+    [books, handleOpenBookDetail]
+  );
+
+  // Navegação para a busca com suporte a termo inicial (ex: Gênero)
+  const handleNavigateToSearch = useCallback(
+    (initialQuery?: string) => {
+      if (initialQuery) {
+        setSearchInput(initialQuery);
+        performSearch(initialQuery);
+      }
+      handleBottomTabChange('BUSCAR');
+    },
+    [handleBottomTabChange, performSearch]
+  );
+
   // Limpar filtros (restaura padrões: Autor, Data de Leitura, Todos os formatos, Todas as avaliações)
   const clearFilters = () => {
     setTextQuery('');
@@ -1098,6 +1163,19 @@ export const App: React.FC = () => {
         />
       ) : (
         <>
+          {currentTab === 'INICIO' && (
+            <LandingHomeScreen
+              palette={palette}
+              books={books}
+              onNavigateToTab={handleBottomTabChange}
+              onOpenShelfWithStatus={handleOpenShelfWithStatus}
+              onSelectLocalBook={(book) => handleOpenBookDetail(book)}
+              onSelectExternalBook={handleSelectExternalBook}
+              onNavigateToSearch={handleNavigateToSearch}
+              onOpenManualRegister={() => handleOpenManualRegister()}
+            />
+          )}
+
           {currentTab === 'ESTANTE' && (
             <HomeScreen
               palette={palette}

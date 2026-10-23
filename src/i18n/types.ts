@@ -75,11 +75,33 @@ export interface Translations {
     error: string;
   };
   nav: {
+    home: string;
     bookshelf: string;
     loans: string;
     search: string;
     stats: string;
     settings: string;
+  };
+  landingHome: {
+    welcome: string;
+    welcomeSubtitle: string;
+    searchPrompt: string;
+    myShelf: string;
+    read: string;
+    wantToRead: string;
+    loans: string;
+    yourShelf: string;
+    trending: string;
+    bestSellers: string;
+    becauseYouLike: string;
+    recommendedForYou: string;
+    newReleases: string;
+    continueJourney: string;
+    viewAll: string;
+    readingPreferences: string;
+    selectGenres: string;
+    noRecommendations: string;
+    refresh: string;
   };
   home: {
     title: string;

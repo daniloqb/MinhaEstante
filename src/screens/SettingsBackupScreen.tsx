@@ -17,15 +17,22 @@ import {
   Loader2,
   Trash2,
   AlertTriangle,
-  Globe,
   ChevronDown,
+  Globe,
   Archive,
+  SlidersHorizontal,
+  Sparkles,
 } from 'lucide-react';
 import { MaShelfLogo } from '../components/MaShelfLogo';
 import { useI18n } from '../i18n/I18nContext';
 import { LocaleId } from '../i18n/types';
 import { BackupService } from '../services/storage/backupService';
 import { BookStorage } from '../services/storage';
+import {
+  ReadingPreferencesService,
+  ReadingPreferences,
+  STANDARD_GENRES,
+} from '../features/home-feed';
 
 interface SettingsBackupScreenProps {
   palette: WoodPalette;
@@ -78,6 +85,64 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
   const [pendingZipFile, setPendingZipFile] = useState<File | null>(null);
   const [restoreMode, setRestoreMode] = useState<'replace' | 'merge'>('replace');
   const zipFileInputRef = useRef<HTMLInputElement>(null);
+
+  const [readingPrefs, setReadingPrefs] = useState<ReadingPreferences>(() =>
+    ReadingPreferencesService.getPreferences()
+  );
+  const [customGenreInput, setCustomGenreInput] = useState('');
+
+  const handleToggleGenre = (genre: string) => {
+    const exists = readingPrefs.favoriteGenres.includes(genre);
+    const updatedList = exists
+      ? readingPrefs.favoriteGenres.filter((g) => g !== genre)
+      : [...readingPrefs.favoriteGenres, genre];
+    const updated = ReadingPreferencesService.savePreferences({
+      ...readingPrefs,
+      favoriteGenres: updatedList,
+    });
+    setReadingPrefs(updated);
+  };
+
+  const handleAddCustomGenre = () => {
+    const trimmed = customGenreInput.trim();
+    if (!trimmed) return;
+    if (!readingPrefs.favoriteGenres.includes(trimmed)) {
+      const updated = ReadingPreferencesService.savePreferences({
+        ...readingPrefs,
+        favoriteGenres: [...readingPrefs.favoriteGenres, trimmed],
+      });
+      setReadingPrefs(updated);
+    }
+    setCustomGenreInput('');
+  };
+
+  const handleSuggestFromLibrary = () => {
+    const suggested = ReadingPreferencesService.suggestGenresFromLibrary(books);
+    const updated = ReadingPreferencesService.savePreferences({
+      ...readingPrefs,
+      favoriteGenres: suggested,
+      hasCompletedOnboarding: true,
+    });
+    setReadingPrefs(updated);
+    setStatusMessage('Gêneros favoritos calculados a partir da sua estante com sucesso!');
+    setTimeout(() => setStatusMessage(null), 3000);
+  };
+
+  const handleToggleRecommendations = () => {
+    const updated = ReadingPreferencesService.savePreferences({
+      ...readingPrefs,
+      enableRecommendations: !readingPrefs.enableRecommendations,
+    });
+    setReadingPrefs(updated);
+  };
+
+  const handleSetFictionPreference = (mode: 'all' | 'fiction' | 'non-fiction') => {
+    const updated = ReadingPreferencesService.savePreferences({
+      ...readingPrefs,
+      fictionPreference: mode,
+    });
+    setReadingPrefs(updated);
+  };
 
   useEffect(() => {
     const win = window as any;
@@ -672,6 +737,172 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
                   </button>
                 );
               })}
+            </div>
+          </div>
+        </PaperCard>
+
+        {/* Preferências de Leitura & Descoberta */}
+        <PaperCard palette={palette} elevated className="flex flex-col gap-4">
+          <div className="flex items-center justify-between pb-1 border-b" style={{ borderColor: `${palette.woodBorder}30` }}>
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal size={20} color={palette.woodBorder} />
+              <h3 className="font-serif font-bold text-xl" style={{ color: palette.textOnPaper }}>
+                Preferências de Leitura & Descoberta
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={handleSuggestFromLibrary}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-sans font-semibold cursor-pointer shadow-xs hover:brightness-110 active:scale-95 transition-all select-none"
+              style={{
+                backgroundColor: palette.goldPrimary,
+                borderColor: palette.woodBorder,
+                color: palette.textOnGold,
+              }}
+              title="Calcular preferências analisando os livros da sua estante"
+            >
+              <Sparkles size={13} />
+              <span>Sugerir da Estante</span>
+            </button>
+          </div>
+
+          {/* Toggle Recomendações */}
+          <div className="flex items-center justify-between py-1">
+            <div className="flex flex-col">
+              <span className="font-semibold text-sm font-sans" style={{ color: palette.textOnPaper }}>
+                Recomendações Personalizadas
+              </span>
+              <span className="text-xs font-sans" style={{ color: palette.textSecondaryOnPaper }}>
+                Apresentar obras sugeridas no Início com base nos seus interesses
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleToggleRecommendations}
+              className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
+                readingPrefs.enableRecommendations ? 'bg-amber-600' : 'bg-stone-600'
+              }`}
+            >
+              <div
+                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                  readingPrefs.enableRecommendations ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Modo de Obras: Ficção / Não-Ficção / Ambos */}
+          <div className="flex flex-col gap-2">
+            <label className="text-xs sm:text-sm font-sans font-semibold" style={{ color: palette.textOnPaper }}>
+              Tipo de Leitura Preferencial:
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'all' as const, label: 'Ambos' },
+                { id: 'fiction' as const, label: 'Ficção' },
+                { id: 'non-fiction' as const, label: 'Não-Ficção' },
+              ].map((m) => {
+                const isSelected = readingPrefs.fictionPreference === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => handleSetFictionPreference(m.id)}
+                    className="py-2 rounded-lg font-sans font-semibold text-xs border cursor-pointer transition-colors select-none"
+                    style={{
+                      backgroundColor: isSelected ? palette.goldPrimary : 'transparent',
+                      color: isSelected ? palette.textOnGold : palette.textOnPaper,
+                      borderColor: palette.woodBorder,
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Gêneros Favoritos */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs sm:text-sm font-sans font-semibold" style={{ color: palette.textOnPaper }}>
+                Gêneros Favoritos ({readingPrefs.favoriteGenres.length} selecionados):
+              </label>
+              {readingPrefs.favoriteGenres.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = ReadingPreferencesService.savePreferences({
+                      ...readingPrefs,
+                      favoriteGenres: [],
+                    });
+                    setReadingPrefs(updated);
+                  }}
+                  className="text-xs font-sans underline cursor-pointer opacity-75 hover:opacity-100"
+                  style={{ color: palette.textOnPaper }}
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto pr-1">
+              {STANDARD_GENRES.map((g) => {
+                const isSelected = readingPrefs.favoriteGenres.includes(g);
+                return (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => handleToggleGenre(g)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-sans font-medium border flex items-center gap-1 cursor-pointer transition-all select-none ${
+                      isSelected ? 'shadow-xs' : 'opacity-80 hover:opacity-100'
+                    }`}
+                    style={{
+                      backgroundColor: isSelected ? palette.goldPrimary : palette.paperSurfaceElevated,
+                      borderColor: isSelected ? palette.woodBorder : `${palette.woodBorder}40`,
+                      color: isSelected ? palette.textOnGold : palette.textOnPaper,
+                    }}
+                  >
+                    {isSelected && <CheckCircle2 size={12} className="stroke-[2.5]" />}
+                    <span>{g}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Inserir novo gênero */}
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="text"
+                value={customGenreInput}
+                onChange={(e) => setCustomGenreInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCustomGenre();
+                  }
+                }}
+                placeholder="Digitar outro gênero..."
+                className="flex-1 px-3 py-1.5 rounded-lg border text-xs font-sans focus:outline-none focus:ring-1"
+                style={{
+                  backgroundColor: palette.paperSurfaceElevated,
+                  borderColor: palette.woodBorder,
+                  color: palette.textOnPaper,
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleAddCustomGenre}
+                disabled={!customGenreInput.trim()}
+                className="px-3 py-1.5 rounded-lg border font-sans font-semibold text-xs cursor-pointer disabled:opacity-50 hover:brightness-110"
+                style={{
+                  backgroundColor: palette.goldPrimary,
+                  borderColor: palette.woodBorder,
+                  color: palette.textOnGold,
+                }}
+              >
+                Adicionar
+              </button>
             </div>
           </div>
         </PaperCard>

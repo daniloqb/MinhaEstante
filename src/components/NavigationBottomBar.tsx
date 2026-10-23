@@ -1,9 +1,9 @@
 import React from 'react';
-import { BookOpen, Search, BarChart3, Settings } from 'lucide-react';
+import { Sparkles, BookOpen, Search, BarChart3, Settings } from 'lucide-react';
 import { WoodPalette } from '../theme/woodTheme';
 import { useI18n } from '../i18n/I18nContext';
 
-export type MainTab = 'ESTANTE' | 'EMPRESTADOS' | 'BUSCAR' | 'ESTATISTICAS' | 'CONFIG';
+export type MainTab = 'INICIO' | 'ESTANTE' | 'EMPRESTADOS' | 'BUSCAR' | 'ESTATISTICAS' | 'CONFIG';
 
 interface NavigationBottomBarProps {
   palette: WoodPalette;
@@ -28,6 +28,7 @@ export const NavigationBottomBar: React.FC<NavigationBottomBarProps> = ({
     icon: React.ComponentType<{ size?: number; className?: string }>;
     count?: number;
   }[] = [
+    { id: 'INICIO', label: t.nav.home, icon: Sparkles },
     { id: 'ESTANTE', label: t.nav.bookshelf, icon: BookOpen, count: totalCount },
     { id: 'BUSCAR', label: t.nav.search, icon: Search },
     { id: 'ESTATISTICAS', label: t.nav.stats, icon: BarChart3 },
