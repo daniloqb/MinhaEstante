@@ -63,23 +63,78 @@ class WebInMemoryCoverStore {
   private covers: Map<string, string> = new Map();
 
   async save(path: string, base64Data: string): Promise<void> {
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    this.covers.set(cleanPath, base64Data);
     this.covers.set(path, base64Data);
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`mashelf_cover_${cleanPath}`, base64Data);
+      }
+    } catch {
+      // Ignora erro de cota de armazenamento web
+    }
   }
 
   async read(path: string): Promise<string | null> {
-    return this.covers.get(path) || null;
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    if (this.covers.has(cleanPath)) return this.covers.get(cleanPath)!;
+    if (this.covers.has(path)) return this.covers.get(path)!;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const item =
+          localStorage.getItem(`mashelf_cover_${cleanPath}`) ||
+          localStorage.getItem(`mashelf_cover_${path}`);
+        if (item) {
+          this.covers.set(cleanPath, item);
+          this.covers.set(path, item);
+          return item;
+        }
+      }
+    } catch {}
+    return null;
   }
 
   async delete(path: string): Promise<boolean> {
-    return this.covers.delete(path);
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    const res = this.covers.delete(cleanPath) || this.covers.delete(path);
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(`mashelf_cover_${cleanPath}`);
+        localStorage.removeItem(`mashelf_cover_${path}`);
+      }
+    } catch {}
+    return res;
   }
 
   async list(): Promise<string[]> {
-    return Array.from(this.covers.keys());
+    const set = new Set(this.covers.keys());
+    try {
+      if (typeof localStorage !== 'undefined') {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('mashelf_cover_')) {
+            set.add(key.replace('mashelf_cover_', ''));
+          }
+        }
+      }
+    } catch {}
+    return Array.from(set);
   }
 
   clear(): void {
     this.covers.clear();
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const toRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('mashelf_cover_')) {
+            toRemove.push(key);
+          }
+        }
+        toRemove.forEach((k) => localStorage.removeItem(k));
+      }
+    } catch {}
   }
 }
 
@@ -205,6 +260,22 @@ export class CoverStorageService {
       if (this.displayUrlCache.has(relativePath)) {
         return this.displayUrlCache.get(relativePath)!;
       }
+
+      // Em ambiente Web, verifica persistência local síncrona
+      if (!this.isNative() && typeof localStorage !== 'undefined') {
+        try {
+          const cached =
+            localStorage.getItem(`mashelf_cover_${cleanPath}`) ||
+            localStorage.getItem(`mashelf_cover_${relativePath}`);
+          if (cached) {
+            this.displayUrlCache.set(cleanPath, cached);
+            this.displayUrlCache.set(relativePath, cached);
+            return cached;
+          }
+        } catch {
+          // ignore
+        }
+      }
     }
 
     // Se houver URL remota ou data URL de fallback válida
@@ -225,7 +296,7 @@ export class CoverStorageService {
    * WebView prontas antes da primeira renderização da estante.
    */
   static async warmDisplayCache(items: (string | { capaLocalPath?: string | null })[]): Promise<void> {
-    if (!this.isNative() || !Array.isArray(items) || items.length === 0) return;
+    if (!Array.isArray(items) || items.length === 0) return;
 
     await this.initialize();
 
@@ -242,21 +313,35 @@ export class CoverStorageService {
 
     if (pathsToWarm.size === 0) return;
 
-    // Converte os caminhos em paralelo
-    await Promise.allSettled(
-      Array.from(pathsToWarm).map(async (path) => {
-        try {
-          const uriResult = await Filesystem.getUri({
-            path,
-            directory: Directory.Data,
-          });
-          const converted = Capacitor.convertFileSrc(uriResult.uri);
-          this.displayUrlCache.set(path, converted);
-        } catch {
-          // Ignora se o arquivo individual não existir
-        }
-      })
-    );
+    if (this.isNative()) {
+      await Promise.allSettled(
+        Array.from(pathsToWarm).map(async (path) => {
+          try {
+            const uriResult = await Filesystem.getUri({
+              path,
+              directory: Directory.Data,
+            });
+            const converted = Capacitor.convertFileSrc(uriResult.uri);
+            this.displayUrlCache.set(path, converted);
+          } catch {
+            // Ignora se o arquivo individual não existir
+          }
+        })
+      );
+    } else {
+      await Promise.allSettled(
+        Array.from(pathsToWarm).map(async (path) => {
+          try {
+            const memoryCover = await this.webStore.read(path);
+            if (memoryCover) {
+              this.displayUrlCache.set(path, memoryCover);
+            }
+          } catch {
+            // Ignora erro
+          }
+        })
+      );
+    }
   }
 
   /**

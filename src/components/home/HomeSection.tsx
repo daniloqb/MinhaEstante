@@ -1,6 +1,8 @@
 import React from 'react';
 import { WoodPalette } from '../../theme/woodTheme';
 import { HomeBookItem, HomeBookSection } from '../../features/home-feed/types';
+import { Book } from '../../types/book';
+import { areBooksDuplicate } from '../../services/storage';
 import { BookCarousel } from './BookCarousel';
 import { DiscoveryBookCard } from './DiscoveryBookCard';
 import { HomeSectionSkeleton } from './HomeSectionSkeleton';
@@ -9,6 +11,7 @@ import { ChevronRight, BookOpen, Plus } from 'lucide-react';
 interface HomeSectionProps {
   palette: WoodPalette;
   section: HomeBookSection;
+  libraryBooks?: Book[];
   userBookIds?: Set<string | number>;
   onSelectBook: (item: HomeBookItem) => void;
   onViewAll?: (section: HomeBookSection) => void;
@@ -18,6 +21,7 @@ interface HomeSectionProps {
 export const HomeSection: React.FC<HomeSectionProps> = ({
   palette,
   section,
+  libraryBooks,
   onSelectBook,
   onViewAll,
   onAddFirstBook,
@@ -139,15 +143,42 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
       {/* Carrossel de Livros */}
       <BookCarousel palette={palette}>
-        {section.books.map((item) => (
-          <DiscoveryBookCard
-            key={item.id}
-            palette={palette}
-            item={item}
-            isAlreadyInLibrary={item.isLocal}
-            onClick={onSelectBook}
-          />
-        ))}
+        {section.books.map((item) => {
+          // Identifica se este livro já existe na biblioteca local (pelo item ou por cruzamento de título/autor/ISBN)
+          const matchingBook =
+            item.localBook ||
+            (libraryBooks
+              ? libraryBooks.find((b) =>
+                  areBooksDuplicate(b, {
+                    titulo: item.titulo,
+                    autores: item.autores,
+                    isbn13: item.isbn13,
+                    isbn10: item.isbn10,
+                  })
+                )
+              : undefined);
+
+          const isLocal = Boolean(item.isLocal || matchingBook);
+          const enrichedItem: HomeBookItem = matchingBook
+            ? {
+                ...item,
+                isLocal: true,
+                localBook: matchingBook,
+                capaUrl: item.capaUrl || matchingBook.capaUrl,
+                capaLocalPath: item.capaLocalPath || matchingBook.capaLocalPath,
+              }
+            : item;
+
+          return (
+            <DiscoveryBookCard
+              key={item.id}
+              palette={palette}
+              item={enrichedItem}
+              isAlreadyInLibrary={isLocal}
+              onClick={onSelectBook}
+            />
+          );
+        })}
       </BookCarousel>
     </section>
   );

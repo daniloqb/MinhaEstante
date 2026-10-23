@@ -307,7 +307,14 @@ export const App: React.FC = () => {
     let active = true;
     const initializeDatabase = async () => {
       try {
-        const loadedBooks = await BookStorage.loadBooksFromDatabase();
+        let loadedBooks = await BookStorage.loadBooksFromDatabase();
+        if (loadedBooks.length === 0) {
+          const fallbackBooks = BookStorage.loadBooks();
+          if (fallbackBooks && fallbackBooks.length > 0) {
+            await BookStorage.saveAllBooksToDatabase(fallbackBooks);
+            loadedBooks = await BookStorage.loadBooksFromDatabase();
+          }
+        }
         if (active) {
           setBooks(loadedBooks);
           setIsDbReady(true);

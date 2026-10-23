@@ -52,7 +52,14 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
       ? book.capaUrl
       : null;
 
-  const localPath = book?.capaLocalPath;
+  const localPath =
+    book?.capaLocalPath ||
+    (book?.capaUrl && !book.capaUrl.startsWith('http') && !book.capaUrl.startsWith('data:')
+      ? book.capaUrl
+      : null) ||
+    (coverUrl && !coverUrl.startsWith('http') && !coverUrl.startsWith('data:')
+      ? coverUrl
+      : null);
 
   const [imageFailed, setImageFailed] = useState(false);
   const [displayUrl, setDisplayUrl] = useState<string | null>(() => {
@@ -61,7 +68,15 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
 
   useEffect(() => {
     let isMounted = true;
-    const currentLocal = book?.capaLocalPath;
+    const currentLocal =
+      book?.capaLocalPath ||
+      (book?.capaUrl && !book.capaUrl.startsWith('http') && !book.capaUrl.startsWith('data:')
+        ? book.capaUrl
+        : null) ||
+      (coverUrl && !coverUrl.startsWith('http') && !coverUrl.startsWith('data:')
+        ? coverUrl
+        : null);
+
     const currentRemote =
       coverUrl && (coverUrl.startsWith('data:') || coverUrl.startsWith('http'))
         ? coverUrl

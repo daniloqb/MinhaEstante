@@ -14,6 +14,7 @@ import {
   HomeFeedService,
   ReadingPreferencesService,
 } from '../features/home-feed';
+import { CoverStorageService } from '../services/storage/coverStorageService';
 
 export interface LandingHomeScreenProps {
   palette: WoodPalette;
@@ -79,6 +80,9 @@ export const LandingHomeScreen: React.FC<LandingHomeScreenProps> = ({
   );
 
   useEffect(() => {
+    // Pré-aquece o cache de exibição das capas locais imediatamente
+    CoverStorageService.warmDisplayCache(books);
+
     // Atualiza imediatamente seções locais quando a coleção muda
     setSections((prev) => {
       const local = HomeFeedService.getLocalSections(books);
@@ -176,6 +180,7 @@ export const LandingHomeScreen: React.FC<LandingHomeScreenProps> = ({
               key={section.id}
               palette={palette}
               section={section}
+              libraryBooks={books}
               onSelectBook={handleSelectBook}
               onViewAll={handleViewAll}
               onAddFirstBook={onOpenManualRegister}

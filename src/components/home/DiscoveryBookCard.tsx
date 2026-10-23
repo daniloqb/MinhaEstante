@@ -31,10 +31,20 @@ export const DiscoveryBookCard: React.FC<DiscoveryBookCardProps> = ({
       {/* Capa com proporção vertical nobre (2:3) e sombra de papel */}
       <div className="relative w-full aspect-[2/3] rounded-lg overflow-hidden shadow-md group-hover:shadow-xl transition-shadow duration-200 bg-stone-900/10">
         <BookCoverView
-          coverUrl={item.capaUrl || undefined}
+          palette={palette}
+          book={item.localBook}
+          coverUrl={
+            item.capaUrl ||
+            item.localBook?.capaUrl ||
+            item.capaLocalPath ||
+            item.localBook?.capaLocalPath ||
+            undefined
+          }
           title={item.titulo}
           author={item.autores[0]}
-          palette={palette}
+          width="100%"
+          height="100%"
+          className="w-full h-full pointer-events-none"
         />
 
         {/* Badge de Posição de Ranking (#1, #2...) */}

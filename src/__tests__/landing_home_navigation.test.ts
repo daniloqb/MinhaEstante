@@ -5,6 +5,7 @@ import { NavigationBottomBar, MainTab } from '../components/NavigationBottomBar'
 import { DarkWalnutPalette } from '../theme/woodTheme';
 import { Book } from '../types/book';
 import { areBooksDuplicate } from '../services/storage';
+import { LocalShelfFeed } from '../features/home-feed';
 
 describe('Landing Home & Navegação Integrada (Kindle Discovery Experience)', () => {
   describe('1. Internacionalização de Início (nav.home e landingHome)', () => {
@@ -200,6 +201,33 @@ describe('Landing Home & Navegação Integrada (Kindle Discovery Experience)', (
           }
         )
       ).toBe(false);
+    });
+  });
+
+  describe('5. Resolução e Preservação de Capas na Tela Inicial', () => {
+    it('mapeia capaLocalPath e localBook em itens de estante pessoal e jornada', () => {
+      const bookWithLocalCover: Book = {
+        id: 99,
+        origem: 'manual',
+        titulo: 'Livro Com Capa Local',
+        autores: ['Autor Local'],
+        generos: ['Ficção'],
+        tenho_fisico: true,
+        status_leitura: 'quero_ler',
+        capaUrl: null,
+        capaLocalPath: 'covers/cover_99_123456_abc.jpg',
+        formato: 'fisico',
+        dataCadastro: 500,
+        dataAtualizacao: 500,
+      };
+
+      const shelfSection = LocalShelfFeed.getPersonalShelfSection([bookWithLocalCover]);
+      expect(shelfSection.books[0].capaLocalPath).toBe('covers/cover_99_123456_abc.jpg');
+      expect(shelfSection.books[0].localBook?.capaLocalPath).toBe('covers/cover_99_123456_abc.jpg');
+
+      const journeySection = LocalShelfFeed.getReadingJourneySection([bookWithLocalCover]);
+      expect(journeySection.books[0].capaLocalPath).toBe('covers/cover_99_123456_abc.jpg');
+      expect(journeySection.books[0].localBook?.capaLocalPath).toBe('covers/cover_99_123456_abc.jpg');
     });
   });
 });

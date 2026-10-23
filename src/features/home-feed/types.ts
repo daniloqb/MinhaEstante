@@ -17,6 +17,7 @@ export interface HomeBookItem {
   titulo: string;
   autores: string[];
   capaUrl?: string | null;
+  capaLocalPath?: string | null;
   anoPublicacao?: number | null;
   editora?: string | null;
   generos?: string[];
