@@ -19,6 +19,8 @@ import { EditionMatcher } from './EditionMatcher';
 import { ResultRanking } from './ResultRanking';
 import { CoverResolver } from './CoverResolver';
 
+export const PROVIDER_TIMEOUT_MS = 10000; // 10 segundos por provedor
+ 
 export class SearchCoordinator {
   private providers: Map<ProviderId, BookProvider> = new Map();
 
@@ -135,8 +137,29 @@ export class SearchCoordinator {
       }
 
       const startMs = Date.now();
+      const providerController = new AbortController();
+      let didTimeout = false;
+
+      const handleGlobalAbort = () => {
+        providerController.abort();
+      };
+
+      if (signal) {
+        if (signal.aborted) {
+          providerController.abort();
+        } else {
+          signal.addEventListener('abort', handleGlobalAbort, { once: true });
+        }
+      }
+
+      // Timeout individual de 10 segundos para cada base
+      const timeoutId = setTimeout(() => {
+        didTimeout = true;
+        providerController.abort();
+      }, PROVIDER_TIMEOUT_MS);
+
       try {
-        const page = await provider.search(query, subCursor, signal);
+        const page = await provider.search(query, subCursor, providerController.signal);
         const duration = Date.now() - startMs;
         statusEntry.durationMs = duration;
         statusEntry.httpStatus = page.httpStatus || 200;
@@ -150,16 +173,35 @@ export class SearchCoordinator {
 
         rawPages.push(page);
       } catch (err: any) {
-        if (err?.name === 'AbortError') throw err;
         statusEntry.durationMs = Date.now() - startMs;
         statusEntry.status = 'error';
-        statusEntry.errorMessage = err?.message || 'Erro inesperado';
+
+        if (signal?.aborted) {
+          statusEntry.errorMessage = 'Pesquisa cancelada';
+          throw err;
+        } else if (didTimeout) {
+          statusEntry.errorMessage = 'Tempo limite esgotado (10s)';
+        } else {
+          statusEntry.errorMessage = err?.message || 'Erro inesperado';
+        }
+      } finally {
+        clearTimeout(timeoutId);
+        if (signal) {
+          signal.removeEventListener('abort', handleGlobalAbort);
+        }
       }
 
       providerStatuses.push(statusEntry);
     });
 
     await Promise.allSettled(promises);
+
+    // Se o usuário cancelou a pesquisa globalmente, propaga o cancelamento
+    if (signal?.aborted) {
+      const abortError = new Error('Pesquisa cancelada pelo usuário');
+      abortError.name = 'AbortError';
+      throw abortError;
+    }
 
     // Constrói novo cursor agregado
     const nextAggCursor: AggregatedCursor = {};

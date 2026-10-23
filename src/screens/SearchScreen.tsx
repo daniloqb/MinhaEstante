@@ -31,6 +31,7 @@ interface SearchScreenProps {
   searchQuery: string;
   onQueryChange: (query: string) => void;
   onSearch: (query: string) => void;
+  onCancelSearch?: () => void;
   isLoading: boolean;
   results: SearchResultBook[];
   errorMessage: string | null;
@@ -50,6 +51,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
   searchQuery,
   onQueryChange,
   onSearch,
+  onCancelSearch,
   isLoading,
   results,
   errorMessage,
@@ -114,8 +116,29 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
     }
   };
 
+  const handleToggleAction = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isLoading) {
+      if (onCancelSearch) {
+        onCancelSearch();
+      }
+    } else {
+      const trimmed = searchQuery.trim();
+      if (trimmed) {
+        onSearch(trimmed);
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) {
+      if (onCancelSearch) {
+        onCancelSearch();
+      }
+      return;
+    }
     const trimmed = searchQuery.trim();
     if (trimmed) {
       onSearch(trimmed);
@@ -267,9 +290,14 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               {searchQuery && (
                 <button
                   type="button"
-                  onClick={() => onQueryChange('')}
+                  onClick={() => {
+                    if (isLoading && onCancelSearch) {
+                      onCancelSearch();
+                    }
+                    onQueryChange('');
+                  }}
                   className="p-1 rounded-full hover:bg-black/10 cursor-pointer"
-                  title="Limpar busca"
+                  title={isLoading ? 'Cancelar e limpar busca' : 'Limpar busca'}
                 >
                   <X size={15} />
                 </button>
@@ -341,29 +369,39 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               </button>
             </div>
 
-            {/* Ação de Busca */}
-            <button
-              type="submit"
-              disabled={isLoading || !searchQuery.trim()}
-              className="flex items-center justify-center gap-2 px-5 py-2 rounded-lg font-sans font-semibold text-xs sm:text-sm border shadow-md cursor-pointer hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 min-h-[38px] select-none"
-              style={{
-                backgroundColor: palette.goldPrimary,
-                borderColor: palette.woodBorder,
-                color: palette.textOnGold,
-              }}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 size={15} className="animate-spin" />
-                  <span>Explorando...</span>
-                </>
-              ) : (
-                <>
-                  <Search size={15} />
-                  <span>Explorar</span>
-                </>
-              )}
-            </button>
+            {/* Toggle entre Explorar e Cancelar */}
+            {isLoading ? (
+              <button
+                key="btn-cancel-search"
+                type="button"
+                onClick={handleToggleAction}
+                className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2 rounded-lg font-sans font-semibold text-xs sm:text-sm border shadow-md cursor-pointer hover:bg-rose-700 active:scale-95 transition-all min-h-[38px] select-none text-white bg-rose-800 border-rose-900"
+                title="Cancelar pesquisa em andamento"
+                aria-label="Cancelar pesquisa em andamento"
+              >
+                <Loader2 size={15} className="animate-spin text-white/90 pointer-events-none" />
+                <span className="pointer-events-none">Cancelar</span>
+                <X size={15} className="stroke-[2.5] pointer-events-none" />
+              </button>
+            ) : (
+              <button
+                key="btn-explore-search"
+                type="button"
+                onClick={handleToggleAction}
+                disabled={!searchQuery.trim()}
+                className="flex items-center justify-center gap-2 px-5 py-2 rounded-lg font-sans font-semibold text-xs sm:text-sm border shadow-md cursor-pointer hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 min-h-[38px] select-none"
+                style={{
+                  backgroundColor: palette.goldPrimary,
+                  borderColor: palette.woodBorder,
+                  color: palette.textOnGold,
+                }}
+                title="Iniciar pesquisa bibliográfica"
+                aria-label="Iniciar pesquisa bibliográfica"
+              >
+                <Search size={15} className="pointer-events-none" />
+                <span className="pointer-events-none">Explorar</span>
+              </button>
+            )}
           </div>
         </form>
 
@@ -378,6 +416,17 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
               <p className="text-xs sm:text-sm text-center max-w-sm font-sans" style={{ color: palette.textSecondaryOnWood }}>
                 Google Books, Open Library, Inventaire e bases integradas
               </p>
+              {onCancelSearch && (
+                <button
+                  type="button"
+                  onClick={onCancelSearch}
+                  className="mt-2 flex items-center gap-1.5 px-4 py-2 rounded-lg font-sans font-semibold text-xs border shadow-sm cursor-pointer hover:bg-rose-700 active:scale-95 transition-all text-white bg-rose-800 border-rose-900"
+                  title="Cancelar pesquisa"
+                >
+                  <X size={14} />
+                  <span>Cancelar pesquisa</span>
+                </button>
+              )}
             </div>
           )}
 

@@ -72,6 +72,12 @@ export class BookDiscoveryEngine {
       return inFlight;
     }
 
+    if (signal?.aborted) {
+      const abortErr = new Error('Busca cancelada');
+      abortErr.name = 'AbortError';
+      throw abortErr;
+    }
+
     const searchPromise = this.executeSearch(trimmed, cursor, signal);
     DiscoveryCache.setInFlight(trimmed, cursor, searchPromise);
 
@@ -83,10 +89,22 @@ export class BookDiscoveryEngine {
     cursor?: string,
     signal?: AbortSignal
   ): Promise<DiscoverySearchResponse> {
+    if (signal?.aborted) {
+      const abortErr = new Error('Busca cancelada');
+      abortErr.name = 'AbortError';
+      throw abortErr;
+    }
+
     const parsedQuery = QueryParser.parse(trimmedQuery);
 
     // 2. Executa a busca convencional coordenada
     const response = await this.coordinator.coordinateSearch(parsedQuery, cursor, signal);
+
+    if (signal?.aborted) {
+      const abortErr = new Error('Busca cancelada');
+      abortErr.name = 'AbortError';
+      throw abortErr;
+    }
 
     // 3. Avaliação de suficiência para fallback opcional do Gemini (Apenas na página 1 e se não for ISBN)
     // Regra Obrigatória (Cenário D): Não acionar o Gemini silenciosamente para mascarar erro de autenticação (401, 403) ou cota (429) do Google Books
@@ -125,6 +143,12 @@ export class BookDiscoveryEngine {
           }
         }
       }
+    }
+
+    if (signal?.aborted) {
+      const abortErr = new Error('Busca cancelada');
+      abortErr.name = 'AbortError';
+      throw abortErr;
     }
 
     // Grava no cache

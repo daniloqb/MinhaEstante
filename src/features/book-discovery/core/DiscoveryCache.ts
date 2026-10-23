@@ -48,9 +48,11 @@ export class DiscoveryCache {
   static setInFlight(query: string, cursor: string | undefined, promise: Promise<DiscoverySearchResponse>): void {
     const key = this.makeKey(query, cursor);
     this.inFlightRequests.set(key, promise);
-    promise.finally(() => {
-      this.inFlightRequests.delete(key);
-    });
+    promise
+      .finally(() => {
+        this.inFlightRequests.delete(key);
+      })
+      .catch(() => {});
   }
 
   static clear(): void {

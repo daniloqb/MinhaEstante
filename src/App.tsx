@@ -511,12 +511,30 @@ export const App: React.FC = () => {
   );
 
   const searchRequestIdRef = React.useRef<number>(0);
+  const searchAbortControllerRef = React.useRef<AbortController | null>(null);
+
+  const handleCancelSearch = useCallback(() => {
+    if (searchAbortControllerRef.current) {
+      searchAbortControllerRef.current.abort();
+      searchAbortControllerRef.current = null;
+    }
+    setIsSearchLoading(false);
+    setIsLoadingMoreSearch(false);
+    searchRequestIdRef.current++;
+  }, []);
 
   // Search logic: busca bibliográfica mundial via BookDiscoveryEngine com suporte a paginação agregada
   const performSearch = useCallback(
     async (query: string) => {
       const trimmed = query.trim();
       if (!trimmed) return;
+
+      // Aborta qualquer busca em andamento anterior
+      if (searchAbortControllerRef.current) {
+        searchAbortControllerRef.current.abort();
+      }
+      const controller = new AbortController();
+      searchAbortControllerRef.current = controller;
 
       setIsSearchLoading(true);
       setSearchError(null);
@@ -528,9 +546,9 @@ export const App: React.FC = () => {
           geminiApiKey: geminiApiKey || googleApiKey,
         });
 
-        const response = await engine.search(trimmed);
+        const response = await engine.search(trimmed, undefined, controller.signal);
 
-        if (searchRequestIdRef.current === reqId) {
+        if (searchRequestIdRef.current === reqId && !controller.signal.aborted) {
           setSearchResults(response.books);
           setSearchCursor(response.nextCursor);
           setHasMoreSearch(response.hasMore);
@@ -554,10 +572,20 @@ export const App: React.FC = () => {
             setSearchError(null);
           }
         }
-      } catch {
+      } catch (err: any) {
+        if (err?.name === 'AbortError' || controller.signal.aborted) {
+          if (searchRequestIdRef.current === reqId) {
+            setIsSearchLoading(false);
+          }
+          return;
+        }
         if (searchRequestIdRef.current === reqId) {
           setSearchError('Erro ao buscar livros na internet. Verifique sua conexão e tente novamente.');
           setIsSearchLoading(false);
+        }
+      } finally {
+        if (searchAbortControllerRef.current === controller) {
+          searchAbortControllerRef.current = null;
         }
       }
     },
@@ -569,6 +597,12 @@ export const App: React.FC = () => {
       return;
     }
 
+    if (searchAbortControllerRef.current) {
+      searchAbortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    searchAbortControllerRef.current = controller;
+
     setIsLoadingMoreSearch(true);
     try {
       const engine = BookDiscoveryEngine.getInstance({
@@ -576,16 +610,24 @@ export const App: React.FC = () => {
         geminiApiKey: geminiApiKey || googleApiKey,
       });
 
-      const response = await engine.search(searchInput.trim(), searchCursor);
+      const response = await engine.search(searchInput.trim(), searchCursor, controller.signal);
 
-      setSearchResults((prev) => [...prev, ...response.books]);
-      setSearchCursor(response.nextCursor);
-      setHasMoreSearch(response.hasMore);
-      setProviderStatuses(response.providerStatuses);
-    } catch (err) {
+      if (!controller.signal.aborted) {
+        setSearchResults((prev) => [...prev, ...response.books]);
+        setSearchCursor(response.nextCursor);
+        setHasMoreSearch(response.hasMore);
+        setProviderStatuses(response.providerStatuses);
+      }
+    } catch (err: any) {
+      if (err?.name === 'AbortError' || controller.signal.aborted) {
+        return;
+      }
       console.warn('Erro ao carregar mais livros:', err);
     } finally {
       setIsLoadingMoreSearch(false);
+      if (searchAbortControllerRef.current === controller) {
+        searchAbortControllerRef.current = null;
+      }
     }
   }, [hasMoreSearch, searchCursor, isSearchLoading, isLoadingMoreSearch, searchInput, googleBooksApiKey, geminiApiKey, googleApiKey]);
 
@@ -1120,6 +1162,7 @@ export const App: React.FC = () => {
                 }
               }}
               onSearch={performSearch}
+              onCancelSearch={handleCancelSearch}
               isLoading={isSearchLoading}
               results={searchResults}
               errorMessage={searchError}
