@@ -13,6 +13,7 @@ import {
 import { getPalette } from './theme/woodTheme';
 import { BookStorage, areBooksDuplicate } from './services/storage';
 import { BookDiscoveryEngine, ProviderStatus } from './features/book-discovery';
+import { DiscoveryNavigationContext } from './features/home-feed';
 import { NativeService } from './services/nativeService';
 
 // Layout & Components
@@ -260,6 +261,7 @@ export const App: React.FC = () => {
   const [hasMoreSearch, setHasMoreSearch] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [providerStatuses, setProviderStatuses] = useState<ProviderStatus[]>([]);
+  const [searchDiscoveryContext, setSearchDiscoveryContext] = useState<DiscoveryNavigationContext | undefined>();
 
   // Palette
   const palette = useMemo(() => getPalette(isLightOak), [isLightOak]);
@@ -423,11 +425,11 @@ export const App: React.FC = () => {
         tenho_fisico: nextTenho,
         dataAtualizacao: Date.now(),
       };
-      handleSaveBook(updated);
-
-      if (selectedBookDetail && selectedBookDetail.id === book.id) {
-        setSelectedBookDetail(updated);
-      }
+      handleSaveBook(updated).then((saved) => {
+        if (selectedBookDetail && (selectedBookDetail.id === book.id || selectedBookDetail.id === 0)) {
+          setSelectedBookDetail(saved);
+        }
+      });
 
       setQuickActionBook(null);
       setToastMessage(
@@ -933,12 +935,14 @@ export const App: React.FC = () => {
     [books, handleOpenBookDetail]
   );
 
-  // Navegação para a busca com suporte a termo inicial (ex: Gênero)
+  // Navegação para a busca com suporte a termo inicial e contexto de descoberta estruturado
   const handleNavigateToSearch = useCallback(
-    (initialQuery?: string) => {
-      if (initialQuery) {
-        setSearchInput(initialQuery);
-        performSearch(initialQuery);
+    (initialQuery?: string, context?: DiscoveryNavigationContext) => {
+      setSearchDiscoveryContext(context);
+      const query = initialQuery || context?.searchTerm || '';
+      if (query) {
+        setSearchInput(query);
+        performSearch(query);
       }
       handleBottomTabChange('BUSCAR');
     },
@@ -1244,6 +1248,7 @@ export const App: React.FC = () => {
                   setSearchCursor(null);
                   setHasMoreSearch(false);
                   setProviderStatuses([]);
+                  setSearchDiscoveryContext(undefined);
                 }
               }}
               onSearch={performSearch}
@@ -1260,6 +1265,8 @@ export const App: React.FC = () => {
               isLoadingMore={isLoadingMoreSearch}
               providerStatuses={providerStatuses}
               onGoToSettings={() => handleBottomTabChange('CONFIG')}
+              discoveryContext={searchDiscoveryContext}
+              onClearDiscoveryContext={() => setSearchDiscoveryContext(undefined)}
             />
           )}
 

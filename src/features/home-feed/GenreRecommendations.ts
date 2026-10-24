@@ -3,34 +3,10 @@ import { areBooksDuplicate } from '../../services/storage';
 import { HomeBookItem, HomeBookSection, ReadingPreferences } from './types';
 import { HomeFeedCache } from './HomeFeedCache';
 import { ReadingPreferencesService } from './ReadingPreferencesService';
-
-// Mapeamento de termos de gêneros em português para slugs do Open Library
-const GENRE_SUBJECT_MAP: Record<string, string> = {
-  'romance': 'romance',
-  'literatura clássica': 'classic_literature',
-  'clássicos': 'classic_literature',
-  'ficção científica': 'science_fiction',
-  'fantasia': 'fantasy',
-  'filosofia': 'philosophy',
-  'história': 'history',
-  'biografia': 'biography',
-  'biografia & memórias': 'biography',
-  'suspense & mistério': 'mystery_and_detective_stories',
-  'suspense': 'thriller',
-  'poesia': 'poetry',
-  'ciência & natureza': 'science',
-  'ciência': 'science',
-  'tecnologia': 'technology',
-  'desenvolvimento pessoal': 'self_help',
-  'psicologia': 'psychology',
-  'economia': 'economics',
-  'arte': 'art',
-  'terror & horror': 'horror',
-  'terror': 'horror',
-};
+import { BookGenreNormalizer } from './BookGenreNormalizer';
 
 export class GenreRecommendations {
-  private static CACHE_PREFIX = 'genre_rec_';
+  private static CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 horas
 
   /**
    * Escolhe um gênero favorito com rotação estável baseada no dia do ano
@@ -60,18 +36,18 @@ export class GenreRecommendations {
     signal?: AbortSignal
   ): Promise<HomeBookSection> {
     const genre = this.pickStableGenre(books, preferences);
-    const cacheKey = `${this.CACHE_PREFIX}${genre.toLowerCase().replace(/\s+/g, '_')}`;
+    const signature = HomeFeedCache.computeProfileSignature(books, preferences);
+    const subjectSlug = BookGenreNormalizer.toOpenLibrarySubject(genre);
+    const displayGenreName = BookGenreNormalizer.toDisplayName(genre);
 
-    const cached = HomeFeedCache.get(cacheKey);
+    const cacheKey = `personalized_genre_${subjectSlug}_${signature}`;
+
+    const cached = HomeFeedCache.get(cacheKey, signature);
     if (cached && !cached.isStale) {
-      return cached.section;
+      return { ...cached.section, isCached: true, lastUpdated: cached.timestamp };
     }
 
-    // Identifica o slug do assunto para a Open Library
-    const lower = genre.toLowerCase();
-    const subjectSlug = GENRE_SUBJECT_MAP[lower] || lower.replace(/[^a-z0-9]/g, '_');
-
-    try {
+    const fetchTask = async (): Promise<HomeBookSection> => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 9000);
 
@@ -81,90 +57,103 @@ export class GenreRecommendations {
         else signal.addEventListener('abort', onGlobalAbort, { once: true });
       }
 
-      const url = `https://openlibrary.org/subjects/${encodeURIComponent(subjectSlug)}.json?limit=25`;
-      const res = await fetch(url, { signal: controller.signal });
+      try {
+        const url = `https://openlibrary.org/subjects/${encodeURIComponent(subjectSlug)}.json?limit=30`;
+        const res = await fetch(url, { signal: controller.signal });
 
-      clearTimeout(timeoutId);
-      if (signal) signal.removeEventListener('abort', onGlobalAbort);
+        clearTimeout(timeoutId);
+        if (signal) signal.removeEventListener('abort', onGlobalAbort);
 
-      if (!res.ok) {
-        throw new Error(`Open Library Subjects HTTP ${res.status}`);
-      }
+        if (!res.ok) {
+          throw new Error(`Open Library Subjects HTTP ${res.status}`);
+        }
 
-      const data = await res.json();
-      const works = Array.isArray(data?.works) ? data.works : [];
+        const data = await res.json();
+        const works = Array.isArray(data?.works) ? data.works : [];
 
-      const items: HomeBookItem[] = [];
+        const items: HomeBookItem[] = [];
 
-      for (const w of works) {
-        if (items.length >= 10) break;
-        if (!w.title) continue;
+        for (const w of works) {
+          if (items.length >= 10) break;
+          if (!w.title) continue;
 
-        const candidateBook = {
-          titulo: w.title,
-          autores: Array.isArray(w.authors) ? w.authors.map((a: any) => a.name) : [],
-          isbn13: undefined,
-          isbn10: undefined,
+          const candidateAuthors = Array.isArray(w.authors) ? w.authors.map((a: any) => a.name).filter(Boolean) : [];
+          const candidateBook = {
+            titulo: w.title,
+            autores: candidateAuthors,
+            isbn13: undefined,
+            isbn10: undefined,
+          };
+
+          // Exclui obras que o usuário já possui na estante
+          const isDuplicate = (books || []).some((b) => areBooksDuplicate(b, candidateBook));
+          if (isDuplicate) continue;
+
+          const coverId = w.cover_id;
+          const coverUrl = coverId ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : undefined;
+
+          items.push({
+            id: `genre_${w.key || items.length}`,
+            isLocal: false,
+            searchResult: {
+              origem: 'openlibrary',
+              idExterno: w.key,
+              titulo: w.title,
+              autores: candidateAuthors,
+              anoPublicacao: typeof w.first_publish_year === 'number' ? w.first_publish_year : null,
+              capaUrl: coverUrl,
+              generos: [displayGenreName],
+              fontes: [`Open Library (${displayGenreName})`],
+            },
+            titulo: w.title,
+            autores: candidateAuthors,
+            capaUrl: coverUrl,
+            anoPublicacao: typeof w.first_publish_year === 'number' ? w.first_publish_year : null,
+            generos: [displayGenreName],
+            reason: `Destaque no gênero ${displayGenreName}`,
+          });
+        }
+
+        const now = Date.now();
+        const section: HomeBookSection = {
+          id: 'section_genre',
+          type: 'genre',
+          title: `Porque você gosta de ${displayGenreName}`,
+          subtitle: `Seleção de obras aclamadas de ${displayGenreName}`,
+          source: `Open Library Subject (${displayGenreName})`,
+          books: items,
+          genre: displayGenreName,
+          state: items.length > 0 ? 'ready' : 'empty',
+          canViewAll: items.length > 0,
+          lastUpdated: now,
+          isCached: false,
         };
 
-        // Regra estrita: Exclui livros que o usuário já possui ou leu
-        const alreadyInLibrary = (books || []).some((b) => areBooksDuplicate(b, candidateBook));
-        if (alreadyInLibrary) continue;
+        if (items.length > 0) {
+          HomeFeedCache.set(cacheKey, section, this.CACHE_TTL_MS, signature);
+        }
 
-        const coverId = w.cover_id;
-        const coverUrl = coverId ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : undefined;
+        return section;
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        if (signal) signal.removeEventListener('abort', onGlobalAbort);
 
-        items.push({
-          id: `genre_${w.key || items.length}`,
-          isLocal: false,
-          searchResult: {
-            origem: 'openlibrary',
-            idExterno: w.key,
-            titulo: w.title,
-            autores: candidateBook.autores,
-            anoPublicacao: typeof w.first_publish_year === 'number' ? w.first_publish_year : null,
-            capaUrl: coverUrl,
-            generos: [genre],
-            fontes: ['Open Library Subjects'],
-          },
-          titulo: w.title,
-          autores: candidateBook.autores,
-          capaUrl: coverUrl,
-          anoPublicacao: typeof w.first_publish_year === 'number' ? w.first_publish_year : null,
-          generos: [genre],
-          reason: `Destaque no gênero ${genre}`,
-        });
+        if (cached) {
+          return { ...cached.section, isCached: true, lastUpdated: cached.timestamp };
+        }
+
+        return {
+          id: 'section_genre',
+          type: 'genre',
+          title: `Porque você gosta de ${displayGenreName}`,
+          genre: displayGenreName,
+          books: [],
+          state: 'empty',
+          errorMessage: `Não foi possível carregar sugestões de ${displayGenreName} no momento.`,
+        };
       }
+    };
 
-      const section: HomeBookSection = {
-        id: `section_genre_${subjectSlug}`,
-        type: 'genre',
-        title: `Porque você gosta de ${genre}`,
-        subtitle: `Novas obras selecionadas para o seu interesse em ${genre}`,
-        source: 'Open Library Catalog',
-        genre,
-        books: items,
-        state: items.length > 0 ? 'ready' : 'empty',
-        canViewAll: true,
-      };
-
-      if (items.length > 0) {
-        HomeFeedCache.set(cacheKey, section, 24 * 60 * 60 * 1000); // 24h
-      }
-
-      return section;
-    } catch {
-      if (cached) return cached.section;
-      return {
-        id: `section_genre_${subjectSlug}`,
-        type: 'genre',
-        title: `Porque você gosta de ${genre}`,
-        subtitle: `Obras de ${genre}`,
-        genre,
-        books: [],
-        state: 'empty',
-        errorMessage: 'Não foi possível carregar sugestões de gênero.',
-      };
-    }
+    return HomeFeedCache.setInFlight(cacheKey, fetchTask());
   }
 }

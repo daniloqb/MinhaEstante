@@ -3,11 +3,26 @@ import { Book, SearchResultBook } from '../../types/book';
 export type HomeSectionType =
   | 'personal-shelf'
   | 'trending'
+  | 'apple-books'
   | 'bestsellers'
   | 'genre'
   | 'recommended'
   | 'new-releases'
   | 'reading-journey';
+
+export interface DiscoveryNavigationContext {
+  source: 'home';
+  mode?: 'genre' | 'trending' | 'bestsellers' | 'apple-books' | 'releases' | 'recommended';
+  genre?: string;
+  provider?: string;
+  market?: string;
+  title?: string;
+  sourceName?: string;
+  referenceDate?: string;
+  searchTerm?: string;
+  type?: HomeSectionType;
+  books?: HomeBookItem[];
+}
 
 export interface HomeBookItem {
   id: string;
@@ -26,6 +41,8 @@ export interface HomeBookItem {
   reason?: string;
   rankPosition?: number;
   rating?: number | null;
+  releaseType?: 'new-work' | 'new-edition';
+  externalLink?: string;
 }
 
 export interface HomeBookSection {
@@ -40,6 +57,9 @@ export interface HomeBookSection {
   errorMessage?: string;
   genre?: string;
   canViewAll?: boolean;
+  lastUpdated?: number;
+  isCached?: boolean;
+  discoveryContext?: DiscoveryNavigationContext;
 }
 
 export interface ReadingPreferences {

@@ -205,22 +205,35 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
           </button>
         }
         actions={
-          <div className="flex items-center gap-1">
-            <button
-              onClick={onEdit}
-              className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
-              title="Editar dados"
+          book.id > 0 ? (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={onEdit}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+                title="Editar dados"
+              >
+                <Edit size={19} color={palette.goldPrimary} />
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer text-red-400 hover:text-red-300"
+                title="Excluir livro"
+              >
+                <Trash2 size={19} />
+              </button>
+            </div>
+          ) : (
+            <div
+              className="flex items-center px-2.5 py-1 rounded-md text-xs font-sans font-semibold tracking-wide border shadow-2xs"
+              style={{
+                backgroundColor: `${palette.woodBorder}30`,
+                borderColor: `${palette.woodBorder}60`,
+                color: palette.goldPrimary,
+              }}
             >
-              <Edit size={19} color={palette.goldPrimary} />
-            </button>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer text-red-400 hover:text-red-300"
-              title="Excluir livro"
-            >
-              <Trash2 size={19} />
-            </button>
-          </div>
+              Prévia da Obra
+            </div>
+          )
         }
       />
 

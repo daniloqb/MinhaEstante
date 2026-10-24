@@ -7,6 +7,7 @@ import { PaperCard } from '../components/PaperCard';
 import { areBooksDuplicate } from '../services/storage';
 import { useI18n } from '../i18n/I18nContext';
 import { ProviderStatus } from '../features/book-discovery';
+import { DiscoveryNavigationContext } from '../features/home-feed/types';
 import {
   Search,
   X,
@@ -44,6 +45,8 @@ interface SearchScreenProps {
   isLoadingMore?: boolean;
   providerStatuses?: ProviderStatus[];
   onGoToSettings?: () => void;
+  discoveryContext?: DiscoveryNavigationContext;
+  onClearDiscoveryContext?: () => void;
 }
 
 export const SearchScreen: React.FC<SearchScreenProps> = ({
@@ -64,6 +67,8 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
   isLoadingMore = false,
   providerStatuses = [],
   onGoToSettings,
+  discoveryContext,
+  onClearDiscoveryContext,
 }) => {
   const { t } = useI18n();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -407,6 +412,36 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
 
         {/* Resultados da Descoberta */}
         <div className="mt-5 flex-1 flex flex-col">
+          {discoveryContext && (
+            <div
+              className="mb-4 p-3.5 rounded-xl border flex items-center justify-between gap-3 shadow-xs"
+              style={{
+                backgroundColor: `${palette.goldPrimary}18`,
+                borderColor: `${palette.goldPrimary}60`,
+              }}
+            >
+              <div className="flex flex-col">
+                <span className="font-serif font-bold text-sm sm:text-base" style={{ color: palette.textOnWood }}>
+                  {discoveryContext.title}
+                </span>
+                <span className="text-xs font-sans opacity-85 mt-0.5" style={{ color: palette.textSecondaryOnWood }}>
+                  Fonte: {discoveryContext.sourceName} {discoveryContext.referenceDate ? `• ${discoveryContext.referenceDate}` : ''}
+                </span>
+              </div>
+              {onClearDiscoveryContext && (
+                <button
+                  type="button"
+                  onClick={onClearDiscoveryContext}
+                  className="p-1.5 rounded-full hover:bg-black/10 transition-colors cursor-pointer select-none"
+                  title="Limpar contexto de exploração"
+                  aria-label="Limpar contexto de exploração"
+                >
+                  <X size={16} style={{ color: palette.textOnWood }} />
+                </button>
+              )}
+            </div>
+          )}
+
           {isLoading && results.length === 0 && (
             <div className="py-12 flex flex-col items-center justify-center gap-3">
               <Loader2 size={38} className="animate-spin" style={{ color: palette.goldPrimary }} />

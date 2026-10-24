@@ -334,6 +334,35 @@ app.get('/api/books/search', async (req, res) => {
   }
 });
 
+// API: Proxy para rankings do New York Times Best Sellers
+app.get('/api/bestsellers/nyt', async (req, res) => {
+  const clientKey = (req.headers['x-nyt-api-key'] as string) || (req.query.key as string) || '';
+  const apiKey = clientKey || process.env.NYT_API_KEY || '';
+  if (!apiKey) {
+    return res.status(400).json({ error: 'Chave de API do New York Times não informada.' });
+  }
+
+  const list = String(req.query.list || 'hardcover-fiction');
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 9000);
+    const nytRes = await fetch(
+      `https://api.nytimes.com/svc/books/v3/lists/current/${encodeURIComponent(list)}.json?api-key=${encodeURIComponent(apiKey)}`,
+      { signal: controller.signal }
+    );
+    clearTimeout(timeout);
+
+    if (!nytRes.ok) {
+      return res.status(nytRes.status).json({ error: `NYT Books HTTP ${nytRes.status}` });
+    }
+
+    const data = await nytRes.json();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Erro ao consultar a API do New York Times.' });
+  }
+});
+
 // API: Consulta direta de livro por ISBN
 app.get('/api/books/isbn/:isbn', async (req, res) => {
   const isbn = String(req.params.isbn || '').replace(/[-\s]/g, '');
