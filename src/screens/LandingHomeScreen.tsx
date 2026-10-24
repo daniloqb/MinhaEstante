@@ -87,11 +87,15 @@ export const LandingHomeScreen: React.FC<LandingHomeScreenProps> = ({
   // Atualizador incremental e resiliente de uma seção
   const updateSectionState = useCallback((newSection: HomeBookSection) => {
     setSections((prev) => {
+      // Se a seção for remota e vazia (sem livros), remove para não poluir
+      if (newSection.books.length === 0 && newSection.type !== 'personal-shelf') {
+        return prev.filter((s) => s.id !== newSection.id && s.type !== newSection.type);
+      }
       const filtered = prev.filter((s) => s.id !== newSection.id && s.type !== newSection.type);
       return sortSections([...filtered, newSection]);
     });
 
-    if (newSection.lastUpdated) {
+    if (newSection.lastUpdated && newSection.books.length > 0) {
       setLastUpdated(newSection.lastUpdated);
       setIsCached(Boolean(newSection.isCached));
     }

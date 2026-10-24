@@ -80,13 +80,6 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
 
   // Seção sem livros (e não é estante principal), oculta silenciosamente
   if (section.books.length === 0) {
-    if (section.errorMessage) {
-      return (
-        <div className="w-full py-2 px-1 text-xs opacity-60 font-sans italic" style={{ color: palette.textSecondaryOnWood }}>
-          {section.title}: {section.errorMessage}
-        </div>
-      );
-    }
     return null;
   }
 

@@ -363,6 +363,33 @@ app.get('/api/bestsellers/nyt', async (req, res) => {
   }
 });
 
+// API: Proxy para rankings oficiais gratuitos da Apple Books (Top Paid RSS sem restrição de CORS)
+app.get('/api/bestsellers/apple', async (req, res) => {
+  const market = String(req.query.market || 'br').toLowerCase().replace(/[^a-z]/g, '') || 'br';
+  const feedUrl = `https://rss.marketingtools.apple.com/api/v2/${market}/books/top-paid/10/books.json`;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 9500);
+
+    const appleRes = await fetch(feedUrl, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+    });
+    clearTimeout(timeout);
+
+    if (!appleRes.ok) {
+      return res.status(appleRes.status).json({ error: `Apple Books HTTP ${appleRes.status}` });
+    }
+
+    const data = await appleRes.json();
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Erro ao consultar feed oficial da Apple Books.' });
+  }
+});
+
 // API: Consulta direta de livro por ISBN
 app.get('/api/books/isbn/:isbn', async (req, res) => {
   const isbn = String(req.params.isbn || '').replace(/[-\s]/g, '');
@@ -571,6 +598,7 @@ async function startServer() {
         middlewareMode: true,
         host: '0.0.0.0',
         port: 3000,
+        hmr: false,
       },
       appType: 'spa',
     });

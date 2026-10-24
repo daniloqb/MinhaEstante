@@ -54,7 +54,7 @@ export class NewReleasesFeed {
     }
 
     const currentYear = new Date().getFullYear();
-    const minYear = currentYear - 1; // Janela dos últimos 12 a 18 meses
+    const minYear = currentYear - 2; // Janela dos últimos 24 meses
 
     const fetchTask = async (): Promise<HomeBookSection> => {
       const controller = new AbortController();
@@ -67,9 +67,16 @@ export class NewReleasesFeed {
       }
 
       try {
-        // Consulta na Open Library com ordenação por novidades e filtro de ano verificável
-        const olUrl = `https://openlibrary.org/search.json?q=*&publish_year:[${minYear}+TO+${currentYear}]&sort=new&limit=30`;
-        const res = await fetch(olUrl, { signal: controller.signal });
+        // Consulta na Open Library com ordenação por novidades recentes (termo com 3+ caracteres para evitar HTTP 422)
+        const olUrl = `https://openlibrary.org/search.json?q=livros&sort=new&limit=30`;
+        let res = await fetch(olUrl, { signal: controller.signal });
+
+        if (!res.ok) {
+          // Fallback para termo literário alternativo
+          res = await fetch('https://openlibrary.org/search.json?q=literatura&sort=new&limit=30', {
+            signal: controller.signal,
+          });
+        }
 
         clearTimeout(timeoutId);
         if (signal) signal.removeEventListener('abort', onGlobalAbort);

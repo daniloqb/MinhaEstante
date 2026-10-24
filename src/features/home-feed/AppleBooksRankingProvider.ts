@@ -45,7 +45,9 @@ export class AppleBooksRankingProvider {
     officialUrl: string;
   }> {
     const market = SUPPORTED_APPLE_MARKETS[marketCode.toLowerCase()] || SUPPORTED_APPLE_MARKETS.br;
-    const feedUrl = `https://rss.marketingtools.apple.com/api/v2/${market.code}/books/top-paid/10/books.json`;
+    const directUrl = `https://rss.marketingtools.apple.com/api/v2/${market.code}/books/top-paid/10/books.json`;
+    const proxyUrl = `/api/bestsellers/apple?market=${encodeURIComponent(market.code)}`;
+    const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 9500);
@@ -57,12 +59,23 @@ export class AppleBooksRankingProvider {
     }
 
     try {
-      const res = await fetch(feedUrl, {
-        signal: controller.signal,
-        headers: {
-          Accept: 'application/json',
-        },
-      });
+      let res: Response;
+      const primaryUrl = isBrowser ? proxyUrl : directUrl;
+
+      try {
+        res = await fetch(primaryUrl, {
+          signal: controller.signal,
+          headers: { Accept: 'application/json' },
+        });
+      } catch (firstErr) {
+        // Fallback para URL direta ou proxy se a primeira tentativa falhar
+        if (signal?.aborted) throw firstErr;
+        const fallbackUrl = primaryUrl === proxyUrl ? directUrl : proxyUrl;
+        res = await fetch(fallbackUrl, {
+          signal: controller.signal,
+          headers: { Accept: 'application/json' },
+        });
+      }
 
       clearTimeout(timeoutId);
       if (signal) signal.removeEventListener('abort', onGlobalAbort);
@@ -111,7 +124,7 @@ export class AppleBooksRankingProvider {
         books,
         referenceDate: updatedDate,
         marketName: market.displayName,
-        officialUrl: feed?.links?.[0]?.self || feedUrl,
+        officialUrl: feed?.links?.[0]?.self || directUrl,
       };
     } catch (err: any) {
       clearTimeout(timeoutId);
