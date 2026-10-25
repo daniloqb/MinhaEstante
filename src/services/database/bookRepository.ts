@@ -60,7 +60,7 @@ export class BookRepository implements IBookRepository {
     }
 
     const primaryFormat = (row.formato as BookFormat) || formatos[0] || 'fisico';
-    const tenhoFisico = Number(row.tenho_fisico) === 1 || formatos.includes('fisico');
+    const tenhoFisico = row.tenho_fisico != null ? (Number(row.tenho_fisico) === 1 || (row.tenho_fisico as any) === true) : false;
 
     return {
       id: Number(row.id),
@@ -104,7 +104,10 @@ export class BookRepository implements IBookRepository {
     const formatos = getBookFormats(book);
     const formatosJson = JSON.stringify(formatos);
     const formato = book.formato || formatos[0] || 'fisico';
-    const tenhoFisico = (book.tenho_fisico !== undefined ? book.tenho_fisico : formatos.includes('fisico')) ? 1 : 0;
+    const tenhoFisico = (typeof book.tenho_fisico === 'boolean'
+      ? book.tenho_fisico
+      : (book.tenho_fisico !== undefined ? Boolean(book.tenho_fisico) : formatos.includes('fisico'))
+    ) ? 1 : 0;
     const statusLeitura = book.status_leitura || 'nenhum';
 
     const uuid = book.uuid || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `book-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
@@ -240,7 +243,10 @@ export class BookRepository implements IBookRepository {
     const formatos = getBookFormats(bookToSave);
     const formatosJson = JSON.stringify(formatos);
     const formato = bookToSave.formato || formatos[0] || 'fisico';
-    const tenhoFisico = (bookToSave.tenho_fisico !== undefined ? bookToSave.tenho_fisico : formatos.includes('fisico')) ? 1 : 0;
+    const tenhoFisico = (typeof bookToSave.tenho_fisico === 'boolean'
+      ? bookToSave.tenho_fisico
+      : (bookToSave.tenho_fisico !== undefined ? Boolean(bookToSave.tenho_fisico) : formatos.includes('fisico'))
+    ) ? 1 : 0;
     const statusLeitura = bookToSave.status_leitura || 'nenhum';
 
     const params = [
@@ -341,10 +347,10 @@ export class BookRepository implements IBookRepository {
           `INSERT INTO books (
             id, origem, id_externo, titulo, subtitulo, autores_json, editora,
             ano_publicacao, paginas, isbn10, isbn13, generos_json, descricao,
-            capa_url, capa_local_path, formato, tenho_fisico, status_leitura,
+            capa_url, capa_local_path, formato, formatos_json, tenho_fisico, status_leitura,
             emprestimo_json, mes_leitura, ano_leitura, nota, observacoes,
-            data_cadastro, data_atualizacao
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+            data_cadastro, data_atualizacao, uuid
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
           params
         );
         inserted++;

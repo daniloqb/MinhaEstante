@@ -56,7 +56,6 @@ CREATE INDEX IF NOT EXISTS idx_books_ano_leitura ON books(ano_leitura);
 CREATE INDEX IF NOT EXISTS idx_books_isbn13 ON books(isbn13);
 CREATE INDEX IF NOT EXISTS idx_books_isbn10 ON books(isbn10);
 CREATE INDEX IF NOT EXISTS idx_books_data_cadastro ON books(data_cadastro DESC);
-CREATE INDEX IF NOT EXISTS idx_books_uuid ON books(uuid);
 `;
 
 /**
@@ -127,6 +126,8 @@ CREATE TABLE IF NOT EXISTS reading_progress (
 );
 
 CREATE INDEX IF NOT EXISTS idx_reading_progress_session_id ON reading_progress(session_id);
+-- 5. Índice para o identificador estável UUID da obra
+CREATE INDEX IF NOT EXISTS idx_books_uuid ON books(uuid);
 `;
 
 /**
@@ -855,6 +856,21 @@ class NativeSQLiteDatabaseAdapter implements IDatabaseService {
 
         // Novas tabelas de anexos, posições e sessões
         await this.db.execute(V2_MIGRATION_SQL);
+
+        // Backfill defensivo de UUIDs para registros legados que não possuam identificador estável
+        try {
+          const rowsWithoutUuid = await this.db.query('SELECT id FROM books WHERE uuid IS NULL OR uuid = \'\';');
+          if (rowsWithoutUuid.values && rowsWithoutUuid.values.length > 0) {
+            for (const row of rowsWithoutUuid.values as any[]) {
+              const generatedUuid = typeof crypto !== 'undefined' && crypto.randomUUID
+                ? crypto.randomUUID()
+                : `book-${row.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+              await this.db.run('UPDATE books SET uuid = ? WHERE id = ?;', [generatedUuid, row.id]);
+            }
+          }
+        } catch (uuidErr) {
+          console.warn('Aviso: Falha ao executar backfill de UUIDs:', uuidErr);
+        }
 
         // Registra versão 2 concluída
         await this.db.run(

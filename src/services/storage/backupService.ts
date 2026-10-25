@@ -80,6 +80,7 @@ export class BackupService {
 
     // Identifica capas locais portáteis
     let coversCount = 0;
+    const processedCoverFiles = new Set<string>();
     const total = books.length;
 
     onProgress?.('Lendo capas da biblioteca...', 0, total);
@@ -97,8 +98,11 @@ export class BackupService {
           if (coverBase64) {
             const fileName = book.capaLocalPath.split('/').pop() || `cover_${book.id}.jpg`;
             const zipPath = `covers/${fileName}`;
-            coversFolder.file(fileName, coverBase64, { base64: true });
-            coversCount++;
+            if (!processedCoverFiles.has(fileName)) {
+              coversFolder.file(fileName, coverBase64, { base64: true });
+              processedCoverFiles.add(fileName);
+              coversCount++;
+            }
             portableCoverPath = zipPath;
           }
         } catch (err) {
@@ -162,7 +166,7 @@ export class BackupService {
    * 2. Valida a integridade e descompacta um backup ZIP
    */
   static async validateAndExtractZip(
-    zipInput: Blob | ArrayBuffer | string
+    zipInput: Blob | ArrayBuffer | string | Uint8Array
   ): Promise<{
     manifest: BackupManifest;
     books: Book[];
@@ -209,7 +213,7 @@ export class BackupService {
       if (!Array.isArray(parsedBooks)) {
         throw new Error('books.json não contém uma lista de livros');
       }
-      books = migrateLegacyBooks(parsedBooks);
+      books = migrateLegacyBooks(parsedBooks, false);
     } catch (err: any) {
       throw new Error(`Erro ao validar livros do backup: ${err.message}`);
     }
@@ -257,7 +261,7 @@ export class BackupService {
    * 3. Restaura o backup na biblioteca (Modo 'replace' ou 'merge')
    */
   static async restoreFromZip(
-    zipInput: Blob | ArrayBuffer | string,
+    zipInput: Blob | ArrayBuffer | string | Uint8Array,
     mode: 'replace' | 'merge' = 'replace',
     onProgress?: (step: string, current: number, total: number) => void
   ): Promise<RestoreResult> {
@@ -304,23 +308,19 @@ export class BackupService {
 
       for (const item of books) {
         let finalCoverPath = item.capaLocalPath || null;
-        if (finalCoverPath && !coverFiles.has(finalCoverPath)) {
+        if (finalCoverPath && coverFiles.has(finalCoverPath)) {
+          // Capa presente e extraída com sucesso do ZIP
+          if (item.capaUrl && item.capaUrl.startsWith('data:')) {
+            item.capaUrl = null;
+          }
+        } else if (finalCoverPath) {
           // Se o arquivo da capa não existia no zip, verificar se existe localmente
           const existsLocal = await CoverStorageService.readCoverBinary(finalCoverPath);
           if (!existsLocal) {
             warnings.push(`Capa ${finalCoverPath} do livro "${item.titulo}" não encontrada.`);
           }
-        }
-
-        // Se o item tinha capa em base64 antiga, converte para local
-        if (item.capaUrl && (item.capaUrl.startsWith('data:image/') || item.capaUrl.startsWith('data:application/'))) {
-          try {
-            const localSaved = await CoverStorageService.convertBase64ToLocalCover(item.capaUrl, item.id);
-            finalCoverPath = localSaved;
-            item.capaUrl = null;
-          } catch {
-            warnings.push(`Não foi possível converter capa em base64 do livro "${item.titulo}".`);
-          }
+        } else {
+          finalCoverPath = null;
         }
 
         booksToInsert.push({
@@ -332,11 +332,28 @@ export class BackupService {
       if (mode === 'replace') {
         await repo.bulkInsert(booksToInsert);
       } else {
-        // Merge
+        // Merge inteligente preservando registros existentes
         const mergedList = [...currentList];
         for (const item of booksToInsert) {
-          const maxId = mergedList.reduce((max, b) => Math.max(max, b.id || 0), 0);
-          mergedList.push({ ...item, id: maxId + 1 });
+          const existingIdx = mergedList.findIndex((b) => {
+            if (b.uuid && item.uuid && b.uuid === item.uuid) return true;
+            if (b.isbn13 && item.isbn13 && b.isbn13 === item.isbn13) return true;
+            if (b.idExterno && item.idExterno && b.origem === item.origem && b.idExterno === item.idExterno) return true;
+            return false;
+          });
+
+          if (existingIdx >= 0) {
+            const existing = mergedList[existingIdx];
+            mergedList[existingIdx] = {
+              ...item,
+              id: existing.id,
+              uuid: existing.uuid || item.uuid,
+              dataCadastro: existing.dataCadastro || item.dataCadastro,
+            };
+          } else {
+            const maxId = mergedList.reduce((max, b) => Math.max(max, b.id || 0), 0);
+            mergedList.push({ ...item, id: maxId + 1 });
+          }
         }
         await repo.clearAll();
         await repo.bulkInsert(mergedList);

@@ -136,7 +136,7 @@ export function mergeDuplicateBooks(a: Book, b: Book): Book {
 /**
  * Migra lista de livros antigos para a nova regra de negócio independente
  */
-export function migrateLegacyBooks(rawBooks: any[]): Book[] {
+export function migrateLegacyBooks(rawBooks: any[], deduplicate = true): Book[] {
   if (!Array.isArray(rawBooks)) return [];
 
   // 1. Converte campos individuais para cada livro
@@ -165,6 +165,11 @@ export function migrateLegacyBooks(rawBooks: any[]): Book[] {
       status_leitura = 'nenhum';
     } else if (legacyIndicator === 'nenhum') {
       status_leitura = 'nenhum';
+      if (typeof raw.tenho_fisico !== 'boolean') {
+        tenho_fisico = raw.formato !== 'ebook' && raw.formato !== 'audiolivro';
+      }
+    } else if (typeof raw.tenho_fisico !== 'boolean') {
+      tenho_fisico = raw.formato !== 'ebook' && raw.formato !== 'audiolivro';
     }
 
     const rawFormato: BookFormat =
@@ -177,8 +182,13 @@ export function migrateLegacyBooks(rawBooks: any[]): Book[] {
       formatos = getBookFormats({ formato: rawFormato, tenho_fisico });
     }
 
+    const uuid = raw.uuid || (typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `book-${raw.id || idx + 1}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`);
+
     return {
       id: raw.id || idx + 1,
+      uuid,
       origem: raw.origem || 'manual',
       idExterno: raw.idExterno || null,
       titulo: raw.titulo || 'Sem título',
@@ -207,7 +217,12 @@ export function migrateLegacyBooks(rawBooks: any[]): Book[] {
     };
   });
 
-  // 2. Mescla registros duplicados (ex.: um livro em Meus Livros e outro em Lido/Quero ler)
+  // 2. Se não foi solicitada deduplicação (padrão seguro para restaurações e backups), retorna todos
+  if (!deduplicate) {
+    return converted;
+  }
+
+  // 3. Mescla registros duplicados apenas quando explicitamente solicitado (ex.: migração legado v1)
   const merged: Book[] = [];
   for (const book of converted) {
     const existingIdx = merged.findIndex((m) => areBooksDuplicate(m, book));
