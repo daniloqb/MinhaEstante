@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Book, ReadingStatus, isBookBorrowed, hasBookFormat } from '../types/book';
+import { Book, BookFormat, ReadingStatus, isBookBorrowed, hasBookFormat, isBookOwned } from '../types/book';
+import { useI18n } from '../i18n/I18nContext';
 import { WoodPalette } from '../theme/woodTheme';
 import {
   BookOpen,
@@ -26,7 +27,7 @@ interface QuickActionModalProps {
   onTogglePosse: (book: Book) => void;
   onSetStatusLeitura: (book: Book, status: ReadingStatus) => void;
   onDelete: (book: Book) => void;
-  onToggleFormato?: (book: Book) => void;
+  onToggleFormato?: (book: Book, format: BookFormat) => void;
   onOpenLoanModal?: (book: Book) => void;
 }
 
@@ -42,12 +43,14 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
   onToggleFormato,
   onOpenLoanModal,
 }) => {
+  const { t } = useI18n();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   if (!book) return null;
-  const isEbook = hasBookFormat(book, 'ebook') || book.formato === 'ebook';
-  const isAudiobook = hasBookFormat(book, 'audiolivro') || book.formato === 'audiolivro';
-  const isFisico = hasBookFormat(book, 'fisico') || book.formato === 'fisico' || book.tenho_fisico;
+  const isEbook = hasBookFormat(book, 'ebook');
+  const isAudiobook = hasBookFormat(book, 'audiolivro');
+  const isFisico = hasBookFormat(book, 'fisico');
+  const owned = isBookOwned(book);
 
   return (
     <div
@@ -160,27 +163,25 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
           )}
 
           {isAudiobook && (
-            <span
-              className="text-xs font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1 bg-teal-950/20 text-teal-700 border-teal-300/60"
-            >
-              <Headphones size={12} />
-              Audiolivro
-            </span>
-          )}
+          <span
+            className="text-xs font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1 bg-teal-950/20 text-teal-700 border-teal-300/60"
+          >
+            <Headphones size={12} />
+            Audiolivro
+          </span>
+        )}
 
-          {isFisico && (
-            <span
-              className="text-xs font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1"
-              style={{
-                backgroundColor: book.tenho_fisico ? `${palette.goldPrimary}20` : '#00000008',
-                borderColor: book.tenho_fisico ? palette.goldPrimary : `${palette.woodBorder}40`,
-                color: book.tenho_fisico ? palette.woodBorder : palette.textSecondaryOnPaper,
-              }}
-            >
-              <Library size={12} />
-              {book.tenho_fisico ? 'Tenho em casa' : 'Sem posse física'}
-            </span>
-          )}
+          <span
+            className="text-xs font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1"
+            style={{
+              backgroundColor: owned ? `${palette.goldPrimary}20` : '#00000008',
+              borderColor: owned ? palette.goldPrimary : `${palette.woodBorder}40`,
+              color: owned ? palette.woodBorder : palette.textSecondaryOnPaper,
+            }}
+          >
+            <Library size={12} />
+            {owned ? t.ownership.owned : t.ownership.notOwned}
+          </span>
 
           <span
             className="text-xs font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1"
@@ -214,7 +215,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
                 <Bookmark size={12} /> Quero ler
               </>
             ) : (
-              'Sem leitura'
+              book.status_leitura === 'lendo' ? t.status.reading : book.status_leitura === 'abandonado' ? t.status.abandoned : t.status.none
             )}
           </span>
         </div>
@@ -259,60 +260,40 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
             </button>
           )}
 
-          {/* Alternar entre Físico, E-book e Audiolivro */}
+          {/* Modalidades independentes: mantém ao menos uma selecionada. */}
           {onToggleFormato && (
-            <button
-              onClick={() => {
-                onToggleFormato(book);
-              }}
-              className="w-full py-2.5 px-4 rounded-xl font-sans font-medium text-xs sm:text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all select-none"
-              style={{
-                borderColor: `${palette.woodBorder}70`,
-                color: palette.textOnPaper,
-              }}
-            >
-              {book.formato === 'ebook' ? (
-                <>
-                  <Headphones size={15} /> Mudar para Audiolivro
-                </>
-              ) : book.formato === 'audiolivro' ? (
-                <>
-                  <BookOpen size={15} /> Mudar para Livro Físico
-                </>
-              ) : (
-                <>
-                  <Tablet size={15} /> Mudar para E-book Digital
-                </>
-              )}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              {(['fisico', 'ebook', 'audiolivro'] as BookFormat[]).map((format) => (
+                <button
+                  key={format}
+                  type="button"
+                  aria-pressed={hasBookFormat(book, format)}
+                  onClick={() => onToggleFormato(book, format)}
+                  className="flex-1 py-2 px-2 rounded-xl font-sans font-medium text-xs border cursor-pointer hover:bg-black/5 active:scale-98 transition-all"
+                  style={{
+                    borderColor: palette.woodBorder,
+                    backgroundColor: hasBookFormat(book, format) ? `${palette.goldPrimary}25` : 'transparent',
+                    color: palette.textOnPaper,
+                  }}
+                >
+                  {format === 'fisico' ? t.format.physical : format === 'ebook' ? t.format.ebook : t.format.audiobook}
+                </button>
+              ))}
+            </div>
           )}
 
-          {/* Ação de Posse Física (se for livro físico) */}
-          {isFisico && (
-            <button
-              onClick={() => {
-                onDismiss();
-                onTogglePosse(book);
-              }}
-              className="w-full py-2.5 px-4 rounded-xl font-sans font-medium text-xs sm:text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all select-none"
-              style={{
-                borderColor: palette.woodBorder,
-                color: palette.textOnPaper,
-              }}
-            >
-              {book.tenho_fisico ? (
-                <>
-                  <MinusCircle size={16} />
-                  Remover de Meus Livros (não tenho mais)
-                </>
-              ) : (
-                <>
-                  <Library size={16} />
-                  Adicionar a Meus Livros (tenho físico)
-                </>
-              )}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => {
+              onDismiss();
+              onTogglePosse(book);
+            }}
+            className="w-full py-2.5 px-4 rounded-xl font-sans font-medium text-xs sm:text-sm flex items-center justify-center gap-2 border cursor-pointer hover:bg-black/5 active:scale-98 transition-all select-none"
+            style={{ borderColor: palette.woodBorder, color: palette.textOnPaper }}
+          >
+            {owned ? <MinusCircle size={16} /> : <Library size={16} />}
+            {owned ? t.ownership.remove : t.ownership.add}
+          </button>
 
           {/* Ação: Marcar como Lido */}
           {book.status_leitura !== 'lido' && (

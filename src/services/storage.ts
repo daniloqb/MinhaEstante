@@ -1,4 +1,4 @@
-import { Book, EstanteStats, ReadingStatus, BookFormat, getBookFormats, hasBookFormat } from '../types/book';
+import { Book, EstanteStats, ReadingStatus, BookFormat, getBookFormats, hasBookFormat, isBookOwned } from '../types/book';
 import { bookRepository } from './database/bookRepository';
 import { CoverStorageService } from './storage/coverStorageService';
 
@@ -76,15 +76,19 @@ export function areBooksDuplicate(a: Partial<Book>, b: Partial<Book>): boolean {
  * Mescla dois registros duplicados em um único registro preservando informações
  */
 export function mergeDuplicateBooks(a: Book, b: Book): Book {
-  // Combina posse física
-  const combinedTenhoFisico = Boolean(a.tenho_fisico || b.tenho_fisico);
+  // Combina declarações de posse apenas na mesclagem explícita de registros
+  const combinedTenhoFisico = isBookOwned(a) || isBookOwned(b);
 
-  // Status de leitura: 'lido' tem precedência sobre 'quero_ler' que tem precedência sobre 'nenhum'
+  // Mantém a precedência de Lido e preserva também os estados Lendo e Abandonado.
   let combinedStatus: ReadingStatus = 'nenhum';
   if (a.status_leitura === 'lido' || b.status_leitura === 'lido') {
     combinedStatus = 'lido';
+  } else if (a.status_leitura === 'lendo' || b.status_leitura === 'lendo') {
+    combinedStatus = 'lendo';
   } else if (a.status_leitura === 'quero_ler' || b.status_leitura === 'quero_ler') {
     combinedStatus = 'quero_ler';
+  } else if (a.status_leitura === 'abandonado' || b.status_leitura === 'abandonado') {
+    combinedStatus = 'abandonado';
   }
 
   // Preserva nota, ano e mês de leitura
@@ -141,36 +145,16 @@ export function migrateLegacyBooks(rawBooks: any[], deduplicate = true): Book[] 
 
   // 1. Converte campos individuais para cada livro
   const converted: Book[] = rawBooks.map((raw, idx) => {
-    let tenho_fisico = false;
-    let status_leitura: ReadingStatus = 'nenhum';
-
-    if (typeof raw.tenho_fisico === 'boolean') {
-      tenho_fisico = raw.tenho_fisico;
-    }
-
     const legacyIndicator = String(raw.status_leitura || raw.status || raw.categoria || '').toLowerCase().trim();
-    if (legacyIndicator === 'lido' || legacyIndicator === 'lidos') {
-      status_leitura = 'lido';
-      if (typeof raw.tenho_fisico !== 'boolean') tenho_fisico = false;
-    } else if (legacyIndicator === 'quero_ler' || legacyIndicator === 'desejo') {
-      status_leitura = 'quero_ler';
-      if (typeof raw.tenho_fisico !== 'boolean') tenho_fisico = false;
-    } else if (
-      legacyIndicator === 'meus_livros' ||
-      legacyIndicator === 'meus livros' ||
-      legacyIndicator === 'tenho' ||
-      legacyIndicator === 'possui'
-    ) {
-      tenho_fisico = true;
-      status_leitura = 'nenhum';
-    } else if (legacyIndicator === 'nenhum') {
-      status_leitura = 'nenhum';
-      if (typeof raw.tenho_fisico !== 'boolean') {
-        tenho_fisico = raw.formato !== 'ebook' && raw.formato !== 'audiolivro';
-      }
-    } else if (typeof raw.tenho_fisico !== 'boolean') {
-      tenho_fisico = raw.formato !== 'ebook' && raw.formato !== 'audiolivro';
-    }
+    // Um booleano histórico explícito tem precedência sobre qualquer categoria antiga.
+    const tenho_fisico = typeof raw.tenho_fisico === 'boolean'
+      ? raw.tenho_fisico
+      : ['meus_livros', 'meus livros', 'tenho', 'possui'].includes(legacyIndicator);
+    const legacyStatuses: Record<string, ReadingStatus> = {
+      lido: 'lido', lidos: 'lido', quero_ler: 'quero_ler', desejo: 'quero_ler',
+      lendo: 'lendo', abandonado: 'abandonado', nenhum: 'nenhum',
+    };
+    const status_leitura = legacyStatuses[legacyIndicator] || 'nenhum';
 
     const rawFormato: BookFormat =
       raw.formato === 'audiolivro' ? 'audiolivro' : raw.formato === 'ebook' ? 'ebook' : 'fisico';
@@ -383,8 +367,7 @@ export const BookStorage = {
 
   computeStats(books: Book[]): EstanteStats {
     const currentYear = new Date().getFullYear();
-    // Meus Livros: tenho_fisico === true
-    const meusLivros = books.filter((b) => b.tenho_fisico);
+    const meusLivros = books.filter(isBookOwned);
     // Lidos: status_leitura === 'lido'
     const lidos = books.filter((b) => b.status_leitura === 'lido');
     // Quero Ler: status_leitura === 'quero_ler'
@@ -437,6 +420,7 @@ export const BookStorage = {
       .slice(0, 8);
 
     return {
+      totalRegistros: books.length,
       totalMeusLivros: meusLivros.length,
       totalLidos: lidos.length,
       totalQueroLer: queroLer.length,
@@ -447,9 +431,9 @@ export const BookStorage = {
       lidosPorAno: porAno,
       topAutores,
       topGeneros,
-      totalEbooks: books.filter((b) => hasBookFormat(b, 'ebook') || b.formato === 'ebook').length,
-      totalAudiolivros: books.filter((b) => hasBookFormat(b, 'audiolivro') || b.formato === 'audiolivro').length,
-      totalFisicos: books.filter((b) => hasBookFormat(b, 'fisico') || b.formato === 'fisico' || b.tenho_fisico).length,
+      totalEbooks: books.filter((b) => hasBookFormat(b, 'ebook')).length,
+      totalAudiolivros: books.filter((b) => hasBookFormat(b, 'audiolivro')).length,
+      totalFisicos: books.filter((b) => hasBookFormat(b, 'fisico')).length,
     };
   },
 
@@ -519,7 +503,7 @@ export const BookStorage = {
       escapeCsv(b.descricao),
       escapeCsv(b.capaUrl),
       b.formato || 'fisico',
-      b.tenho_fisico ? 'sim' : 'nao',
+      isBookOwned(b) ? 'sim' : 'nao',
       escapeCsv(b.status_leitura),
       b.mesLeitura ?? '',
       b.anoLeitura ?? '',
@@ -674,13 +658,15 @@ export const BookStorage = {
 
       if (statusLeituraIdx >= 0 && statusLeituraIdx < cols.length) {
         const val = cols[statusLeituraIdx].toLowerCase().trim();
-        if (val.includes('lido') || val === 'read') status_leitura = 'lido';
+        if (val === 'lendo') status_leitura = 'lendo';
+        else if (val === 'abandonado') status_leitura = 'abandonado';
+        else if (val.includes('lido') || val === 'read') status_leitura = 'lido';
         else if (val.includes('quero') || val.includes('wish')) status_leitura = 'quero_ler';
         else status_leitura = 'nenhum';
       } else if (legacyStatusIdx >= 0 && legacyStatusIdx < cols.length) {
         const val = cols[legacyStatusIdx].toLowerCase().trim();
         if (val.includes('meus') || val.includes('tenho')) {
-          tenho_fisico = true;
+          if (tenhoFisicoIdx < 0) tenho_fisico = true;
           status_leitura = 'nenhum';
         } else if (val.includes('lido')) {
           status_leitura = 'lido';
@@ -689,10 +675,12 @@ export const BookStorage = {
         }
       }
 
-      let formato: 'fisico' | 'ebook' = 'fisico';
+      let formato: BookFormat = 'fisico';
       if (formatoIdx >= 0 && formatoIdx < cols.length) {
         const val = cols[formatoIdx].toLowerCase().trim();
-        if (val.includes('ebook') || val.includes('e-book') || val.includes('digital')) {
+        if (val.includes('audiolivro') || val.includes('audiobook')) {
+          formato = 'audiolivro';
+        } else if (val.includes('ebook') || val.includes('e-book') || val.includes('digital')) {
           formato = 'ebook';
         }
       }

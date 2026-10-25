@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Book, BookLoan, ShelfTab } from '../types/book';
+import { Book, BookLoan, ShelfTab, isBookOwned } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
 import { PaperCard } from '../components/PaperCard';
@@ -265,7 +265,7 @@ export const LoansScreen: React.FC<LoansScreenProps> = ({
                 color: palette.textOnWood,
               }}
             >
-              {books.filter((b) => Boolean(b.tenho_fisico) || b.formato === 'ebook').length}
+              {books.filter(isBookOwned).length}
             </span>
           </button>
 

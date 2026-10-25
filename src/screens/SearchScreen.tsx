@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SearchResultBook, ShelfTab, Book, BookFormat, ReadingStatus, getBookFormats, toggleBookFormat } from '../types/book';
+import { SearchResultBook, ShelfTab, Book, BookFormat, ReadingStatus, getBookFormats, toggleBookFormat, isBookOwned } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
 import { BookCoverView } from '../components/BookCoverView';
@@ -28,6 +28,10 @@ import {
 } from 'lucide-react';
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal';
 
+// A prévia e os toggles do cartão devem consultar a mesma seleção pendente.
+const getSearchItemKey = (item: SearchResultBook): string =>
+  item.isbn13 || `${item.origem}:${item.idExterno || `${item.titulo}:${item.autores.join('|')}`}`;
+
 interface SearchScreenProps {
   palette: WoodPalette;
   searchQuery: string;
@@ -40,7 +44,8 @@ interface SearchScreenProps {
   onSelectBookToAdd: (
     book: SearchResultBook,
     targetAction?: ShelfTab | 'audiolivro' | 'fisico' | BookFormat[],
-    targetStatus?: ReadingStatus
+    targetStatus?: ReadingStatus,
+    targetOwned?: boolean
   ) => void;
   onSelectBookDetail: (book: Book) => void;
   onOpenManualRegister: () => void;
@@ -99,7 +104,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
     if (existingInLibrary) {
       onSelectBookDetail(existingInLibrary);
     } else {
-      const itemKey = item.isbn13 || item.idExterno || item.titulo;
+      const itemKey = getSearchItemKey(item);
       const pendingFmts = pendingFormatsByItem[itemKey] || (item.formatos && item.formatos.length > 0 ? item.formatos : ['fisico']);
       const previewBook: Book = {
         id: 0,
@@ -118,7 +123,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
         capaUrl: item.capaUrl,
         formato: pendingFmts[0] || 'fisico',
         formatos: pendingFmts,
-        tenho_fisico: pendingFmts.includes('fisico'),
+        tenho_fisico: false,
         status_leitura: 'nenhum',
         anoLeitura: null,
         mesLeitura: null,
@@ -629,7 +634,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                                   border: '1px solid #10b98150',
                                 }}
                               >
-                                Na Estante
+                                {t.ownership.registered}
                               </span>
                             )}
                           </div>
@@ -684,7 +689,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
 
                         {/* Botões de Ação na Estante */}
                         {(() => {
-                          const itemKey = item.isbn13 || item.idExterno || `${item.titulo}_${idx}`;
+                          const itemKey = getSearchItemKey(item);
                           const effectiveFormats: BookFormat[] = existingInLibrary
                             ? getBookFormats(existingInLibrary)
                             : (pendingFormatsByItem[itemKey] || (item.formatos && item.formatos.length > 0 ? item.formatos : ['fisico']));
@@ -772,12 +777,12 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                               </button>
 
                               {/* Botão de Adicionar à Estante (quando ainda não cadastrado) */}
-                              {!existingInLibrary ? (
+                              {!existingInLibrary || !isBookOwned(existingInLibrary) ? (
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    onSelectBookToAdd(item, effectiveFormats, 'nenhum');
+                                    onSelectBookToAdd(item, effectiveFormats, undefined, true);
                                   }}
                                   className="px-2.5 py-1 rounded-md font-sans font-bold text-xs flex items-center gap-1 border shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all select-none"
                                   style={{
@@ -785,10 +790,10 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                                     borderColor: palette.woodBorder,
                                     color: palette.textOnGold,
                                   }}
-                                  title="Adicionar à estante com os formatos selecionados"
+                                  title={t.ownership.add}
                                 >
                                   <Plus size={12} />
-                                  + Estante
+                                  {t.ownership.add}
                                 </button>
                               ) : (
                                 <span
@@ -799,7 +804,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                                     border: '1px solid #10b98150',
                                   }}
                                 >
-                                  Na Estante ✓
+                                  {t.ownership.owned} ✓
                                 </span>
                               )}
 

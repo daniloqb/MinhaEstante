@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Book, ReadingStatus, BookFormat, getBookFormats, toggleBookFormat, formatFormatNames } from '../types/book';
+import { Book, ReadingStatus, BookFormat, getBookFormats, updateBookFormats, isBookOwned, formatFormatNames } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
 import { WoodShelf } from '../components/WoodShelf';
 import { BookCoverView } from '../components/BookCoverView';
+import { BookOwnershipToggle } from '../components/BookOwnershipToggle';
 import { PaperCard } from '../components/PaperCard';
 import { StarRatingBar } from '../components/StarRatingBar';
 import { BookSummaryAiModal } from '../components/BookSummaryAiModal';
@@ -127,26 +128,7 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
 
   const handleToggleFormat = (newFormat: BookFormat) => {
     if (!onUpdateBook) return;
-    const activeFormats = getBookFormats(book);
-    const nextFormats = toggleBookFormat(activeFormats, newFormat);
-    if (
-      nextFormats.length === activeFormats.length &&
-      nextFormats.every((f) => activeFormats.includes(f))
-    ) {
-      return; // Mantém pelo menos um formato ativo (não pode desmarcar o único)
-    }
-
-    const nextPrimary = nextFormats.includes(newFormat)
-      ? newFormat
-      : nextFormats[0] || 'fisico';
-
-    onUpdateBook({
-      ...book,
-      formato: nextPrimary,
-      formatos: nextFormats,
-      tenho_fisico: nextFormats.includes('fisico'),
-      dataAtualizacao: Date.now(),
-    });
+    onUpdateBook(updateBookFormats(book, newFormat));
   };
 
   const originLabel =
@@ -533,54 +515,11 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
             </p>
           </div>
 
-          {/* Painel Independente 1: Posse Física (Switch com estado reativo) */}
-          <div
-            className="p-3.5 rounded-xl border flex items-center justify-between transition-colors"
-            style={{
-              backgroundColor: book.tenho_fisico ? `${palette.goldPrimary}18` : palette.paperSurfaceElevated,
-              borderColor: book.tenho_fisico ? palette.goldPrimary : palette.paperBorder,
-            }}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className="p-2 rounded-lg"
-                style={{
-                  backgroundColor: book.tenho_fisico ? palette.goldPrimary : `${palette.woodBorder}20`,
-                  color: book.tenho_fisico ? palette.textOnGold : palette.woodBorder,
-                }}
-              >
-                <Library size={19} />
-              </div>
-              <div>
-                <span className="font-serif font-bold text-base block" style={{ color: palette.textOnPaper }}>
-                  Tenho este exemplar em casa
-                </span>
-                <span className="text-xs sm:text-sm font-sans" style={{ color: palette.textSecondaryOnPaper }}>
-                  {book.tenho_fisico
-                    ? 'Exemplar físico no acervo pessoal (Aba Livros Físicos)'
-                    : 'Não possuo o exemplar físico no momento'}
-                </span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              role="switch"
-              aria-checked={book.tenho_fisico}
-              onClick={onTogglePosse}
-              className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-              style={{
-                backgroundColor: book.tenho_fisico ? palette.goldPrimary : '#9ca3af',
-              }}
-              title={book.tenho_fisico ? 'Remover de Livros Físicos' : 'Adicionar a Livros Físicos'}
-            >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                  book.tenho_fisico ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
+          <BookOwnershipToggle
+            palette={palette}
+            owned={isBookOwned(book)}
+            onChange={onTogglePosse}
+          />
 
           {/* Painel Independente 2: Status de Leitura & Avaliação */}
           <div

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Book, SearchResultBook, ShelfTab } from '../types/book';
+import { Book, SearchResultBook, ShelfTab, isBookOwned } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { MainTab } from '../components/NavigationBottomBar';
 import { HomeHeader } from '../components/home/HomeHeader';
@@ -77,7 +77,7 @@ export const LandingHomeScreen: React.FC<LandingHomeScreenProps> = ({
   // Contadores reais da coleção
   const counts = useMemo(() => {
     return {
-      meusLivros: books.filter((b) => Boolean(b.tenho_fisico) || b.formato === 'ebook').length,
+      meusLivros: books.filter(isBookOwned).length,
       lidos: books.filter((b) => b.status_leitura === 'lido').length,
       queroLer: books.filter((b) => b.status_leitura === 'quero_ler').length,
       emprestados: books.filter((b) => b.emprestimo && !b.emprestimo.devolvido).length,

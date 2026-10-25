@@ -1,16 +1,14 @@
-import { Book } from '../../types/book';
+import { Book, isBookOwned } from '../../types/book';
 import { HomeBookItem, HomeBookSection } from './types';
 
 export class LocalShelfFeed {
   /**
    * Seção 1: "Sua Estante"
-   * Últimos 10 livros cadastrados que pertencem à coleção (posse física ou e-book).
+   * Últimos 10 livros cadastrados que pertencem à coleção (posse declarada, em qualquer modalidade).
    * Ordenados por dataCadastro decrescente (do mais recente para o mais antigo).
    */
   static getPersonalShelfSection(books: Book[]): HomeBookSection {
-    const ownedBooks = (books || []).filter(
-      (b) => Boolean(b.tenho_fisico) || b.formato === 'ebook'
-    );
+    const ownedBooks = (books || []).filter(isBookOwned);
 
     // Ordenação estrita por dataCadastro decrescente
     const sorted = [...ownedBooks].sort((a, b) => (b.dataCadastro || 0) - (a.dataCadastro || 0));
@@ -78,7 +76,7 @@ export class LocalShelfFeed {
     // 2. Não lidos na estante
     if (items.length < 10) {
       const unreadOwned = all.filter(
-        (b) => (b.tenho_fisico || b.formato === 'ebook') && b.status_leitura === 'nenhum'
+        (b) => isBookOwned(b) && b.status_leitura === 'nenhum'
       );
       for (const b of unreadOwned) {
         if (items.length >= 10) break;

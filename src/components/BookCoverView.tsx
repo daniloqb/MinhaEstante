@@ -151,9 +151,9 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
     }
 
     // 2. Físico / E-book / Audiolivro (suporta múltiplos formatos simultâneos)
-    const hasFisico = hasBookFormat(book, 'fisico') || book.formato === 'fisico' || book.tenho_fisico;
-    const hasEbook = hasBookFormat(book, 'ebook') || book.formato === 'ebook';
-    const hasAudio = hasBookFormat(book, 'audiolivro') || book.formato === 'audiolivro';
+    const hasFisico = hasBookFormat(book, 'fisico');
+    const hasEbook = hasBookFormat(book, 'ebook');
+    const hasAudio = hasBookFormat(book, 'audiolivro');
 
     if (hasAudio) {
       items.push(
@@ -185,14 +185,14 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
       );
     }
 
-    if (hasFisico && (!hasEbook && !hasAudio || book.tenho_fisico)) {
+    if (hasFisico) {
       items.push(
         <span
           key="fisico"
           className={`${
             compact ? 'px-1 py-0.5 text-[9px]' : 'px-1.5 py-0.5 text-[10px] sm:text-[11px]'
           } rounded-full font-sans font-bold shadow-md flex items-center gap-0.5 border bg-amber-950 text-amber-100 border-amber-300/70 tracking-tight`}
-          title={book.tenho_fisico ? 'Livro Físico (tenho em casa)' : 'Livro Físico'}
+          title="Livro Físico"
         >
           <BookOpen size={compact ? 8 : 10} />
           <span>Físico</span>

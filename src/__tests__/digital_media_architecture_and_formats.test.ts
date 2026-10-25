@@ -266,7 +266,7 @@ describe('14. Preparação Arquitetural para Leitura Digital e Audiolivros', () 
   });
 
   describe('Consultas e Abas da Estante com Audiolivro', () => {
-    it('livro com formato audiolivro aparece na aba "todos" e respeita status de leitura', () => {
+    it('audiolivro sem posse fica fora de Meus Livros e preserva a lista de leitura', () => {
       const audioBook: Book = {
         id: 77,
         origem: 'manual',
@@ -281,7 +281,8 @@ describe('14. Preparação Arquitetural para Leitura Digital e Audiolivros', () 
         dataAtualizacao: Date.now(),
       };
 
-      expect(isBookInTab(audioBook, 'todos')).toBe(true);
+      expect(isBookInTab(audioBook, 'todos')).toBe(false);
+      expect(isBookInTab({ ...audioBook, tenho_fisico: true }, 'todos')).toBe(true);
       expect(isBookInTab(audioBook, 'quero_ler')).toBe(true);
       expect(isBookInTab(audioBook, 'meus_livros')).toBe(false);
       expect(isBookInTab(audioBook, 'ebook')).toBe(false);
@@ -473,7 +474,7 @@ describe('14. Preparação Arquitetural para Leitura Digital e Audiolivros', () 
     });
 
     describe('Sincronização atômica do Book com updateBookFormats', () => {
-      it('atualiza tenho_fisico e formato legado proporcionalmente à seleção', () => {
+      it('atualiza modalidades e formato legado preservando a posse declarada', () => {
         const initialBook: Book = {
           id: 50,
           origem: 'manual',
@@ -510,19 +511,19 @@ describe('14. Preparação Arquitetural para Leitura Digital e Audiolivros', () 
         // 3. Remove Físico
         const withoutFisico = updateBookFormats(withAudio, 'fisico');
         expect(withoutFisico.formatos).toEqual(['ebook', 'audiolivro']);
-        expect(withoutFisico.tenho_fisico).toBe(false); // posse física desativada de forma sincronizada!
+        expect(withoutFisico.tenho_fisico).toBe(true); // Remover uma modalidade não remove a posse.
         expect(['ebook', 'audiolivro']).toContain(withoutFisico.formato); // formato legado aponta para um dos ativos
 
         // 4. Remove E-book (sobra Audiolivro)
         const onlyAudio = updateBookFormats(withoutFisico, 'ebook');
         expect(onlyAudio.formatos).toEqual(['audiolivro']);
-        expect(onlyAudio.tenho_fisico).toBe(false);
+        expect(onlyAudio.tenho_fisico).toBe(true);
         expect(onlyAudio.formato).toBe('audiolivro');
 
         // 5. Tenta remover Audiolivro (deve manter Audiolivro)
         const attemptRemoveLast = updateBookFormats(onlyAudio, 'audiolivro');
         expect(attemptRemoveLast.formatos).toEqual(['audiolivro']);
-        expect(attemptRemoveLast.tenho_fisico).toBe(false);
+        expect(attemptRemoveLast.tenho_fisico).toBe(true);
         expect(attemptRemoveLast.formato).toBe('audiolivro');
       });
 
@@ -547,7 +548,7 @@ describe('14. Preparação Arquitetural para Leitura Digital e Audiolivros', () 
         current = updateBookFormats(current, 'fisico');
 
         expect(current.formatos).toEqual(['ebook', 'audiolivro']);
-        expect(current.tenho_fisico).toBe(false);
+        expect(current.tenho_fisico).toBe(true);
         expect(getBookFormats(current)).toEqual(['ebook', 'audiolivro']);
         expect(hasBookFormat(current, 'fisico')).toBe(false);
         expect(hasBookFormat(current, 'ebook')).toBe(true);

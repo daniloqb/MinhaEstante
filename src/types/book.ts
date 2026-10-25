@@ -14,7 +14,7 @@ export interface BookLoan {
   observacoes?: string | null;
 }
 
-// As abas de consulta da estante unificada: Todos (Físicos + E-books + Audiolivros), Lidos, Quero Ler
+// 'todos' é o identificador histórico da aba visual Meus Livros.
 export type ShelfTab = 'todos' | 'meus_livros' | 'ebook' | 'lido' | 'quero_ler';
 
 // Legado para compatibilidade retroativa com código existente
@@ -47,7 +47,7 @@ export interface Book {
   // Lista de formatos associados à obra (permite ter físico, e-book e audiolivro simultâneos)
   formatos?: BookFormat[];
 
-  // Posse e status de leitura independentes
+  // Nome legado: representa posse do exemplar em qualquer modalidade.
   tenho_fisico: boolean;
   status_leitura: ReadingStatus;
 
@@ -97,6 +97,7 @@ export interface SearchResultBook {
 }
 
 export interface EstanteStats {
+  totalRegistros: number;
   totalMeusLivros: number;
   totalLidos: number;
   totalQueroLer: number;
@@ -116,22 +117,16 @@ export interface EstanteStats {
  * Obtém todos os formatos da obra, com fallback resiliente para campos legados
  */
 export function getBookFormats(book?: Partial<Book> | null): BookFormat[] {
-  if (!book) return ['fisico'];
-  if (Array.isArray(book.formatos) && book.formatos.length > 0) {
-    return Array.from(new Set(book.formatos));
-  }
-  const formats: BookFormat[] = [];
-  if (book.formato === 'audiolivro') {
-    formats.push('audiolivro');
-  } else if (book.formato === 'ebook') {
-    formats.push('ebook');
-  }
-  if (book.tenho_fisico || book.formato === 'fisico') {
-    if (!formats.includes('fisico')) {
-      formats.push('fisico');
-    }
-  }
-  return formats.length > 0 ? formats : [book.formato || 'fisico'];
+  const formats = Array.isArray(book?.formatos)
+    ? Array.from(new Set(book.formatos)).filter((f) => VALID_BOOK_FORMATS.includes(f))
+    : [];
+  if (formats.length > 0) return formats;
+  return book?.formato && VALID_BOOK_FORMATS.includes(book.formato) ? [book.formato] : ['fisico'];
+}
+
+/** Única declaração de posse, independente de modalidades e status de leitura. */
+export function isBookOwned(book?: Partial<Book> | null): boolean {
+  return book?.tenho_fisico === true;
 }
 
 /**
@@ -162,9 +157,7 @@ export function toggleBookFormat(
   formatToToggle: BookFormat
 ): BookFormat[] {
   if (!VALID_BOOK_FORMATS.includes(formatToToggle)) {
-    return Array.isArray(currentFormats) && currentFormats.length > 0
-      ? (Array.from(new Set(currentFormats)).filter((f): f is BookFormat => VALID_BOOK_FORMATS.includes(f)))
-      : ['fisico'];
+    return getBookFormats({ formatos: currentFormats ? [...currentFormats] : [] });
   }
 
   // Sanitiza formatos atuais garantindo unicidade e valores canônicos
@@ -189,8 +182,8 @@ export function toggleBookFormat(
 }
 
 /**
- * Atualiza um livro aplicando a alternância de formato e sincronizando
- * os campos legados (formato principal e tenho_fisico) de forma atômica e consistente.
+ * Alterna uma modalidade e sincroniza apenas o formato principal legado.
+ * Posse, leitura e demais dados são preservados.
  */
 export function updateBookFormats(book: Book, formatToToggle: BookFormat): Book {
   const currentFormats = getBookFormats(book);
@@ -205,13 +198,10 @@ export function updateBookFormats(book: Book, formatToToggle: BookFormat): Book 
     nextPrimary = nextFormats[0] || 'fisico';
   }
 
-  const hasFisico = nextFormats.includes('fisico');
-
   return {
     ...book,
     formato: nextPrimary,
     formatos: nextFormats,
-    tenho_fisico: hasFisico,
     dataAtualizacao: Date.now(),
   };
 }
@@ -231,37 +221,23 @@ export function formatFormatNames(formats?: BookFormat[] | null): string {
 
 /**
  * Consulta de pertencimento à aba:
- * - Todos / Estante: apenas livros que tenho fisicamente OU como e-book OU como audiolivro (posse confirmada)
+ * - Todos / Meus Livros: somente a declaração explícita de posse.
  * - Lidos: status_leitura === 'lido'
  * - Quero ler: status_leitura === 'quero_ler'
  */
 export function isBookInTab(book: Book, tab: ShelfTab): boolean {
   switch (tab) {
     case 'todos':
-      // Filtra apenas os livros que o usuário tem fisicamente, como e-book ou como audiolivro
-      return (
-        Boolean(book.tenho_fisico) ||
-        hasBookFormat(book, 'ebook') ||
-        hasBookFormat(book, 'audiolivro') ||
-        book.formato === 'ebook' ||
-        book.formato === 'audiolivro'
-      );
     case 'meus_livros':
-      return Boolean(book.tenho_fisico);
+      return isBookOwned(book);
     case 'ebook':
-      return hasBookFormat(book, 'ebook') || book.formato === 'ebook';
+      return hasBookFormat(book, 'ebook');
     case 'lido':
       return book.status_leitura === 'lido';
     case 'quero_ler':
       return book.status_leitura === 'quero_ler';
     default:
-      return (
-        Boolean(book.tenho_fisico) ||
-        hasBookFormat(book, 'ebook') ||
-        hasBookFormat(book, 'audiolivro') ||
-        book.formato === 'ebook' ||
-        book.formato === 'audiolivro'
-      );
+      return isBookOwned(book);
   }
 }
 
@@ -305,7 +281,7 @@ export function getReadingStatusLabel(status: ReadingStatus): string {
 export function getStatusLabel(status: BookStatus | ReadingStatus | BookFormat): string {
   switch (status) {
     case 'meus_livros':
-      return 'Livros Físicos';
+      return 'Meus Livros';
     case 'ebook':
       return 'E-books';
     case 'audiolivro':

@@ -13,6 +13,8 @@ import {
   hasBookFormat,
   getBookFormats,
   toggleBookFormat,
+  updateBookFormats,
+  isBookOwned,
   formatFormatNames,
 } from './types/book';
 import { getPalette } from './theme/woodTheme';
@@ -40,9 +42,11 @@ import { SearchScreen } from './screens/SearchScreen';
 import { ManualBookScreen } from './screens/ManualBookScreen';
 import { StatsScreen } from './screens/StatsScreen';
 import { SettingsBackupScreen } from './screens/SettingsBackupScreen';
-import { CheckCircle2, AlertTriangle } from 'lucide-react';
+import { useI18n } from './i18n/I18nContext';
+import { CheckCircle2 } from 'lucide-react';
 
 export const App: React.FC = () => {
+  const { t } = useI18n();
   // App Persistent State (gerenciado via SQLite nativo)
   const [books, setBooks] = useState<Book[]>([]);
   const [isDbReady, setIsDbReady] = useState<boolean>(false);
@@ -68,9 +72,6 @@ export const App: React.FC = () => {
     existingBook: Book;
   } | null>(null);
 
-  // Livro que ficou sem posse e sem status de leitura
-  const [orphanConflictBook, setOrphanConflictBook] = useState<Book | null>(null);
-
   // Shelf Filtering State - Estante unificada (Todos / Lidos / Quero Ler) e formato
   const [statusTab, setStatusTab] = useState<ShelfTab>('todos');
   const [selectedFormat, setSelectedFormat] = useState<BookFormat | null>(null);
@@ -95,7 +96,6 @@ export const App: React.FC = () => {
   const tabStackRef = React.useRef<MainTab[]>(['INICIO']);
   const historyDepthRef = React.useRef<number>(0);
   const navStateRef = React.useRef({
-    orphanConflictBook,
     duplicateConflict,
     loanModalBook,
     editingBookInModal,
@@ -107,7 +107,6 @@ export const App: React.FC = () => {
   });
 
   navStateRef.current = {
-    orphanConflictBook,
     duplicateConflict,
     loanModalBook,
     editingBookInModal,
@@ -140,10 +139,6 @@ export const App: React.FC = () => {
     const s = navStateRef.current;
 
     // 1. Fechar Modais e Diálogos em ordem de profundidade
-    if (s.orphanConflictBook) {
-      setOrphanConflictBook(null);
-      return true;
-    }
     if (s.duplicateConflict) {
       setDuplicateConflict(null);
       return true;
@@ -380,7 +375,6 @@ export const App: React.FC = () => {
           setSelectedBookDetail(null);
         }
         setQuickActionBook(null);
-        setOrphanConflictBook(null);
         setToastMessage(`"${book.titulo}" removido da estante.`);
       } catch (err) {
         console.error('Falha ao excluir livro do SQLite:', err);
@@ -390,57 +384,29 @@ export const App: React.FC = () => {
     [selectedBookDetail]
   );
 
-  // Alternar formato rápido na ação rápida (Físico -> E-book -> Audiolivro)
+  // Cada modalidade é um toggle; posse e leitura permanecem inalteradas.
   const handleToggleFormato = useCallback(
-    (book: Book) => {
-      let nextFormat: BookFormat = 'fisico';
-      if (book.formato === 'fisico' || (!book.formato && book.tenho_fisico)) {
-        nextFormat = 'ebook';
-      } else if (book.formato === 'ebook') {
-        nextFormat = 'audiolivro';
-      } else {
-        nextFormat = 'fisico';
-      }
-
-      const updated: Book = {
-        ...book,
-        formato: nextFormat,
-        formatos: [nextFormat],
-        tenho_fisico: nextFormat === 'fisico' ? (book.tenho_fisico ?? true) : false,
-        dataAtualizacao: Date.now(),
-      };
-      handleSaveBook(updated);
-      if (selectedBookDetail && selectedBookDetail.id === book.id) {
-        setSelectedBookDetail(updated);
-      }
-      setQuickActionBook(null);
-      setToastMessage(
-        nextFormat === 'ebook'
-          ? `"${book.titulo}" configurado como E-book Digital!`
-          : nextFormat === 'audiolivro'
-          ? `"${book.titulo}" configurado como Audiolivro!`
-          : `"${book.titulo}" movido para Livros Físicos!`
-      );
+    async (book: Book, format: BookFormat) => {
+      const saved = await handleSaveBook(updateBookFormats(book, format));
+      setQuickActionBook((current) => current?.id === book.id ? saved : current);
     },
-    [handleSaveBook, selectedBookDetail]
+    [handleSaveBook]
   );
 
   // Regra de negócio: Posse independente
   const handleTogglePosse = useCallback(
     (book: Book) => {
-      const nextTenho = !book.tenho_fisico;
-
-      // Se desmarcar posse e não tem status de leitura e não é ebook: alerta de livro órfão
-      if (!nextTenho && book.status_leitura === 'nenhum' && book.formato !== 'ebook') {
-        setOrphanConflictBook(book);
-        return;
-      }
+      const nextTenho = !isBookOwned(book);
 
       const updated: Book = {
         ...book,
         tenho_fisico: nextTenho,
         dataAtualizacao: Date.now(),
       };
+      if (!book.id) {
+        handleOpenEditModal(updated);
+        return;
+      }
       handleSaveBook(updated).then((saved) => {
         if (selectedBookDetail && (selectedBookDetail.id === book.id || selectedBookDetail.id === 0)) {
           setSelectedBookDetail(saved);
@@ -449,23 +415,15 @@ export const App: React.FC = () => {
 
       setQuickActionBook(null);
       setToastMessage(
-        nextTenho
-          ? `"${book.titulo}" adicionado a Livros Físicos (tenho em casa)!`
-          : `"${book.titulo}" removido de Livros Físicos!`
+        nextTenho ? t.ownership.added : t.ownership.removed
       );
     },
-    [handleSaveBook, selectedBookDetail]
+    [handleSaveBook, selectedBookDetail, handleOpenEditModal, t]
   );
 
   // Regra de negócio: Status de leitura independente
   const handleSetStatusLeitura = useCallback(
     async (book: Book, targetStatus: ReadingStatus) => {
-      // Se remover status de leitura e não tiver posse física: alerta de livro órfão
-      if (targetStatus === 'nenhum' && !book.tenho_fisico && book.formato !== 'ebook') {
-        setOrphanConflictBook(book);
-        return;
-      }
-
       const isNowLido = targetStatus === 'lido';
       const updated: Book = {
         ...book,
@@ -474,6 +432,11 @@ export const App: React.FC = () => {
         mesLeitura: isNowLido ? (book.mesLeitura || new Date().getMonth() + 1) : book.mesLeitura,
         dataAtualizacao: Date.now(),
       };
+
+      if (!book.id) {
+        handleOpenEditModal(updated);
+        return;
+      }
 
       try {
         const saved = await handleSaveBook(updated);
@@ -662,7 +625,8 @@ export const App: React.FC = () => {
     (
       searchedBook: SearchResultBook,
       targetAction: ShelfTab | 'audiolivro' | 'fisico' | BookFormat[] = 'meus_livros',
-      targetStatus?: ReadingStatus
+      targetStatus?: ReadingStatus,
+      targetOwned?: boolean
     ) => {
       const existing = BookStorage.findPotentialDuplicate(
         searchedBook.isbn13,
@@ -678,7 +642,7 @@ export const App: React.FC = () => {
 
         if (Array.isArray(targetAction)) {
           nextFormats = targetAction.length > 0 ? targetAction : ['fisico'];
-        } else if (targetAction === 'fisico' || targetAction === 'meus_livros') {
+        } else if (targetAction === 'fisico') {
           nextFormats = toggleBookFormat(nextFormats, 'fisico');
         } else if (targetAction === 'ebook') {
           nextFormats = toggleBookFormat(nextFormats, 'ebook');
@@ -694,15 +658,17 @@ export const App: React.FC = () => {
           ? 'quero_ler'
           : existing.status_leitura;
 
-        const nextPrimary = nextFormats[0] || 'fisico';
+        const nextPrimary = existing.formato && nextFormats.includes(existing.formato)
+          ? existing.formato : nextFormats[0] || 'fisico';
+        const newlyRead = effectiveStatus === 'lido' && existing.status_leitura !== 'lido';
         const updated: Book = {
           ...existing,
           formato: nextPrimary,
           formatos: nextFormats,
-          tenho_fisico: nextFormats.includes('fisico'),
+          tenho_fisico: targetOwned ?? (targetAction === 'meus_livros' ? true : isBookOwned(existing)),
           status_leitura: effectiveStatus,
-          anoLeitura: effectiveStatus === 'lido' ? (existing.anoLeitura || new Date().getFullYear()) : existing.anoLeitura,
-          mesLeitura: effectiveStatus === 'lido' ? (existing.mesLeitura || new Date().getMonth() + 1) : existing.mesLeitura,
+          anoLeitura: newlyRead ? (existing.anoLeitura || new Date().getFullYear()) : existing.anoLeitura,
+          mesLeitura: newlyRead ? (existing.mesLeitura || new Date().getMonth() + 1) : existing.mesLeitura,
           dataAtualizacao: Date.now(),
         };
 
@@ -761,7 +727,7 @@ export const App: React.FC = () => {
         capaUrl: searchedBook.capaUrl,
         formato: initialFormats[0] || 'fisico',
         formatos: initialFormats,
-        tenho_fisico: initialFormats.includes('fisico'),
+        tenho_fisico: targetOwned ?? (targetAction === 'meus_livros'),
         status_leitura: finalStatus,
         anoLeitura: finalStatus === 'lido' ? new Date().getFullYear() : null,
         mesLeitura: finalStatus === 'lido' ? new Date().getMonth() + 1 : null,
@@ -770,22 +736,8 @@ export const App: React.FC = () => {
         dataAtualizacao: now,
       };
 
-      if (finalStatus === 'lido') {
-        handleSaveBook(baseBook)
-          .then((saved) => {
-            setToastMessage(`"${saved.titulo}" salvo e marcado como Lido!`);
-            handleOpenEditModal(saved);
-          })
-          .catch((err) => {
-            console.error('Erro ao adicionar livro da busca como lido no SQLite:', err);
-          });
-      } else {
-        handleSaveBook(baseBook).then(() => {
-          setToastMessage(`"${searchedBook.titulo}" adicionado à estante (${formatFormatNames(initialFormats)})!`);
-        }).catch((err) => {
-          console.error('Erro ao adicionar livro da busca no SQLite:', err);
-        });
-      }
+      // Confirmação editável: a intenção da ação define só o estado inicial da posse.
+      handleOpenEditModal(baseBook);
     },
     [books, handleOpenEditModal, handleSaveBook]
   );
@@ -797,11 +749,11 @@ export const App: React.FC = () => {
 
     // 1.1 Filtro por Formato da Obra (Livros Físicos vs E-books vs Audiolivros)
     if (selectedFormat === 'fisico') {
-      list = list.filter((b) => hasBookFormat(b, 'fisico') || b.formato === 'fisico' || b.tenho_fisico);
+      list = list.filter((b) => hasBookFormat(b, 'fisico'));
     } else if (selectedFormat === 'ebook') {
-      list = list.filter((b) => hasBookFormat(b, 'ebook') || b.formato === 'ebook');
+      list = list.filter((b) => hasBookFormat(b, 'ebook'));
     } else if (selectedFormat === 'audiolivro') {
-      list = list.filter((b) => hasBookFormat(b, 'audiolivro') || b.formato === 'audiolivro');
+      list = list.filter((b) => hasBookFormat(b, 'audiolivro'));
     }
 
     // 2. Filtro de texto
@@ -1014,69 +966,6 @@ export const App: React.FC = () => {
       )}
 
 
-      {/* Diálogo para Livro Órfão (tenho_fisico = false e status_leitura = 'nenhum') */}
-      {orphanConflictBook && (
-        <div
-          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs"
-          onClick={() => setOrphanConflictBook(null)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl p-6 shadow-2xl border"
-            style={{
-              backgroundColor: palette.paperSurface,
-              borderColor: palette.woodBorder,
-              color: palette.textOnPaper,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-2 mb-3 text-amber-700">
-              <AlertTriangle size={24} />
-              <h3 className="font-serif font-bold text-xl leading-tight">
-                Livro sem lista ativa
-              </h3>
-            </div>
-
-            <p className="text-sm leading-relaxed mb-6" style={{ color: palette.textOnPaper }}>
-              Este livro não está mais em nenhuma lista (não é posse física em casa e não possui status de leitura). Deseja excluí-lo do aplicativo?
-            </p>
-
-            <div className="flex flex-col gap-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  handleDeleteBook(orphanConflictBook);
-                }}
-                className="w-full py-2.5 px-4 rounded-lg font-serif font-bold text-sm bg-red-700 text-white cursor-pointer hover:bg-red-800 active:scale-98 transition-colors"
-              >
-                Excluir livro definitivamente
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const updated: Book = {
-                    ...orphanConflictBook,
-                    tenho_fisico: false,
-                    status_leitura: 'nenhum',
-                    dataAtualizacao: Date.now(),
-                  };
-                  handleSaveBook(updated);
-                  setOrphanConflictBook(null);
-                  setToastMessage(`"${orphanConflictBook.titulo}" mantido oculto no arquivo.`);
-                }}
-                className="w-full py-2.5 px-4 rounded-lg font-serif font-semibold text-sm border cursor-pointer hover:bg-black/5 active:scale-98"
-                style={{
-                  borderColor: palette.woodBorder,
-                  color: palette.textOnPaper,
-                }}
-              >
-                Manter oculto no arquivo
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modal de Conflito de Livro Duplicado */}
       <DuplicateConflictModal
         palette={palette}
@@ -1108,11 +997,7 @@ export const App: React.FC = () => {
             dataCadastro: Date.now(),
             dataAtualizacao: Date.now(),
           };
-          handleSaveBook(newBookEntity).then(() => {
-            setToastMessage(`"${searchedBook.titulo}" adicionado a Meus Livros!`);
-          }).catch((err) => {
-            console.error('Erro ao adicionar livro pós-conflito no SQLite:', err);
-          });
+          handleOpenEditModal(newBookEntity);
         }}
       />
 
@@ -1186,14 +1071,20 @@ export const App: React.FC = () => {
           onDelete={() => handleDeleteBook(selectedBookDetail)}
           onTogglePosse={() => handleTogglePosse(selectedBookDetail)}
           onSetStatusLeitura={(status) => handleSetStatusLeitura(selectedBookDetail, status)}
-          onUpdateBook={handleSaveBook}
+          onUpdateBook={(updated) => {
+            if (!updated.id) {
+              handleOpenEditModal(updated);
+              return;
+            }
+            return handleSaveBook(updated);
+          }}
           onOpenLoanModal={(b) => handleOpenLoanModal(b)}
           onReturnBook={handleReturnLoan}
         />
       ) : isManualRegisterOpen ? (
         <ManualBookScreen
           palette={palette}
-          initialTab={statusTab}
+          initialTab={currentTab === 'ESTANTE' ? statusTab : undefined}
           onBack={() => closeOverlayOrBack(() => setIsManualRegisterOpen(false))}
           onSave={(newBook) => {
             handleSaveBook(newBook);
@@ -1348,7 +1239,7 @@ export const App: React.FC = () => {
             palette={palette}
             currentTab={currentTab}
             onTabChange={handleBottomTabChange}
-            totalCount={books.filter((b) => Boolean(b.tenho_fisico) || b.formato === 'ebook').length}
+            totalCount={books.filter(isBookOwned).length}
             borrowedCount={activeBorrowedCount}
           />
         </>

@@ -58,7 +58,7 @@ describe('Home Feed & Descoberta Literária (Kindle-inspired Home)', () => {
       expect(section.type).toBe('personal-shelf');
     });
 
-    it('exclui livros que não são de posse física e não são e-books', () => {
+    it('exclui livros sem posse declarada, incluindo e-books', () => {
       const mockBooks: Book[] = [
         {
           id: 1,
@@ -100,9 +100,8 @@ describe('Home Feed & Descoberta Literária (Kindle-inspired Home)', () => {
 
       const section = LocalShelfFeed.getPersonalShelfSection(mockBooks);
       expect(section.state).toBe('ready');
-      expect(section.books).toHaveLength(2);
-      expect(section.books[0].titulo).toBe('Meu E-book'); // Mais recente primeiro
-      expect(section.books[1].titulo).toBe('Meu Livro Físico');
+      expect(section.books).toHaveLength(1);
+      expect(section.books[0].titulo).toBe('Meu Livro Físico');
     });
 
     it('ordena estritamente por dataCadastro decrescente e limita a 10 livros', () => {

@@ -28,14 +28,14 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
       <WoodTopAppBar palette={palette} title={t.stats.title} />
 
       <div className="flex-1 w-full max-w-2xl mx-auto px-4 py-4 flex flex-col gap-4 pb-12">
-        {/* Distribuição do Acervo: Físicos | E-books | Lidos | Quero Ler */}
+        {/* Posse, modalidades e status são métricas independentes. */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
           <PaperCard palette={palette} className="flex flex-col text-center p-3">
             <span
               className="text-xs sm:text-sm font-sans font-semibold"
               style={{ color: palette.textSecondaryOnPaper }}
             >
-              📖 Livros Físicos
+              📚 {t.home.filterFormatAll}
             </span>
             <span
               className="font-serif font-bold text-3xl sm:text-4xl my-0.5 tabular-nums select-none"
@@ -47,7 +47,7 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
               className="text-xs font-sans"
               style={{ color: palette.textSecondaryOnPaper }}
             >
-              Exemplares em casa
+              {t.ownership.description}
             </span>
           </PaperCard>
 
@@ -114,6 +114,12 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ palette, stats }) => {
             </span>
           </PaperCard>
         </div>
+
+        <PaperCard palette={palette} className="flex flex-wrap justify-between gap-3 text-sm">
+          <span>{t.ownership.records}: {stats.totalRegistros}</span>
+          <span>{t.format.physical}: {stats.totalFisicos ?? 0}</span>
+          <span>{t.format.audiobook}: {stats.totalAudiolivros ?? 0}</span>
+        </PaperCard>
 
         {/* Grandes Números em Cormorant Garamond */}
         <div className="grid grid-cols-2 gap-3">

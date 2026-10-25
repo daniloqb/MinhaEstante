@@ -129,6 +129,20 @@ export interface Translations {
   format: {
     physical: string;
     ebook: string;
+    audiobook: string;
+    selectionHint: string;
+  };
+  ownership: {
+    label: string;
+    description: string;
+    owned: string;
+    notOwned: string;
+    add: string;
+    remove: string;
+    added: string;
+    removed: string;
+    records: string;
+    registered: string;
   };
   loans: {
     title: string;

@@ -1,17 +1,17 @@
 import React, { useState, useRef } from 'react';
-import { Book, ReadingStatus, ShelfTab, BookFormat, getBookFormats, toggleBookFormat } from '../types/book';
+import { Book, ReadingStatus, ShelfTab, BookFormat, getBookFormats, toggleBookFormat, isBookOwned } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
 import { BookCoverView } from '../components/BookCoverView';
 import { PaperCard } from '../components/PaperCard';
 import { StarRatingBar } from '../components/StarRatingBar';
 import { BookSummaryAiModal } from '../components/BookSummaryAiModal';
+import { BookOwnershipToggle } from '../components/BookOwnershipToggle';
+import { useI18n } from '../i18n/I18nContext';
 import { ImageService } from '../services/imageService';
 import {
   ArrowLeft,
   Check,
-  Library,
-  AlertTriangle,
   Tablet,
   BookOpen,
   Headphones,
@@ -36,11 +36,11 @@ interface ManualBookScreenProps {
 export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
   palette,
   initialBook,
-  initialTab = 'meus_livros',
+  initialTab,
   onBack,
   onSave,
-  onDelete,
 }) => {
+  const { t } = useI18n();
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
@@ -73,8 +73,8 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
   // Ao adicionar a partir de Lidos: status em "Lido"
   // Ao adicionar a partir de Quero ler: status em "Quero ler"
   const defaultTenho = initialBook
-    ? initialBook.tenho_fisico
-    : initialTab === 'meus_livros';
+    ? isBookOwned(initialBook)
+    : initialTab === 'meus_livros' || initialTab === 'todos';
   const defaultStatus: ReadingStatus = initialBook
     ? initialBook.status_leitura
     : initialTab === 'lido'
@@ -99,7 +99,6 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
   const [observacoes, setObservacoes] = useState(initialBook?.observacoes || '');
 
   const [tituloError, setTituloError] = useState(false);
-  const [showOrphanPrompt, setShowOrphanPrompt] = useState(false);
 
   // IA Modal e Gerenciamento de Capa
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
@@ -172,9 +171,9 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
 
     const now = Date.now();
     const finalFormato = formato || formatos[0] || 'fisico';
-    const finalTenhoFisico = formatos.includes('fisico') ? finalTenho : false;
 
     const finalBook: Book = {
+      ...initialBook,
       id: initialBook?.id || 0,
       origem: initialBook?.origem || 'manual',
       idExterno: initialBook?.idExterno || null,
@@ -191,7 +190,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
       capaUrl: finalCapaUrl,
       formato: finalFormato,
       formatos,
-      tenho_fisico: finalTenhoFisico,
+      tenho_fisico: finalTenho,
       status_leitura: finalStatus,
       nota: finalStatus === 'lido' ? selectedRating : initialBook?.nota ?? null,
       anoLeitura: finalStatus === 'lido' ? parsedAno : initialBook?.anoLeitura ?? null,
@@ -216,26 +215,12 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
     if (!nextFormatos.includes(formato)) {
       setFormato(nextFormatos[0]);
     }
-    if (fmt === 'fisico') {
-      if (!formatos.includes('fisico')) {
-        setTenhoFisico(true);
-      } else {
-        setTenhoFisico(false);
-      }
-    }
+
   };
 
   const handleSaveClick = () => {
     if (!titulo.trim()) {
       setTituloError(true);
-      return;
-    }
-
-    const hasDigital = formatos.includes('ebook') || formatos.includes('audiolivro');
-    const hasPhysical = formatos.includes('fisico');
-
-    if (!hasDigital && hasPhysical && !tenhoFisico && statusLeitura === 'nenhum') {
-      setShowOrphanPrompt(true);
       return;
     }
 
@@ -272,67 +257,6 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
           setIsAiModalOpen(false);
         }}
       />
-
-      {/* Diálogo de livro sem lista ativa */}
-      {showOrphanPrompt && (
-        <div
-          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs"
-          onClick={() => setShowOrphanPrompt(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl p-6 shadow-2xl border"
-            style={{
-              backgroundColor: palette.paperSurface,
-              borderColor: palette.woodBorder,
-              color: palette.textOnPaper,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-2.5 mb-3 text-amber-700">
-              <AlertTriangle size={24} />
-              <h3 className="font-serif font-bold text-xl leading-tight">
-                Livro sem lista ativa
-              </h3>
-            </div>
-
-            <p className="text-sm leading-relaxed mb-6" style={{ color: palette.textOnPaper }}>
-              Este livro físico não está marcado como posse em casa e não possui status de leitura. Deseja excluí-lo do aplicativo?
-            </p>
-
-            <div className="flex flex-col gap-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowOrphanPrompt(false);
-                  if (initialBook && onDelete) {
-                    onDelete(initialBook);
-                  } else {
-                    onBack();
-                  }
-                }}
-                className="w-full py-2.5 px-4 rounded-lg font-sans font-semibold text-sm bg-red-700 text-white cursor-pointer hover:bg-red-800 active:scale-98 transition-colors select-none"
-              >
-                Excluir livro definitivamente
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowOrphanPrompt(false);
-                  executeSave(false, 'nenhum');
-                }}
-                className="w-full py-2.5 px-4 rounded-lg font-sans font-medium text-sm border cursor-pointer hover:bg-black/5 active:scale-98 select-none"
-                style={{
-                  borderColor: palette.woodBorder,
-                  color: palette.textOnPaper,
-                }}
-              >
-                Manter oculto no arquivo
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <WoodTopAppBar
         palette={palette}
@@ -752,13 +676,7 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
           </div>
 
           <p className="text-xs font-sans leading-relaxed text-stone-600">
-            {formatos.length > 1
-              ? `📚 Obra cadastrada em múltiplos formatos: ${formatos.map((f) => (f === 'fisico' ? 'Físico' : f === 'ebook' ? 'E-book' : 'Audiolivro')).join(', ')}.`
-              : formatos.includes('ebook')
-              ? '📱 Este título ficará na sua aba dedicada de E-books (Kindle, PDF, digital).'
-              : formatos.includes('audiolivro')
-              ? '🎧 Este título ficará registrado como Audiolivro.'
-              : '📚 Este título ficará na sua estante de Livros Físicos que você tem em casa.'}
+            {t.format.selectionHint}
           </p>
         </PaperCard>
 
@@ -768,67 +686,11 @@ export const ManualBookScreen: React.FC<ManualBookScreenProps> = ({
             Posse & Status de Leitura
           </h3>
 
-          {/* Switch: Tenho este livro em casa (exibido se formato físico estiver ativo) */}
-          {formatos.includes('fisico') ? (
-            <div
-              className="p-3.5 rounded-xl border flex items-center justify-between transition-colors"
-              style={{
-                backgroundColor: tenhoFisico ? `${palette.goldPrimary}15` : palette.paperSurfaceElevated,
-                borderColor: tenhoFisico ? palette.goldPrimary : palette.paperBorder,
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="p-2 rounded-lg"
-                  style={{
-                    backgroundColor: tenhoFisico ? palette.goldPrimary : `${palette.woodBorder}20`,
-                    color: tenhoFisico ? palette.textOnGold : palette.woodBorder,
-                  }}
-                >
-                  <Library size={22} />
-                </div>
-                <div>
-                  <span className="font-serif font-bold text-base block" style={{ color: palette.textOnPaper }}>
-                    Tenho este livro físico em casa
-                  </span>
-                  <span className="text-xs font-sans" style={{ color: palette.textSecondaryOnPaper }}>
-                    {tenhoFisico ? 'Exemplar físico no acervo (Aba Físicos)' : 'Não possuo o exemplar físico no momento'}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                role="switch"
-                aria-checked={tenhoFisico}
-                onClick={() => setTenhoFisico(!tenhoFisico)}
-                className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-                style={{
-                  backgroundColor: tenhoFisico ? palette.goldPrimary : '#9ca3af',
-                }}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                    tenhoFisico ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-          ) : (
-            <div
-              className="p-3.5 rounded-xl border flex items-center gap-3 bg-purple-50/40 border-purple-200"
-            >
-              <Tablet size={22} className="text-purple-700" />
-              <div>
-                <span className="font-serif font-bold text-base block text-purple-950">
-                  E-book Digital na Estante
-                </span>
-                <span className="text-xs font-sans text-purple-800">
-                  Gerenciado na aba E-books, separado dos livros físicos.
-                </span>
-              </div>
-            </div>
-          )}
+          <BookOwnershipToggle
+            palette={palette}
+            owned={tenhoFisico}
+            onChange={() => setTenhoFisico(!tenhoFisico)}
+          />
 
           {/* SegmentedButton: Status de Leitura (Nenhum | Quero ler | Lido) */}
           <div>

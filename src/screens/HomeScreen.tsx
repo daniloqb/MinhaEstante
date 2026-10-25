@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Book, ShelfTab, ViewMode, GroupByMode, SortOption, BookFormat } from '../types/book';
+import { Book, ShelfTab, ViewMode, GroupByMode, SortOption, BookFormat, isBookOwned, getBookFormats } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodShelf } from '../components/WoodShelf';
 import { BookCoverView } from '../components/BookCoverView';
@@ -21,6 +21,7 @@ import {
   Bookmark,
   Handshake,
   Tablet,
+  Headphones,
 } from 'lucide-react';
 
 export interface HomeScreenProps {
@@ -91,7 +92,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   // Contadores reais de cada aba da estante unificada
   const tabCounts = useMemo(() => {
     return {
-      todos: allBooks.filter((b) => Boolean(b.tenho_fisico) || b.formato === 'ebook').length,
+      todos: allBooks.filter(isBookOwned).length,
       lido: allBooks.filter((b) => b.status_leitura === 'lido').length,
       quero_ler: allBooks.filter((b) => b.status_leitura === 'quero_ler').length,
       emprestados: allBooks.filter((b) => b.emprestimo && !b.emprestimo.devolvido).length,
@@ -464,7 +465,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               }}
             >
               {selectedFormat === 'ebook' ? <Tablet size={13} /> : <BookOpen size={13} />}
-              <span>Formato: {selectedFormat === 'ebook' ? 'E-books' : 'Físicos'}</span>
+              <span>Formato: {selectedFormat === 'ebook' ? t.format.ebook : selectedFormat === 'audiolivro' ? t.format.audiobook : t.format.physical}</span>
               {onFormatFilterChange && (
                 <button
                   type="button"
@@ -520,7 +521,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               style={{ color: palette.textSecondaryOnWood }}
             >
               {statusTab === 'todos' || statusTab === 'meus_livros'
-                ? 'Sua estante reúne seus livros físicos e e-books digitais em um só lugar.'
+                ? t.ownership.description
                 : statusTab === 'lido'
                 ? 'Registre suas leituras finalizadas com avaliação e data.'
                 : 'Adicione livros que você deseja ler em breve.'}
@@ -628,30 +629,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                         {book.titulo}
                       </h3>
 
-                      {/* Selo de formato e posse */}
-                      <div className="flex items-center gap-1 shrink-0">
-                        {book.formato === 'ebook' ? (
+                      {/* Modalidades declaradas, independentes da posse. */}
+                      <div className="flex flex-wrap items-center justify-end gap-1 shrink-0 max-w-[50%]">
+                        {getBookFormats(book).map((format) => (
                           <span
-                            className="text-xs font-sans font-semibold px-2.5 py-0.5 rounded-full border flex items-center gap-1 bg-purple-50 text-purple-900 border-purple-300"
-                            title="Formato E-book digital"
-                          >
-                            <Tablet size={12} />
-                            E-book
-                          </span>
-                        ) : book.tenho_fisico ? (
-                          <span
+                            key={format}
                             className="text-xs font-sans font-semibold px-2.5 py-0.5 rounded-full border flex items-center gap-1"
-                            style={{
-                              backgroundColor: `${palette.goldPrimary}25`,
-                              borderColor: palette.goldPrimary,
-                              color: palette.woodBorder,
-                            }}
-                            title="Exemplar físico em casa"
+                            style={{ backgroundColor: `${palette.goldPrimary}25`, borderColor: palette.goldPrimary, color: palette.woodBorder }}
                           >
-                            <Library size={12} />
-                            Físico
+                            {format === 'ebook' ? <Tablet size={12} /> : format === 'audiolivro' ? <Headphones size={12} /> : <Library size={12} />}
+                            {format === 'ebook' ? t.format.ebook : format === 'audiolivro' ? t.format.audiobook : t.format.physical}
                           </span>
-                        ) : null}
+                        ))}
                       </div>
                     </div>
 

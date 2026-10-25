@@ -1,4 +1,4 @@
-import { Book, ReadingStatus, BookFormat, BookOrigin, getBookFormats } from '../../types/book';
+import { Book, ReadingStatus, BookFormat, BookOrigin, getBookFormats, isBookOwned } from '../../types/book';
 import { IBookRepository, IDatabaseService, DbBookRow } from './types';
 import { DatabaseService } from './databaseService';
 import { CoverStorageService } from '../storage/coverStorageService';
@@ -104,10 +104,7 @@ export class BookRepository implements IBookRepository {
     const formatos = getBookFormats(book);
     const formatosJson = JSON.stringify(formatos);
     const formato = book.formato || formatos[0] || 'fisico';
-    const tenhoFisico = (typeof book.tenho_fisico === 'boolean'
-      ? book.tenho_fisico
-      : (book.tenho_fisico !== undefined ? Boolean(book.tenho_fisico) : formatos.includes('fisico'))
-    ) ? 1 : 0;
+    const tenhoFisico = isBookOwned(book) ? 1 : 0;
     const statusLeitura = book.status_leitura || 'nenhum';
 
     const uuid = book.uuid || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `book-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
@@ -243,10 +240,7 @@ export class BookRepository implements IBookRepository {
     const formatos = getBookFormats(bookToSave);
     const formatosJson = JSON.stringify(formatos);
     const formato = bookToSave.formato || formatos[0] || 'fisico';
-    const tenhoFisico = (typeof bookToSave.tenho_fisico === 'boolean'
-      ? bookToSave.tenho_fisico
-      : (bookToSave.tenho_fisico !== undefined ? Boolean(bookToSave.tenho_fisico) : formatos.includes('fisico'))
-    ) ? 1 : 0;
+    const tenhoFisico = isBookOwned(bookToSave) ? 1 : 0;
     const statusLeitura = bookToSave.status_leitura || 'nenhum';
 
     const params = [

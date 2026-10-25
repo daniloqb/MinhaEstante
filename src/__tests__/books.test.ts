@@ -526,12 +526,13 @@ describe('5. Testes da Estante Unificada, Filtro de Formato e Empréstimos', () 
     dataAtualizacao: 2000,
   };
 
-  it('Estante Unificada: a aba "todos" exibe tanto livros físicos quanto e-books', () => {
+  it('Meus Livros: o identificador "todos" exige posse também para e-books', () => {
     expect(isBookInTab(livroFisico, 'todos')).toBe(true);
-    expect(isBookInTab(livroEbook, 'todos')).toBe(true);
+    expect(isBookInTab(livroEbook, 'todos')).toBe(false);
+    expect(isBookInTab({ ...livroEbook, tenho_fisico: true }, 'todos')).toBe(true);
   });
 
-  it('Aba "todos" da estante NÃO exibe livros sem posse física e sem formato ebook', () => {
+  it('Aba "todos" da estante não inclui registros sem posse, mesmo digitais', () => {
     const livroApenasDesejo: Book = {
       id: 103,
       origem: 'manual',
@@ -557,7 +558,8 @@ describe('5. Testes da Estante Unificada, Filtro de Formato e Empréstimos', () 
     expect(isBookInTab(livroApenasDesejo, 'todos')).toBe(false);
     expect(isBookInTab(livroLidoFora, 'todos')).toBe(false);
     expect(isBookInTab(livroFisico, 'todos')).toBe(true);
-    expect(isBookInTab(livroEbook, 'todos')).toBe(true);
+    expect(isBookInTab(livroEbook, 'todos')).toBe(false);
+    expect(isBookInTab({ ...livroEbook, tenho_fisico: true }, 'todos')).toBe(true);
   });
 
   it('Filtro de Formato: filtra entre livros físicos e e-books corretamente', () => {
