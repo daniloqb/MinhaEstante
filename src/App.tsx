@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Book,
+  BookFormat,
   ShelfTab,
   ReadingStatus,
   ViewMode,
@@ -9,6 +10,10 @@ import {
   SearchResultBook,
   BookLoan,
   isBookInTab,
+  hasBookFormat,
+  getBookFormats,
+  toggleBookFormat,
+  formatFormatNames,
 } from './types/book';
 import { getPalette } from './theme/woodTheme';
 import { BookStorage, areBooksDuplicate } from './services/storage';
@@ -68,7 +73,7 @@ export const App: React.FC = () => {
 
   // Shelf Filtering State - Estante unificada (Todos / Lidos / Quero Ler) e formato
   const [statusTab, setStatusTab] = useState<ShelfTab>('todos');
-  const [selectedFormat, setSelectedFormat] = useState<'fisico' | 'ebook' | null>(null);
+  const [selectedFormat, setSelectedFormat] = useState<BookFormat | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>(() => BookStorage.loadSortBy());
   const [textQuery, setTextQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -385,13 +390,22 @@ export const App: React.FC = () => {
     [selectedBookDetail]
   );
 
-  // Alternar formato: Físico vs E-book
+  // Alternar formato rápido na ação rápida (Físico -> E-book -> Audiolivro)
   const handleToggleFormato = useCallback(
     (book: Book) => {
-      const nextFormat = book.formato === 'ebook' ? 'fisico' : 'ebook';
+      let nextFormat: BookFormat = 'fisico';
+      if (book.formato === 'fisico' || (!book.formato && book.tenho_fisico)) {
+        nextFormat = 'ebook';
+      } else if (book.formato === 'ebook') {
+        nextFormat = 'audiolivro';
+      } else {
+        nextFormat = 'fisico';
+      }
+
       const updated: Book = {
         ...book,
         formato: nextFormat,
+        formatos: [nextFormat],
         tenho_fisico: nextFormat === 'fisico' ? (book.tenho_fisico ?? true) : false,
         dataAtualizacao: Date.now(),
       };
@@ -402,7 +416,9 @@ export const App: React.FC = () => {
       setQuickActionBook(null);
       setToastMessage(
         nextFormat === 'ebook'
-          ? `"${book.titulo}" movido para a estante de E-books!`
+          ? `"${book.titulo}" configurado como E-book Digital!`
+          : nextFormat === 'audiolivro'
+          ? `"${book.titulo}" configurado como Audiolivro!`
           : `"${book.titulo}" movido para Livros Físicos!`
       );
     },
@@ -643,7 +659,11 @@ export const App: React.FC = () => {
 
   // Add searched book with duplicate detection and independent status
   const handleSelectBookToAdd = useCallback(
-    (searchedBook: SearchResultBook, targetAction: ShelfTab = 'meus_livros') => {
+    (
+      searchedBook: SearchResultBook,
+      targetAction: ShelfTab | 'audiolivro' | 'fisico' | BookFormat[] = 'meus_livros',
+      targetStatus?: ReadingStatus
+    ) => {
       const existing = BookStorage.findPotentialDuplicate(
         searchedBook.isbn13,
         searchedBook.isbn10,
@@ -654,38 +674,39 @@ export const App: React.FC = () => {
 
       if (existing) {
         // Já existe: atualiza a posse ou o status sem duplicar!
-        if (targetAction === 'meus_livros') {
-          const updated: Book = {
-            ...existing,
-            formato: 'fisico',
-            tenho_fisico: true,
-            dataAtualizacao: Date.now(),
-          };
-          handleSaveBook(updated);
-          setToastMessage(`"${existing.titulo}" já constava na biblioteca e foi marcado como posse física (Livros Físicos)!`);
-          return;
+        let nextFormats = getBookFormats(existing);
+
+        if (Array.isArray(targetAction)) {
+          nextFormats = targetAction.length > 0 ? targetAction : ['fisico'];
+        } else if (targetAction === 'fisico' || targetAction === 'meus_livros') {
+          nextFormats = toggleBookFormat(nextFormats, 'fisico');
+        } else if (targetAction === 'ebook') {
+          nextFormats = toggleBookFormat(nextFormats, 'ebook');
+        } else if (targetAction === 'audiolivro') {
+          nextFormats = toggleBookFormat(nextFormats, 'audiolivro');
         }
 
-        if (targetAction === 'ebook') {
-          const updated: Book = {
-            ...existing,
-            formato: 'ebook',
-            dataAtualizacao: Date.now(),
-          };
-          handleSaveBook(updated);
-          setToastMessage(`"${existing.titulo}" atualizado na estante de E-books!`);
-          return;
-        }
+        const effectiveStatus = targetStatus
+          ? targetStatus
+          : targetAction === 'lido'
+          ? 'lido'
+          : targetAction === 'quero_ler'
+          ? 'quero_ler'
+          : existing.status_leitura;
 
-        if (targetAction === 'lido') {
-          // Persiste como lido no SQLite e abre edição para preencher avaliação e data
-          const updated: Book = {
-            ...existing,
-            status_leitura: 'lido',
-            anoLeitura: existing.anoLeitura || new Date().getFullYear(),
-            mesLeitura: existing.mesLeitura || (new Date().getMonth() + 1),
-            dataAtualizacao: Date.now(),
-          };
+        const nextPrimary = nextFormats[0] || 'fisico';
+        const updated: Book = {
+          ...existing,
+          formato: nextPrimary,
+          formatos: nextFormats,
+          tenho_fisico: nextFormats.includes('fisico'),
+          status_leitura: effectiveStatus,
+          anoLeitura: effectiveStatus === 'lido' ? (existing.anoLeitura || new Date().getFullYear()) : existing.anoLeitura,
+          mesLeitura: effectiveStatus === 'lido' ? (existing.mesLeitura || new Date().getMonth() + 1) : existing.mesLeitura,
+          dataAtualizacao: Date.now(),
+        };
+
+        if (effectiveStatus === 'lido' && existing.status_leitura !== 'lido') {
           handleSaveBook(updated)
             .then((saved) => {
               setToastMessage(`"${saved.titulo}" marcado como Lido!`);
@@ -697,20 +718,32 @@ export const App: React.FC = () => {
           return;
         }
 
-        if (targetAction === 'quero_ler') {
-          const updated: Book = {
-            ...existing,
-            status_leitura: 'quero_ler',
-            dataAtualizacao: Date.now(),
-          };
-          handleSaveBook(updated);
-          setToastMessage(`"${existing.titulo}" atualizado para Quero Ler!`);
-          return;
-        }
+        handleSaveBook(updated);
+        setToastMessage(`"${existing.titulo}" atualizado na estante (${formatFormatNames(nextFormats)})!`);
+        return;
       }
 
       // Novo livro
       const now = Date.now();
+      let initialFormats: BookFormat[] = ['fisico'];
+      if (Array.isArray(targetAction) && targetAction.length > 0) {
+        initialFormats = targetAction;
+      } else if (targetAction === 'audiolivro') {
+        initialFormats = ['audiolivro'];
+      } else if (targetAction === 'ebook') {
+        initialFormats = ['ebook'];
+      } else if (searchedBook.formatos && searchedBook.formatos.length > 0) {
+        initialFormats = searchedBook.formatos;
+      }
+
+      const finalStatus: ReadingStatus = targetStatus
+        ? targetStatus
+        : targetAction === 'lido'
+        ? 'lido'
+        : targetAction === 'quero_ler'
+        ? 'quero_ler'
+        : 'nenhum';
+
       const baseBook: Book = {
         id: 0,
         origem: searchedBook.origem,
@@ -726,17 +759,18 @@ export const App: React.FC = () => {
         generos: searchedBook.generos,
         descricao: searchedBook.descricao,
         capaUrl: searchedBook.capaUrl,
-        formato: targetAction === 'ebook' ? 'ebook' : 'fisico',
-        tenho_fisico: targetAction === 'meus_livros',
-        status_leitura: targetAction === 'lido' ? 'lido' : targetAction === 'quero_ler' ? 'quero_ler' : 'nenhum',
-        anoLeitura: targetAction === 'lido' ? new Date().getFullYear() : null,
-        mesLeitura: targetAction === 'lido' ? new Date().getMonth() + 1 : null,
-        nota: targetAction === 'lido' ? 10 : null,
+        formato: initialFormats[0] || 'fisico',
+        formatos: initialFormats,
+        tenho_fisico: initialFormats.includes('fisico'),
+        status_leitura: finalStatus,
+        anoLeitura: finalStatus === 'lido' ? new Date().getFullYear() : null,
+        mesLeitura: finalStatus === 'lido' ? new Date().getMonth() + 1 : null,
+        nota: finalStatus === 'lido' ? 10 : null,
         dataCadastro: now,
         dataAtualizacao: now,
       };
 
-      if (targetAction === 'lido') {
+      if (finalStatus === 'lido') {
         handleSaveBook(baseBook)
           .then((saved) => {
             setToastMessage(`"${saved.titulo}" salvo e marcado como Lido!`);
@@ -747,13 +781,7 @@ export const App: React.FC = () => {
           });
       } else {
         handleSaveBook(baseBook).then(() => {
-          setToastMessage(
-            targetAction === 'meus_livros'
-              ? `"${searchedBook.titulo}" adicionado a Livros Físicos!`
-              : targetAction === 'ebook'
-              ? `"${searchedBook.titulo}" adicionado a E-books!`
-              : `"${searchedBook.titulo}" adicionado a Quero Ler!`
-          );
+          setToastMessage(`"${searchedBook.titulo}" adicionado à estante (${formatFormatNames(initialFormats)})!`);
         }).catch((err) => {
           console.error('Erro ao adicionar livro da busca no SQLite:', err);
         });
@@ -767,11 +795,13 @@ export const App: React.FC = () => {
     // 1. Consulta da aba ativa (Todos / Lidos / Quero Ler)
     let list = books.filter((b) => isBookInTab(b, statusTab));
 
-    // 1.1 Filtro por Formato da Obra (Livros Físicos vs E-books)
+    // 1.1 Filtro por Formato da Obra (Livros Físicos vs E-books vs Audiolivros)
     if (selectedFormat === 'fisico') {
-      list = list.filter((b) => b.formato !== 'ebook');
+      list = list.filter((b) => hasBookFormat(b, 'fisico') || b.formato === 'fisico' || b.tenho_fisico);
     } else if (selectedFormat === 'ebook') {
-      list = list.filter((b) => b.formato === 'ebook');
+      list = list.filter((b) => hasBookFormat(b, 'ebook') || b.formato === 'ebook');
+    } else if (selectedFormat === 'audiolivro') {
+      list = list.filter((b) => hasBookFormat(b, 'audiolivro') || b.formato === 'audiolivro');
     }
 
     // 2. Filtro de texto

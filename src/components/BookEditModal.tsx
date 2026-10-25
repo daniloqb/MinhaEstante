@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Book, ReadingStatus, BookFormat } from '../types/book';
+import { Book, ReadingStatus, BookFormat, getBookFormats, toggleBookFormat } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { StarRatingBar } from './StarRatingBar';
 import { BookCoverView } from './BookCoverView';
@@ -16,6 +16,7 @@ import {
   Edit3,
   Tablet,
   BookOpen,
+  Headphones,
   DownloadCloud,
   Sparkles,
   Upload,
@@ -48,6 +49,7 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
   const [titulo, setTitulo] = useState<string>(book.titulo || '');
   const [subtitulo, setSubtitulo] = useState<string>(book.subtitulo || '');
   const [autoresText, setAutoresText] = useState<string>((book.autores || []).join(', '));
+  const [formatos, setFormatos] = useState<BookFormat[]>(() => getBookFormats(book));
   const [formato, setFormato] = useState<BookFormat>(book.formato || 'fisico');
 
   // Controles independentes
@@ -77,7 +79,9 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
       setTitulo(book.titulo || '');
       setSubtitulo(book.subtitulo || '');
       setAutoresText((book.autores || []).join(', '));
-      setFormato(book.formato || 'fisico');
+      const fmts = getBookFormats(book);
+      setFormatos(fmts);
+      setFormato(book.formato || fmts[0] || 'fisico');
       setCapaUrl(book.capaLocalPath || book.capaUrl || '');
       setTenhoFisico(Boolean(book.tenho_fisico));
       setStatusLeitura(
@@ -178,14 +182,18 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
       }
     }
 
+    const finalFormato = formato || formatos[0] || 'fisico';
+    const finalTenhoFisico = formatos.includes('fisico') ? finalTenho : false;
+
     const updated: Book = {
       ...book,
       titulo: trimmedTitle,
       subtitulo: trimmedSubtitle,
       autores: finalAuthors,
-      formato,
+      formato: finalFormato,
+      formatos,
       capaUrl: finalCapaUrl,
-      tenho_fisico: formato === 'ebook' ? false : finalTenho,
+      tenho_fisico: finalTenhoFisico,
       status_leitura: finalStatus,
       nota: finalStatus === 'lido' ? selectedRating : book.nota,
       anoLeitura: finalStatus === 'lido' ? parsedAno : book.anoLeitura,
@@ -198,9 +206,35 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
     onSave(updated);
   };
 
+  const handleToggleFormatOption = (fmt: BookFormat) => {
+    const nextFormatos = toggleBookFormat(formatos, fmt);
+    if (
+      nextFormatos.length === formatos.length &&
+      nextFormatos.every((f) => formatos.includes(f))
+    ) {
+      return; // mantém pelo menos um formato selecionado
+    }
+    setFormatos(nextFormatos);
+
+    if (!nextFormatos.includes(formato)) {
+      setFormato(nextFormatos[0]);
+    }
+
+    if (fmt === 'fisico') {
+      if (!formatos.includes('fisico')) {
+        setTenhoFisico(true);
+      } else {
+        setTenhoFisico(false);
+      }
+    }
+  };
+
   const handleSaveClick = () => {
-    // Se o livro ficar sem posse física E sem status de leitura: perguntar o que deseja fazer
-    if (formato === 'fisico' && !tenhoFisico && statusLeitura === 'nenhum') {
+    // Se o livro não tem formato digital, nem posse física, nem status de leitura: perguntar o que deseja fazer
+    const hasDigitalFormat = formatos.includes('ebook') || formatos.includes('audiolivro');
+    const isPhysicalSelected = formatos.includes('fisico');
+
+    if (!hasDigitalFormat && isPhysicalSelected && !tenhoFisico && statusLeitura === 'nenhum') {
       setShowOrphanPrompt(true);
       return;
     }
@@ -547,7 +581,7 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
             </div>
           </div>
 
-          {/* Formato da Obra na Estante (Livro Físico vs E-book Digital) */}
+          {/* Formatos da Obra na Estante (Livro Físico, E-book Digital, Audiolivro) */}
           <div
             className="p-3.5 rounded-xl border flex flex-col gap-2.5"
             style={{
@@ -555,56 +589,74 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
               borderColor: `${palette.woodBorder}40`,
             }}
           >
-            <label
-              className="text-xs font-serif font-bold uppercase tracking-wider"
-              style={{ color: palette.woodBorder }}
-            >
-              Formato da Obra na Estante
-            </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center justify-between">
+              <label
+                className="text-xs font-serif font-bold uppercase tracking-wider"
+                style={{ color: palette.woodBorder }}
+              >
+                Formatos da Obra na Estante
+              </label>
+              <span className="text-[11px] font-serif text-stone-500 italic">
+                Pode selecionar mais de um
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setFormato('fisico');
-                  setTenhoFisico(true);
-                }}
-                className="py-2.5 px-3 rounded-lg border flex items-center justify-center gap-2 font-serif font-bold text-sm cursor-pointer transition-all shadow-xs"
+                onClick={() => handleToggleFormatOption('fisico')}
+                className="py-2.5 px-2 rounded-lg border flex flex-col sm:flex-row items-center justify-center gap-1.5 font-serif font-bold text-xs sm:text-sm cursor-pointer transition-all shadow-xs text-center"
                 style={{
-                  backgroundColor: formato === 'fisico' ? palette.goldPrimary : 'transparent',
-                  color: formato === 'fisico' ? palette.textOnGold : palette.textOnPaper,
-                  borderColor: formato === 'fisico' ? palette.goldPrimary : palette.woodBorder,
+                  backgroundColor: formatos.includes('fisico') ? palette.goldPrimary : 'transparent',
+                  color: formatos.includes('fisico') ? palette.textOnGold : palette.textOnPaper,
+                  borderColor: formatos.includes('fisico') ? palette.goldPrimary : palette.woodBorder,
                 }}
               >
                 <BookOpen size={16} />
-                <span>Livro Físico</span>
+                <span>Físico</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => {
-                  setFormato('ebook');
-                  setTenhoFisico(false);
-                }}
-                className="py-2.5 px-3 rounded-lg border flex items-center justify-center gap-2 font-serif font-bold text-sm cursor-pointer transition-all shadow-xs"
+                onClick={() => handleToggleFormatOption('ebook')}
+                className="py-2.5 px-2 rounded-lg border flex flex-col sm:flex-row items-center justify-center gap-1.5 font-serif font-bold text-xs sm:text-sm cursor-pointer transition-all shadow-xs text-center"
                 style={{
-                  backgroundColor: formato === 'ebook' ? palette.goldPrimary : 'transparent',
-                  color: formato === 'ebook' ? palette.textOnGold : palette.textOnPaper,
-                  borderColor: formato === 'ebook' ? palette.goldPrimary : palette.woodBorder,
+                  backgroundColor: formatos.includes('ebook') ? palette.goldPrimary : 'transparent',
+                  color: formatos.includes('ebook') ? palette.textOnGold : palette.textOnPaper,
+                  borderColor: formatos.includes('ebook') ? palette.goldPrimary : palette.woodBorder,
                 }}
               >
                 <Tablet size={16} />
-                <span>E-book Digital</span>
+                <span>E-book</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleToggleFormatOption('audiolivro')}
+                className="py-2.5 px-2 rounded-lg border flex flex-col sm:flex-row items-center justify-center gap-1.5 font-serif font-bold text-xs sm:text-sm cursor-pointer transition-all shadow-xs text-center"
+                style={{
+                  backgroundColor: formatos.includes('audiolivro') ? palette.goldPrimary : 'transparent',
+                  color: formatos.includes('audiolivro') ? palette.textOnGold : palette.textOnPaper,
+                  borderColor: formatos.includes('audiolivro') ? palette.goldPrimary : palette.woodBorder,
+                }}
+              >
+                <Headphones size={16} />
+                <span>Audiolivro</span>
               </button>
             </div>
             <p className="text-[11px] text-stone-600 font-serif italic">
-              {formato === 'ebook'
+              {formatos.length > 1
+                ? `📚 Obra configurada em múltiplos formatos: ${formatos.map(f => f === 'fisico' ? 'Físico' : f === 'ebook' ? 'E-book' : 'Audiolivro').join(', ')}.`
+                : formatos.includes('ebook')
                 ? '📱 Obra organizada na aba dedicada de E-books da sua estante.'
-                : '📚 Obra organizada na estante física.'}
+                : formatos.includes('audiolivro')
+                ? '🎧 Obra cadastrada como audiolivro.'
+                : '📚 Obra organizada na estante de Livros Físicos.'}
             </p>
           </div>
 
-          {/* Controle Independente 1: Switch de Posse Física (apenas se formato físico) */}
-          {formato === 'fisico' ? (
+          {/* Controle Independente 1: Switch de Posse Física (exibido se formato físico estiver ativo) */}
+          {formatos.includes('fisico') ? (
             <div
               className="p-3.5 rounded-xl border flex items-center justify-between transition-colors"
               style={{
@@ -676,6 +728,8 @@ export const BookEditModal: React.FC<BookEditModalProps> = ({
                   nenhum: 'Nenhum',
                   quero_ler: 'Quero ler',
                   lido: 'Lido',
+                  lendo: 'Lendo',
+                  abandonado: 'Abandonado',
                 };
 
                 return (

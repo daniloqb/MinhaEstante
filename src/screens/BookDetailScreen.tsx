@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Book, ReadingStatus, BookFormat } from '../types/book';
+import { Book, ReadingStatus, BookFormat, getBookFormats, toggleBookFormat, formatFormatNames } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
 import { WoodShelf } from '../components/WoodShelf';
@@ -22,9 +22,11 @@ import {
   MinusCircle,
   AlertTriangle,
   Sparkles,
+  Plus,
   ShoppingBag,
   Tablet,
   BookOpen,
+  Headphones,
   Download,
   CheckCircle2,
   Loader2,
@@ -95,7 +97,10 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
       : 'Sem data';
 
   const isbn = book.isbn13 || book.isbn10;
-  const isEbook = book.formato === 'ebook';
+  const currentFormats = getBookFormats(book);
+  const isEbook = currentFormats.includes('ebook');
+  const isAudiobook = currentFormats.includes('audiolivro');
+  const isFisico = currentFormats.includes('fisico');
   const hasLocalCover = isDataUrl(book.capaUrl);
 
   const handleDownloadCoverLocally = async () => {
@@ -121,11 +126,25 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
   };
 
   const handleToggleFormat = (newFormat: BookFormat) => {
-    if (newFormat === book.formato || !onUpdateBook) return;
+    if (!onUpdateBook) return;
+    const activeFormats = getBookFormats(book);
+    const nextFormats = toggleBookFormat(activeFormats, newFormat);
+    if (
+      nextFormats.length === activeFormats.length &&
+      nextFormats.every((f) => activeFormats.includes(f))
+    ) {
+      return; // Mantém pelo menos um formato ativo (não pode desmarcar o único)
+    }
+
+    const nextPrimary = nextFormats.includes(newFormat)
+      ? newFormat
+      : nextFormats[0] || 'fisico';
+
     onUpdateBook({
       ...book,
-      formato: newFormat,
-      tenho_fisico: newFormat === 'fisico' ? book.tenho_fisico : false,
+      formato: nextPrimary,
+      formatos: nextFormats,
+      tenho_fisico: nextFormats.includes('fisico'),
       dataAtualizacao: Date.now(),
     });
   };
@@ -254,17 +273,17 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
             />
           </div>
 
-          {/* Seletor Rápido de Formato: Físico vs E-book */}
-          <div className="mt-3 flex items-center gap-2 p-1 rounded-xl bg-black/25 border border-white/10 backdrop-blur-sm">
+          {/* Seletor Rápido de Formato: Físico vs E-book vs Audiolivro */}
+          <div className="mt-3 flex items-center justify-center flex-wrap gap-2 p-1 rounded-xl bg-black/25 border border-white/10 backdrop-blur-sm">
             <button
               type="button"
               onClick={() => handleToggleFormat('fisico')}
               className={`px-3 py-1.5 rounded-lg font-sans text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer select-none ${
-                !isEbook ? 'shadow-md' : 'opacity-65 hover:opacity-90'
+                isFisico ? 'shadow-md' : 'opacity-65 hover:opacity-90'
               }`}
               style={{
-                backgroundColor: !isEbook ? palette.goldPrimary : 'transparent',
-                color: !isEbook ? palette.textOnGold : palette.textOnWood,
+                backgroundColor: isFisico ? palette.goldPrimary : 'transparent',
+                color: isFisico ? palette.textOnGold : palette.textOnWood,
               }}
             >
               <BookOpen size={15} />
@@ -283,6 +302,20 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
             >
               <Tablet size={15} />
               E-book Digital
+            </button>
+            <button
+              type="button"
+              onClick={() => handleToggleFormat('audiolivro')}
+              className={`px-3 py-1.5 rounded-lg font-sans text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer select-none ${
+                isAudiobook ? 'shadow-md' : 'opacity-65 hover:opacity-90'
+              }`}
+              style={{
+                backgroundColor: isAudiobook ? '#0d9488' : 'transparent',
+                color: '#ffffff',
+              }}
+            >
+              <Headphones size={15} />
+              Audiolivro
             </button>
           </div>
 
@@ -433,6 +466,14 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
                 </button>
                 <button
                   type="button"
+                  onClick={() => handleToggleFormat('audiolivro')}
+                  className="px-3 py-1.5 rounded-lg font-sans font-semibold text-xs shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all flex items-center gap-1 bg-teal-700 text-white select-none"
+                >
+                  <Headphones size={13} />
+                  <span>+ Audiolivro</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => onSetStatusLeitura('quero_ler')}
                   className="px-3 py-1.5 rounded-lg font-sans font-semibold text-xs shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all flex items-center gap-1 bg-blue-700 text-white select-none"
                 >
@@ -444,16 +485,31 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
           )}
 
           <div>
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <span
-                className="text-xs font-sans font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md"
-                style={{
-                  backgroundColor: isEbook ? '#7c3aed20' : `${palette.goldPrimary}20`,
-                  color: isEbook ? '#7c3aed' : palette.goldPrimary,
-                }}
-              >
-                {isEbook ? '📱 E-book Digital' : '📖 Livro Físico'}
-              </span>
+            <div className="flex items-center gap-1.5 flex-wrap mb-1">
+              {isFisico && (
+                <span
+                  className="text-xs font-sans font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center gap-1"
+                  style={{
+                    backgroundColor: `${palette.goldPrimary}20`,
+                    color: palette.goldPrimary,
+                  }}
+                >
+                  <BookOpen size={12} />
+                  Livro Físico
+                </span>
+              )}
+              {isEbook && (
+                <span className="text-xs font-sans font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center gap-1 bg-purple-950/20 text-purple-700 border border-purple-300/40">
+                  <Tablet size={12} />
+                  E-book Digital
+                </span>
+              )}
+              {isAudiobook && (
+                <span className="text-xs font-sans font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center gap-1 bg-teal-950/20 text-teal-700 border border-teal-300/40">
+                  <Headphones size={12} />
+                  Audiolivro
+                </span>
+              )}
             </div>
             <h2
               className="font-serif font-bold text-2xl sm:text-3xl leading-snug"
@@ -789,6 +845,21 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
 
         {/* Botões de Ação na Estante */}
         <div className="flex flex-col gap-2.5 pb-8">
+          {/* Se for Prévia da Obra (book.id === 0): Botão de Adicionar à Estante */}
+          {book.id === 0 && onUpdateBook && (
+            <button
+              type="button"
+              onClick={() => onUpdateBook(book)}
+              className="w-full py-3.5 rounded-xl font-sans font-semibold text-base shadow-lg flex items-center justify-center gap-2 cursor-pointer hover:brightness-105 active:scale-98 transition-all select-none"
+              style={{
+                backgroundColor: palette.goldPrimary,
+                color: palette.textOnGold,
+              }}
+            >
+              <Plus size={18} />
+              Adicionar à Estante ({formatFormatNames(currentFormats)})
+            </button>
+          )}
           {/* Ação: Emprestar Livro (se não estiver com empréstimo ativo) */}
           {(!book.emprestimo || book.emprestimo.devolvido) && onOpenLoanModal && (
             <button

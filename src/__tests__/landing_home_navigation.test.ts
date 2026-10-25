@@ -230,4 +230,71 @@ describe('Landing Home & Navegação Integrada (Kindle Discovery Experience)', (
       expect(journeySection.books[0].localBook?.capaLocalPath).toBe('covers/cover_99_123456_abc.jpg');
     });
   });
+
+  describe('6. Rolagem Vertical e Horizontal Nativa nas Capas da Home', () => {
+    it('BookCarousel renderiza faixa horizontal com touch-action pan-x pan-y e sem restrição touch-pan-x', async () => {
+      const { renderToStaticMarkup } = await import('react-dom/server');
+      const { BookCarousel } = await import('../components/home/BookCarousel');
+      const html = renderToStaticMarkup(
+        React.createElement(BookCarousel, {
+          palette: DarkWalnutPalette,
+          children: React.createElement('div', null, 'Livro 1'),
+        })
+      );
+
+      // A faixa horizontal deve ter touch-action: pan-x pan-y para permitir scroll vertical nativo da página
+      expect(html).toContain('touch-action:pan-x pan-y');
+      // Não deve conter a classe Tailwind touch-pan-x que proíbe pan-y vertical
+      expect(html).not.toContain('touch-pan-x');
+      // Deve manter overflow-x-auto e WebkitOverflowScrolling para scroll horizontal suave
+      expect(html).toContain('overflow-x-auto');
+    });
+
+    it('DiscoveryBookCard configura touch-action pan-x pan-y no botão da capa', async () => {
+      const { renderToStaticMarkup } = await import('react-dom/server');
+      const { DiscoveryBookCard } = await import('../components/home/DiscoveryBookCard');
+      const mockItem = {
+        id: 'test-book-1',
+        titulo: 'Dom Casmurro',
+        autores: ['Machado de Assis'],
+        isLocal: true,
+      };
+
+      const html = renderToStaticMarkup(
+        React.createElement(DiscoveryBookCard, {
+          palette: DarkWalnutPalette,
+          item: mockItem,
+          onClick: () => {},
+        })
+      );
+
+      // O botão principal do cartão deve declarar touch-action: pan-x pan-y
+      expect(html).toContain('touch-action:pan-x pan-y');
+      expect(html).toContain('Dom Casmurro');
+      expect(html).toContain('Machado de Assis');
+    });
+
+    it('Valida algoritmo de discriminação de toque estático vs arrasto (limiar de 7px)', () => {
+      // Regra de especificação: movimentos com deslocamento > 7px são classificados como arrasto (scroll)
+      const isDrag = (startX: number, startY: number, currX: number, currY: number) => {
+        const dx = Math.abs(currX - startX);
+        const dy = Math.abs(currY - startY);
+        return dx > 7 || dy > 7;
+      };
+
+      // Toque estacionário ou tremor mínimo (<= 7px): NÃO é arrasto -> abre o livro
+      expect(isDrag(100, 100, 100, 100)).toBe(false);
+      expect(isDrag(100, 100, 103, 104)).toBe(false);
+      expect(isDrag(100, 100, 107, 107)).toBe(false);
+
+      // Arrasto vertical (rolagem da página Home): É arrasto -> NÃO abre o livro
+      expect(isDrag(100, 100, 100, 115)).toBe(true);
+      expect(isDrag(100, 100, 102, 140)).toBe(true);
+
+      // Arrasto horizontal (rolagem do carrossel): É arrasto -> NÃO abre o livro
+      expect(isDrag(100, 100, 130, 100)).toBe(true);
+      expect(isDrag(100, 100, 80, 101)).toBe(true);
+    });
+  });
 });
+

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SearchResultBook, ShelfTab, Book } from '../types/book';
+import { SearchResultBook, ShelfTab, Book, BookFormat, ReadingStatus, getBookFormats, toggleBookFormat } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodTopAppBar } from '../components/WoodTopAppBar';
 import { BookCoverView } from '../components/BookCoverView';
@@ -17,6 +17,7 @@ import {
   Camera,
   ScanBarcode,
   Tablet,
+  Headphones,
   Plus,
   Activity,
   Globe2,
@@ -36,7 +37,11 @@ interface SearchScreenProps {
   isLoading: boolean;
   results: SearchResultBook[];
   errorMessage: string | null;
-  onSelectBookToAdd: (book: SearchResultBook, targetAction?: ShelfTab) => void;
+  onSelectBookToAdd: (
+    book: SearchResultBook,
+    targetAction?: ShelfTab | 'audiolivro' | 'fisico' | BookFormat[],
+    targetStatus?: ReadingStatus
+  ) => void;
   onSelectBookDetail: (book: Book) => void;
   onOpenManualRegister: () => void;
   userBooks?: Book[];
@@ -73,6 +78,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
   const { t } = useI18n();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
+  const [pendingFormatsByItem, setPendingFormatsByItem] = useState<Record<string, BookFormat[]>>({});
 
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
@@ -93,6 +99,8 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
     if (existingInLibrary) {
       onSelectBookDetail(existingInLibrary);
     } else {
+      const itemKey = item.isbn13 || item.idExterno || item.titulo;
+      const pendingFmts = pendingFormatsByItem[itemKey] || (item.formatos && item.formatos.length > 0 ? item.formatos : ['fisico']);
       const previewBook: Book = {
         id: 0,
         origem: item.origem,
@@ -108,8 +116,9 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
         generos: item.generos,
         descricao: item.descricao,
         capaUrl: item.capaUrl,
-        formato: 'fisico',
-        tenho_fisico: false,
+        formato: pendingFmts[0] || 'fisico',
+        formatos: pendingFmts,
+        tenho_fisico: pendingFmts.includes('fisico'),
         status_leitura: 'nenhum',
         anoLeitura: null,
         mesLeitura: null,
@@ -674,77 +683,162 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                         </div>
 
                         {/* Botões de Ação na Estante */}
-                        <div className="mt-3 pt-2 border-t flex flex-wrap gap-1.5 items-center justify-end" style={{ borderColor: `${palette.woodBorder}20` }}>
-                          {/* Físico */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSelectBookToAdd(item, 'meus_livros');
-                            }}
-                            className="px-2.5 py-1 rounded-md font-sans font-semibold text-xs flex items-center gap-1 border shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all select-none"
-                            style={{
-                              backgroundColor: existingInLibrary?.tenho_fisico ? palette.goldPrimary : 'transparent',
-                              borderColor: palette.woodBorder,
-                              color: existingInLibrary?.tenho_fisico ? palette.textOnGold : palette.textOnPaper,
-                            }}
-                          >
-                            <Library size={12} />
-                            {existingInLibrary?.tenho_fisico ? 'Físico ✓' : '+ Físico'}
-                          </button>
+                        {(() => {
+                          const itemKey = item.isbn13 || item.idExterno || `${item.titulo}_${idx}`;
+                          const effectiveFormats: BookFormat[] = existingInLibrary
+                            ? getBookFormats(existingInLibrary)
+                            : (pendingFormatsByItem[itemKey] || (item.formatos && item.formatos.length > 0 ? item.formatos : ['fisico']));
 
-                          {/* E-book */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSelectBookToAdd(item, 'ebook');
-                            }}
-                            className="px-2.5 py-1 rounded-md font-sans font-semibold text-xs flex items-center gap-1 border shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all select-none"
-                            style={{
-                              backgroundColor: existingInLibrary?.formato === 'ebook' ? '#6d28d9' : '#6d28d918',
-                              borderColor: '#6d28d980',
-                              color: existingInLibrary?.formato === 'ebook' ? '#ffffff' : '#6d28d9',
-                            }}
-                          >
-                            <Tablet size={12} />
-                            {existingInLibrary?.formato === 'ebook' ? 'E-book ✓' : '+ E-book'}
-                          </button>
+                          const isFisico = effectiveFormats.includes('fisico');
+                          const isEbook = effectiveFormats.includes('ebook');
+                          const isAudiobook = effectiveFormats.includes('audiolivro');
 
-                          {/* Lido */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSelectBookToAdd(item, 'lido');
-                            }}
-                            className="px-2.5 py-1 rounded-md font-sans font-semibold text-xs border cursor-pointer hover:bg-black/5 active:scale-95 transition-all select-none"
-                            style={{
-                              borderColor: existingInLibrary?.status_leitura === 'lido' ? '#10b981' : palette.woodBorder,
-                              color: existingInLibrary?.status_leitura === 'lido' ? '#065f46' : palette.textOnPaper,
-                              backgroundColor: existingInLibrary?.status_leitura === 'lido' ? '#10b98115' : 'transparent',
-                            }}
-                          >
-                            {existingInLibrary?.status_leitura === 'lido' ? 'Lido ✓' : 'Lido'}
-                          </button>
+                          const handleToggleFormatOnCard = (fmt: BookFormat) => {
+                            if (existingInLibrary) {
+                              const nextFormats = toggleBookFormat(effectiveFormats, fmt);
+                              if (
+                                nextFormats.length === effectiveFormats.length &&
+                                nextFormats.every((f) => effectiveFormats.includes(f))
+                              ) {
+                                return; // Mantém pelo menos um formato ativo
+                              }
+                              onSelectBookToAdd(item, nextFormats);
+                            } else {
+                              setPendingFormatsByItem((prev) => {
+                                const current = prev[itemKey] || (item.formatos && item.formatos.length > 0 ? item.formatos : ['fisico']);
+                                const next = toggleBookFormat(current, fmt);
+                                return { ...prev, [itemKey]: next };
+                              });
+                            }
+                          };
 
-                          {/* Quero Ler */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSelectBookToAdd(item, 'quero_ler');
-                            }}
-                            className="px-2.5 py-1 rounded-md font-sans font-semibold text-xs border cursor-pointer hover:bg-black/5 active:scale-95 transition-all select-none"
-                            style={{
-                              borderColor: existingInLibrary?.status_leitura === 'quero_ler' ? '#2563eb' : `${palette.woodBorder}80`,
-                              color: existingInLibrary?.status_leitura === 'quero_ler' ? '#1d4ed8' : palette.textSecondaryOnPaper,
-                              backgroundColor: existingInLibrary?.status_leitura === 'quero_ler' ? '#2563eb15' : 'transparent',
-                            }}
-                          >
-                            {existingInLibrary?.status_leitura === 'quero_ler' ? 'Quero Ler ✓' : 'Quero Ler'}
-                          </button>
-                        </div>
+                          return (
+                            <div className="mt-3 pt-2 border-t flex flex-wrap gap-1.5 items-center justify-end" style={{ borderColor: `${palette.woodBorder}20` }}>
+                              {/* Formato: Físico */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleFormatOnCard('fisico');
+                                }}
+                                className="px-2.5 py-1 rounded-md font-sans font-semibold text-xs flex items-center gap-1 border shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all select-none"
+                                style={{
+                                  backgroundColor: isFisico ? palette.goldPrimary : 'transparent',
+                                  borderColor: isFisico ? palette.goldPrimary : palette.woodBorder,
+                                  color: isFisico ? palette.textOnGold : palette.textOnPaper,
+                                }}
+                                title={isFisico ? 'Formato Físico ativo (clique para alternar)' : 'Ativar formato Físico'}
+                              >
+                                <Library size={12} />
+                                {isFisico ? 'Físico ✓' : 'Físico'}
+                              </button>
+
+                              {/* Formato: E-book */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleFormatOnCard('ebook');
+                                }}
+                                className="px-2.5 py-1 rounded-md font-sans font-semibold text-xs flex items-center gap-1 border shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all select-none"
+                                style={{
+                                  backgroundColor: isEbook ? '#6d28d9' : '#6d28d918',
+                                  borderColor: isEbook ? '#6d28d9' : '#6d28d980',
+                                  color: isEbook ? '#ffffff' : '#6d28d9',
+                                }}
+                                title={isEbook ? 'Formato E-book ativo (clique para alternar)' : 'Ativar formato E-book'}
+                              >
+                                <Tablet size={12} />
+                                {isEbook ? 'E-book ✓' : 'E-book'}
+                              </button>
+
+                              {/* Formato: Audiolivro */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleFormatOnCard('audiolivro');
+                                }}
+                                className="px-2.5 py-1 rounded-md font-sans font-semibold text-xs flex items-center gap-1 border shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all select-none"
+                                style={{
+                                  backgroundColor: isAudiobook ? '#0d9488' : '#0d948818',
+                                  borderColor: isAudiobook ? '#0d9488' : '#0d948880',
+                                  color: isAudiobook ? '#ffffff' : '#0d9488',
+                                }}
+                                title={isAudiobook ? 'Formato Audiolivro ativo (clique para alternar)' : 'Ativar formato Audiolivro'}
+                              >
+                                <Headphones size={12} />
+                                {isAudiobook ? 'Audiolivro ✓' : 'Audiolivro'}
+                              </button>
+
+                              {/* Botão de Adicionar à Estante (quando ainda não cadastrado) */}
+                              {!existingInLibrary ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSelectBookToAdd(item, effectiveFormats, 'nenhum');
+                                  }}
+                                  className="px-2.5 py-1 rounded-md font-sans font-bold text-xs flex items-center gap-1 border shadow-xs cursor-pointer hover:brightness-105 active:scale-95 transition-all select-none"
+                                  style={{
+                                    backgroundColor: palette.goldPrimary,
+                                    borderColor: palette.woodBorder,
+                                    color: palette.textOnGold,
+                                  }}
+                                  title="Adicionar à estante com os formatos selecionados"
+                                >
+                                  <Plus size={12} />
+                                  + Estante
+                                </button>
+                              ) : (
+                                <span
+                                  className="px-2 py-0.5 rounded-md text-[10px] font-sans font-bold uppercase tracking-wider flex items-center gap-0.5"
+                                  style={{
+                                    backgroundColor: '#10b98120',
+                                    color: '#065f46',
+                                    border: '1px solid #10b98150',
+                                  }}
+                                >
+                                  Na Estante ✓
+                                </span>
+                              )}
+
+                              {/* Lido */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSelectBookToAdd(item, effectiveFormats, 'lido');
+                                }}
+                                className="px-2.5 py-1 rounded-md font-sans font-semibold text-xs border cursor-pointer hover:bg-black/5 active:scale-95 transition-all select-none"
+                                style={{
+                                  borderColor: existingInLibrary?.status_leitura === 'lido' ? '#10b981' : palette.woodBorder,
+                                  color: existingInLibrary?.status_leitura === 'lido' ? '#065f46' : palette.textOnPaper,
+                                  backgroundColor: existingInLibrary?.status_leitura === 'lido' ? '#10b98115' : 'transparent',
+                                }}
+                              >
+                                {existingInLibrary?.status_leitura === 'lido' ? 'Lido ✓' : 'Lido'}
+                              </button>
+
+                              {/* Quero Ler */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSelectBookToAdd(item, effectiveFormats, 'quero_ler');
+                                }}
+                                className="px-2.5 py-1 rounded-md font-sans font-semibold text-xs border cursor-pointer hover:bg-black/5 active:scale-95 transition-all select-none"
+                                style={{
+                                  borderColor: existingInLibrary?.status_leitura === 'quero_ler' ? '#2563eb' : `${palette.woodBorder}80`,
+                                  color: existingInLibrary?.status_leitura === 'quero_ler' ? '#1d4ed8' : palette.textSecondaryOnPaper,
+                                  backgroundColor: existingInLibrary?.status_leitura === 'quero_ler' ? '#2563eb15' : 'transparent',
+                                }}
+                              >
+                                {existingInLibrary?.status_leitura === 'quero_ler' ? 'Quero Ler ✓' : 'Quero Ler'}
+                              </button>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   </PaperCard>

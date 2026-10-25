@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { GroupByMode, SortOption } from '../types/book';
+import { GroupByMode, SortOption, BookFormat } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
-import { X, Filter, BookOpen, Tablet } from 'lucide-react';
+import { X, Filter, BookOpen, Tablet, Headphones } from 'lucide-react';
 
 interface FilterModalProps {
   palette: WoodPalette;
@@ -15,8 +15,8 @@ interface FilterModalProps {
   onRatingFilterChange: (min: number | null) => void;
   selectedYear: number | null;
   onYearFilterChange: (year: number | null) => void;
-  selectedFormat?: 'fisico' | 'ebook' | null;
-  onFormatFilterChange?: (format: 'fisico' | 'ebook' | null) => void;
+  selectedFormat?: BookFormat | null;
+  onFormatFilterChange?: (format: BookFormat | null) => void;
   onClearFilters: () => void;
 }
 
@@ -150,6 +150,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                 { val: null, label: 'Todos os Formatos', icon: null },
                 { val: 'fisico', label: 'Livros Físicos', icon: BookOpen },
                 { val: 'ebook', label: 'E-books Digitais', icon: Tablet },
+                { val: 'audiolivro', label: 'Audiolivros', icon: Headphones },
               ].map((fmt) => {
                 const isSelected = selectedFormat === fmt.val;
                 const IconComp = fmt.icon;

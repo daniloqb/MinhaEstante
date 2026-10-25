@@ -62,9 +62,10 @@ export const BookCarousel: React.FC<BookCarouselProps> = ({ palette, children })
       {/* Faixa de rolagem horizontal com scroll-snap */}
       <div
         ref={containerRef}
-        className="flex gap-3.5 sm:gap-4 overflow-x-auto overflow-y-hidden pb-3 pt-1 px-1 snap-x scrollbar-none scroll-smooth touch-pan-x"
+        className="flex gap-3.5 sm:gap-4 overflow-x-auto overflow-y-hidden pb-3 pt-1 px-1 snap-x scrollbar-none scroll-smooth"
         style={{
           WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-x pan-y',
         }}
       >
         {children}

@@ -1,4 +1,4 @@
-import { Book, ReadingStatus, BookFormat, BookOrigin } from '../../types/book';
+import { Book, ReadingStatus, BookFormat, BookOrigin, getBookFormats } from '../../types/book';
 import { IBookRepository, IDatabaseService, DbBookRow } from './types';
 import { DatabaseService } from './databaseService';
 import { CoverStorageService } from '../storage/coverStorageService';
@@ -43,6 +43,25 @@ export class BookRepository implements IBookRepository {
       }
     }
 
+    let formatos: BookFormat[] = [];
+    if (row.formatos_json) {
+      try {
+        formatos = JSON.parse(row.formatos_json);
+        if (!Array.isArray(formatos)) formatos = [];
+      } catch {
+        formatos = [];
+      }
+    }
+    if (formatos.length === 0) {
+      formatos = getBookFormats({
+        formato: (row.formato as BookFormat) || 'fisico',
+        tenho_fisico: Number(row.tenho_fisico) === 1,
+      });
+    }
+
+    const primaryFormat = (row.formato as BookFormat) || formatos[0] || 'fisico';
+    const tenhoFisico = Number(row.tenho_fisico) === 1 || formatos.includes('fisico');
+
     return {
       id: Number(row.id),
       origem: (row.origem as BookOrigin) || 'manual',
@@ -59,8 +78,9 @@ export class BookRepository implements IBookRepository {
       descricao: row.descricao || null,
       capaUrl: row.capa_url || null,
       capaLocalPath: row.capa_local_path || null,
-      formato: (row.formato as BookFormat) || 'fisico',
-      tenho_fisico: Number(row.tenho_fisico) === 1,
+      formato: primaryFormat,
+      formatos,
+      tenho_fisico: tenhoFisico,
       status_leitura: (row.status_leitura as ReadingStatus) || 'nenhum',
       emprestimo,
       mesLeitura: row.mes_leitura != null ? Number(row.mes_leitura) : null,
@@ -80,8 +100,10 @@ export class BookRepository implements IBookRepository {
     const autoresJson = JSON.stringify(book.autores || []);
     const generosJson = JSON.stringify(book.generos || []);
     const emprestimoJson = book.emprestimo ? JSON.stringify(book.emprestimo) : null;
-    const formato = book.formato || 'fisico';
-    const tenhoFisico = book.tenho_fisico ? 1 : 0;
+    const formatos = getBookFormats(book);
+    const formatosJson = JSON.stringify(formatos);
+    const formato = book.formato || formatos[0] || 'fisico';
+    const tenhoFisico = (book.tenho_fisico !== undefined ? book.tenho_fisico : formatos.includes('fisico')) ? 1 : 0;
     const statusLeitura = book.status_leitura || 'nenhum';
 
     return [
@@ -101,6 +123,7 @@ export class BookRepository implements IBookRepository {
       book.capaUrl || null,
       book.capaLocalPath || null,
       formato,
+      formatosJson,
       tenhoFisico,
       statusLeitura,
       emprestimoJson,
@@ -152,10 +175,10 @@ export class BookRepository implements IBookRepository {
       `INSERT INTO books (
         id, origem, id_externo, titulo, subtitulo, autores_json, editora,
         ano_publicacao, paginas, isbn10, isbn13, generos_json, descricao,
-        capa_url, capa_local_path, formato, tenho_fisico, status_leitura,
+        capa_url, capa_local_path, formato, formatos_json, tenho_fisico, status_leitura,
         emprestimo_json, mes_leitura, ano_leitura, nota, observacoes,
         data_cadastro, data_atualizacao
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
       params
     );
 
@@ -198,8 +221,10 @@ export class BookRepository implements IBookRepository {
     const autoresJson = JSON.stringify(bookToSave.autores || []);
     const generosJson = JSON.stringify(bookToSave.generos || []);
     const emprestimoJson = bookToSave.emprestimo ? JSON.stringify(bookToSave.emprestimo) : null;
-    const formato = bookToSave.formato || 'fisico';
-    const tenhoFisico = bookToSave.tenho_fisico ? 1 : 0;
+    const formatos = getBookFormats(bookToSave);
+    const formatosJson = JSON.stringify(formatos);
+    const formato = bookToSave.formato || formatos[0] || 'fisico';
+    const tenhoFisico = (bookToSave.tenho_fisico !== undefined ? bookToSave.tenho_fisico : formatos.includes('fisico')) ? 1 : 0;
     const statusLeitura = bookToSave.status_leitura || 'nenhum';
 
     const params = [
@@ -218,6 +243,7 @@ export class BookRepository implements IBookRepository {
       bookToSave.capaUrl || null,
       bookToSave.capaLocalPath || null,
       formato,
+      formatosJson,
       tenhoFisico,
       statusLeitura,
       emprestimoJson,
@@ -234,7 +260,7 @@ export class BookRepository implements IBookRepository {
         origem = ?, id_externo = ?, titulo = ?, subtitulo = ?, autores_json = ?,
         editora = ?, ano_publicacao = ?, paginas = ?, isbn10 = ?, isbn13 = ?,
         generos_json = ?, descricao = ?, capa_url = ?, capa_local_path = ?,
-        formato = ?, tenho_fisico = ?, status_leitura = ?, emprestimo_json = ?,
+        formato = ?, formatos_json = ?, tenho_fisico = ?, status_leitura = ?, emprestimo_json = ?,
         mes_leitura = ?, ano_leitura = ?, nota = ?, observacoes = ?, data_atualizacao = ?
       WHERE id = ?;`,
       params
@@ -242,6 +268,9 @@ export class BookRepository implements IBookRepository {
 
     return {
       ...bookToSave,
+      formato,
+      formatos,
+      tenho_fisico: tenhoFisico === 1,
       dataAtualizacao: now,
     };
   }

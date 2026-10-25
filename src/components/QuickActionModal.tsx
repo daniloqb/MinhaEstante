@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Book, ReadingStatus, isBookBorrowed } from '../types/book';
+import { Book, ReadingStatus, isBookBorrowed, hasBookFormat } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import {
   BookOpen,
@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Tablet,
   Handshake,
+  Headphones,
 } from 'lucide-react';
 
 interface QuickActionModalProps {
@@ -44,7 +45,9 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   if (!book) return null;
-  const isEbook = book.formato === 'ebook';
+  const isEbook = hasBookFormat(book, 'ebook') || book.formato === 'ebook';
+  const isAudiobook = hasBookFormat(book, 'audiolivro') || book.formato === 'audiolivro';
+  const isFisico = hasBookFormat(book, 'fisico') || book.formato === 'fisico' || book.tenho_fisico;
 
   return (
     <div
@@ -133,19 +136,39 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
 
         {/* Indicadores atuais do livro */}
         <div className="flex items-center gap-1.5 mb-3.5 flex-wrap">
-          <span
-            className="text-xs font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1"
-            style={{
-              backgroundColor: isEbook ? '#7c3aed20' : `${palette.goldPrimary}20`,
-              borderColor: isEbook ? '#7c3aed80' : palette.goldPrimary,
-              color: isEbook ? '#7c3aed' : palette.woodBorder,
-            }}
-          >
-            {isEbook ? <Tablet size={12} /> : <BookOpen size={12} />}
-            {isEbook ? 'E-book Digital' : 'Livro Físico'}
-          </span>
+          {isFisico && (
+            <span
+              className="text-xs font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1"
+              style={{
+                backgroundColor: `${palette.goldPrimary}20`,
+                borderColor: palette.goldPrimary,
+                color: palette.woodBorder,
+              }}
+            >
+              <BookOpen size={12} />
+              Livro Físico
+            </span>
+          )}
 
-          {!isEbook && (
+          {isEbook && (
+            <span
+              className="text-xs font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1 bg-purple-950/20 text-purple-700 border-purple-300/60"
+            >
+              <Tablet size={12} />
+              E-book
+            </span>
+          )}
+
+          {isAudiobook && (
+            <span
+              className="text-xs font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1 bg-teal-950/20 text-teal-700 border-teal-300/60"
+            >
+              <Headphones size={12} />
+              Audiolivro
+            </span>
+          )}
+
+          {isFisico && (
             <span
               className="text-xs font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1"
               style={{
@@ -236,7 +259,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
             </button>
           )}
 
-          {/* Trocar entre Físico e E-book */}
+          {/* Alternar entre Físico, E-book e Audiolivro */}
           {onToggleFormato && (
             <button
               onClick={() => {
@@ -248,7 +271,11 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
                 color: palette.textOnPaper,
               }}
             >
-              {isEbook ? (
+              {book.formato === 'ebook' ? (
+                <>
+                  <Headphones size={15} /> Mudar para Audiolivro
+                </>
+              ) : book.formato === 'audiolivro' ? (
                 <>
                   <BookOpen size={15} /> Mudar para Livro Físico
                 </>
@@ -261,7 +288,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
           )}
 
           {/* Ação de Posse Física (se for livro físico) */}
-          {!isEbook && (
+          {isFisico && (
             <button
               onClick={() => {
                 onDismiss();

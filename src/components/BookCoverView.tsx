@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { WoodPalette } from '../theme/woodTheme';
-import { Book, isBookBorrowed } from '../types/book';
-import { Check, Bookmark, Tablet, BookOpen, Handshake } from 'lucide-react';
+import { Book, isBookBorrowed, hasBookFormat } from '../types/book';
+import { Check, Bookmark, Tablet, BookOpen, Handshake, Headphones } from 'lucide-react';
 import { CoverStorageService } from '../services/storage/coverStorageService';
 
 interface BookCoverViewProps {
@@ -150,8 +150,27 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
       );
     }
 
-    // 2. Físico / Digital
-    if (book.formato === 'ebook') {
+    // 2. Físico / E-book / Audiolivro (suporta múltiplos formatos simultâneos)
+    const hasFisico = hasBookFormat(book, 'fisico') || book.formato === 'fisico' || book.tenho_fisico;
+    const hasEbook = hasBookFormat(book, 'ebook') || book.formato === 'ebook';
+    const hasAudio = hasBookFormat(book, 'audiolivro') || book.formato === 'audiolivro';
+
+    if (hasAudio) {
+      items.push(
+        <span
+          key="audiolivro"
+          className={`${
+            compact ? 'px-1 py-0.5 text-[9px]' : 'px-1.5 py-0.5 text-[10px] sm:text-[11px]'
+          } rounded-full font-sans font-bold shadow-md flex items-center gap-0.5 border bg-teal-950 text-teal-100 border-teal-300/70 tracking-tight`}
+          title="Audiolivro"
+        >
+          <Headphones size={compact ? 8 : 10} />
+          <span>Áudio</span>
+        </span>
+      );
+    }
+
+    if (hasEbook) {
       items.push(
         <span
           key="digital"
@@ -164,7 +183,9 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
           <span>E-book</span>
         </span>
       );
-    } else {
+    }
+
+    if (hasFisico && (!hasEbook && !hasAudio || book.tenho_fisico)) {
       items.push(
         <span
           key="fisico"
@@ -241,7 +262,8 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
               setImageFailed(true);
             }
           }}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover pointer-events-none"
+          draggable={false}
           loading="lazy"
         />
       ) : (

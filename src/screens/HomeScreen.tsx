@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Book, ShelfTab, ViewMode, GroupByMode, SortOption } from '../types/book';
+import { Book, ShelfTab, ViewMode, GroupByMode, SortOption, BookFormat } from '../types/book';
 import { WoodPalette } from '../theme/woodTheme';
 import { WoodShelf } from '../components/WoodShelf';
 import { BookCoverView } from '../components/BookCoverView';
@@ -43,8 +43,8 @@ export interface HomeScreenProps {
   onGenreFilterChange: (genre: string | null) => void;
   selectedRatingMin: number | null;
   onRatingFilterChange: (min: number | null) => void;
-  selectedFormat?: 'fisico' | 'ebook' | null;
-  onFormatFilterChange?: (format: 'fisico' | 'ebook' | null) => void;
+  selectedFormat?: BookFormat | null;
+  onFormatFilterChange?: (format: BookFormat | null) => void;
   onClearFilters: () => void;
   onSelectBook: (book: Book) => void;
   onOpenQuickAction: (book: Book) => void;

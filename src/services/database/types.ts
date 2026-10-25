@@ -17,6 +17,7 @@ export interface DbBookRow {
   capa_url: string | null;
   capa_local_path: string | null;
   formato: string;
+  formatos_json?: string | null;
   tenho_fisico: number; // 0 ou 1
   status_leitura: string;
   emprestimo_json: string | null;

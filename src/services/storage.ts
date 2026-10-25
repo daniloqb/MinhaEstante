@@ -1,4 +1,4 @@
-import { Book, EstanteStats, ReadingStatus } from '../types/book';
+import { Book, EstanteStats, ReadingStatus, BookFormat, getBookFormats, hasBookFormat } from '../types/book';
 import { bookRepository } from './database/bookRepository';
 import { CoverStorageService } from './storage/coverStorageService';
 
@@ -120,6 +120,7 @@ export function mergeDuplicateBooks(a: Book, b: Book): Book {
     descricao: a.descricao || b.descricao || null,
     capaUrl: a.capaUrl || b.capaUrl || null,
     formato: a.formato || b.formato || 'fisico',
+    formatos: Array.from(new Set([...getBookFormats(a), ...getBookFormats(b)])),
     tenho_fisico: combinedTenhoFisico,
     status_leitura: combinedStatus,
     emprestimo: a.emprestimo || b.emprestimo || null,
@@ -166,6 +167,16 @@ export function migrateLegacyBooks(rawBooks: any[]): Book[] {
       status_leitura = 'nenhum';
     }
 
+    const rawFormato: BookFormat =
+      raw.formato === 'audiolivro' ? 'audiolivro' : raw.formato === 'ebook' ? 'ebook' : 'fisico';
+
+    let formatos: BookFormat[] = Array.isArray(raw.formatos)
+      ? raw.formatos.filter((f: any) => f === 'fisico' || f === 'ebook' || f === 'audiolivro')
+      : [];
+    if (formatos.length === 0) {
+      formatos = getBookFormats({ formato: rawFormato, tenho_fisico });
+    }
+
     return {
       id: raw.id || idx + 1,
       origem: raw.origem || 'manual',
@@ -182,7 +193,8 @@ export function migrateLegacyBooks(rawBooks: any[]): Book[] {
       descricao: raw.descricao || null,
       capaUrl: raw.capaUrl || null,
       capaLocalPath: raw.capaLocalPath || raw.capa_local_path || null,
-      formato: raw.formato === 'ebook' ? 'ebook' : 'fisico',
+      formato: rawFormato,
+      formatos,
       tenho_fisico,
       status_leitura,
       emprestimo: raw.emprestimo || null,
@@ -420,8 +432,9 @@ export const BookStorage = {
       lidosPorAno: porAno,
       topAutores,
       topGeneros,
-      totalEbooks: books.filter((b) => b.formato === 'ebook').length,
-      totalFisicos: books.filter((b) => b.formato !== 'ebook').length,
+      totalEbooks: books.filter((b) => hasBookFormat(b, 'ebook') || b.formato === 'ebook').length,
+      totalAudiolivros: books.filter((b) => hasBookFormat(b, 'audiolivro') || b.formato === 'audiolivro').length,
+      totalFisicos: books.filter((b) => hasBookFormat(b, 'fisico') || b.formato === 'fisico' || b.tenho_fisico).length,
     };
   },
 

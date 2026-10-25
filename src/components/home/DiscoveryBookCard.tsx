@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { WoodPalette } from '../../theme/woodTheme';
 import { BookCoverView } from '../BookCoverView';
 import { HomeBookItem } from '../../features/home-feed/types';
@@ -17,13 +17,57 @@ export const DiscoveryBookCard: React.FC<DiscoveryBookCardProps> = ({
   isAlreadyInLibrary = false,
   onClick,
 }) => {
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const isDraggingRef = useRef(false);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    pointerStartRef.current = { x: e.clientX, y: e.clientY };
+    isDraggingRef.current = false;
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!pointerStartRef.current) return;
+    const dx = Math.abs(e.clientX - pointerStartRef.current.x);
+    const dy = Math.abs(e.clientY - pointerStartRef.current.y);
+    // Limiar de 7px para diferenciar toque de rolagem sem bloquear eventos nativos
+    if (dx > 7 || dy > 7) {
+      isDraggingRef.current = true;
+    }
+  };
+
+  const handlePointerUp = () => {
+    pointerStartRef.current = null;
+  };
+
+  const handlePointerCancel = () => {
+    // Quando o navegador assume a rolagem nativa, cancela o ponteiro
+    isDraggingRef.current = true;
+    pointerStartRef.current = null;
+  };
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (isDraggingRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      isDraggingRef.current = false;
+      return;
+    }
+    onClick(item);
+  };
+
   return (
     <button
       type="button"
-      onClick={() => onClick(item)}
+      onClick={handleClick}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
       className="group flex flex-col text-left shrink-0 w-28 sm:w-32 md:w-36 cursor-pointer focus:outline-none focus:ring-2 rounded-xl p-1 transition-all duration-200 hover:-translate-y-1 active:scale-95 select-none snap-start"
       style={{
         outlineColor: palette.goldPrimary,
+        touchAction: 'pan-x pan-y',
       }}
       title={`${item.titulo} — ${item.autores.join(', ') || 'Autor Desconhecido'}`}
       aria-label={`Livro: ${item.titulo}, autor: ${item.autores.join(', ') || 'Desconhecido'}`}

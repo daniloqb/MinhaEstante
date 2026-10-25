@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS books (
   capa_url TEXT,
   capa_local_path TEXT,
   formato TEXT NOT NULL DEFAULT 'fisico',
+  formatos_json TEXT,
   tenho_fisico INTEGER NOT NULL DEFAULT 1,
   status_leitura TEXT NOT NULL DEFAULT 'nenhum',
   emprestimo_json TEXT,
@@ -73,42 +74,64 @@ class WebInMemoryDatabaseAdapter implements IDatabaseService {
     const trimmed = sql.trim();
     const upper = trimmed.toUpperCase();
 
-    if (upper.startsWith('CREATE') || upper.startsWith('PRAGMA')) {
+    if (upper.startsWith('CREATE') || upper.startsWith('PRAGMA') || upper.startsWith('ALTER')) {
       return { changes: 0 };
     }
 
     if (upper.startsWith('INSERT INTO BOOKS')) {
-      const id = params[0] ? Number(params[0]) : this.autoIncrementId++;
+      const match = trimmed.match(/\(([\s\S]*?)\)\s*VALUES/i);
+      const row: any = {};
+      if (match && match[1]) {
+        const cols = match[1].split(',').map((c) => c.trim().toLowerCase());
+        cols.forEach((col, idx) => {
+          row[col] = params[idx];
+        });
+      } else {
+        row.id = params[0];
+        row.origem = params[1];
+        row.id_externo = params[2];
+        row.titulo = params[3];
+        row.subtitulo = params[4];
+        row.autores_json = params[5];
+        row.editora = params[6];
+        row.ano_publicacao = params[7];
+        row.paginas = params[8];
+        row.isbn10 = params[9];
+        row.isbn13 = params[10];
+        row.generos_json = params[11];
+        row.descricao = params[12];
+        row.capa_url = params[13];
+        row.capa_local_path = params[14];
+        row.formato = params[15];
+        if (params.length >= 26) {
+          row.formatos_json = params[16];
+          row.tenho_fisico = params[17];
+          row.status_leitura = params[18];
+          row.emprestimo_json = params[19];
+          row.mes_leitura = params[20];
+          row.ano_leitura = params[21];
+          row.nota = params[22];
+          row.observacoes = params[23];
+          row.data_cadastro = params[24];
+          row.data_atualizacao = params[25];
+        } else {
+          row.tenho_fisico = params[16];
+          row.status_leitura = params[17];
+          row.emprestimo_json = params[18];
+          row.mes_leitura = params[19];
+          row.ano_leitura = params[20];
+          row.nota = params[21];
+          row.observacoes = params[22];
+          row.data_cadastro = params[23];
+          row.data_atualizacao = params[24];
+        }
+      }
+
+      const id = row.id && Number(row.id) > 0 ? Number(row.id) : this.autoIncrementId++;
       if (id >= this.autoIncrementId) {
         this.autoIncrementId = id + 1;
       }
-      const row = {
-        id,
-        origem: params[1],
-        id_externo: params[2],
-        titulo: params[3],
-        subtitulo: params[4],
-        autores_json: params[5],
-        editora: params[6],
-        ano_publicacao: params[7],
-        paginas: params[8],
-        isbn10: params[9],
-        isbn13: params[10],
-        generos_json: params[11],
-        descricao: params[12],
-        capa_url: params[13],
-        capa_local_path: params[14],
-        formato: params[15],
-        tenho_fisico: params[16],
-        status_leitura: params[17],
-        emprestimo_json: params[18],
-        mes_leitura: params[19],
-        ano_leitura: params[20],
-        nota: params[21],
-        observacoes: params[22],
-        data_cadastro: params[23],
-        data_atualizacao: params[24],
-      };
+      row.id = id;
       this.rows.set(id, row);
       return { changes: 1, lastId: id };
     }
@@ -118,32 +141,14 @@ class WebInMemoryDatabaseAdapter implements IDatabaseService {
       const id = Number(params[params.length - 1]);
       const existing = this.rows.get(id);
       if (existing) {
-        const updated = {
-          ...existing,
-          origem: params[0],
-          id_externo: params[1],
-          titulo: params[2],
-          subtitulo: params[3],
-          autores_json: params[4],
-          editora: params[5],
-          ano_publicacao: params[6],
-          paginas: params[7],
-          isbn10: params[8],
-          isbn13: params[9],
-          generos_json: params[10],
-          descricao: params[11],
-          capa_url: params[12],
-          capa_local_path: params[13],
-          formato: params[14],
-          tenho_fisico: params[15],
-          status_leitura: params[16],
-          emprestimo_json: params[17],
-          mes_leitura: params[18],
-          ano_leitura: params[19],
-          nota: params[20],
-          observacoes: params[21],
-          data_atualizacao: params[22],
-        };
+        const setMatch = trimmed.match(/SET\s+([\s\S]*?)\s+WHERE/i);
+        const updated = { ...existing };
+        if (setMatch && setMatch[1]) {
+          const assignments = setMatch[1].split(',').map((a) => a.trim().split('=')[0].trim().toLowerCase());
+          assignments.forEach((col, idx) => {
+            updated[col] = params[idx];
+          });
+        }
         this.rows.set(id, updated);
         return { changes: 1 };
       }
@@ -257,6 +262,17 @@ class NativeSQLiteDatabaseAdapter implements IDatabaseService {
 
       // Executa criação do esquema inicial
       await this.db.execute(INITIAL_SCHEMA_SQL);
+
+      // Migração defensiva para colunas adicionadas
+      try {
+        const colCheck = await this.db.query(`PRAGMA table_info(books);`);
+        const columns = (colCheck.values || []).map((c: any) => String(c.name).toLowerCase());
+        if (!columns.includes('formatos_json')) {
+          await this.db.execute(`ALTER TABLE books ADD COLUMN formatos_json TEXT;`);
+        }
+      } catch (colErr) {
+        console.warn('Verificação de migração de colunas:', colErr);
+      }
 
       // Registra versão da migração
       await this.db.run(
