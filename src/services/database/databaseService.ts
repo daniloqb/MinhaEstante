@@ -721,8 +721,8 @@ export class WebInMemoryDatabaseAdapter implements IDatabaseService {
     return all as any;
   }
 
-  async runInTransaction<T>(fn: () => Promise<T>): Promise<T> {
-    return await fn();
+  async runInTransaction<T>(fn: (tx?: IDatabaseService) => Promise<T>): Promise<T> {
+    return await fn(this);
   }
 
   async close(): Promise<void> {
@@ -773,49 +773,122 @@ export class WebInMemoryDatabaseAdapter implements IDatabaseService {
 }
 
 /**
+ * Mutex assíncrono para serialização estrita de operações e transações no SQLite nativo.
+ * Garante exclusividade de acesso sem concorrência destrutiva entre chamadas assíncronas.
+ */
+export class AsyncMutex {
+  private queue: Promise<void> = Promise.resolve();
+
+  public async acquire(): Promise<() => void> {
+    let releaseLock!: () => void;
+    const lockAcquired = new Promise<void>((resolve) => {
+      releaseLock = resolve;
+    });
+
+    const previousQueue = this.queue;
+    this.queue = this.queue.then(() => lockAcquired);
+
+    await previousQueue;
+    return releaseLock;
+  }
+
+  public async runExclusive<T>(fn: () => Promise<T>): Promise<T> {
+    const release = await this.acquire();
+    try {
+      return await fn();
+    } finally {
+      release();
+    }
+  }
+}
+
+/**
+ * Contexto de Transação Nativa SQLite
+ * Garante que todas as operações executadas no escopo da transação utilizem `transaction = false`
+ * no @capacitor-community/sqlite, impedindo o erro "Already in transaction".
+ */
+export class NativeTransactionContext implements IDatabaseService {
+  constructor(private db: SQLiteDBConnection) {}
+
+  async initialize(): Promise<void> {
+    // Contexto criado com conexão já pronta
+  }
+
+  async execute(sql: string, params: any[] = []): Promise<any> {
+    if (params.length === 0) {
+      return await this.db.execute(sql, false);
+    }
+    return await this.db.run(sql, params, false);
+  }
+
+  async query<T>(sql: string, params: any[] = []): Promise<T[]> {
+    const res = await this.db.query(sql, params);
+    return (res.values || []) as T[];
+  }
+
+  async runInTransaction<T>(fn: (tx?: IDatabaseService) => Promise<T>): Promise<T> {
+    // Reentrância no mesmo contexto de transação ativo
+    return await fn(this);
+  }
+
+  async close(): Promise<void> {
+    // Conexão pertence ao adaptador pai; fechamento gerenciado lá
+  }
+}
+
+/**
  * Adaptador Nativo SQLite usando @capacitor-community/sqlite
  */
-class NativeSQLiteDatabaseAdapter implements IDatabaseService {
+export class NativeSQLiteDatabaseAdapter implements IDatabaseService {
   private sqlitePlugin: SQLiteConnection | null = null;
   private db: SQLiteDBConnection | null = null;
   private isInitialized = false;
+  private mutex = new AsyncMutex();
+  private currentTxContext: NativeTransactionContext | null = null;
 
   async initialize(): Promise<void> {
     if (this.isInitialized && this.db) return;
 
-    try {
-      this.sqlitePlugin = new SQLiteConnection(CapacitorSQLite);
-      const ret = await this.sqlitePlugin.checkConnectionsConsistency();
-      const isConn = (await this.sqlitePlugin.isConnection(DB_NAME, false)).result;
+    return await this.mutex.runExclusive(async () => {
+      if (this.isInitialized && this.db) return;
 
-      if (ret.result && isConn) {
-        this.db = await this.sqlitePlugin.retrieveConnection(DB_NAME, false);
-      } else {
-        this.db = await this.sqlitePlugin.createConnection(
-          DB_NAME,
-          false,
-          'no-encryption',
-          CURRENT_DB_VERSION,
-          false
-        );
+      try {
+        this.sqlitePlugin = new SQLiteConnection(CapacitorSQLite);
+        const ret = await this.sqlitePlugin.checkConnectionsConsistency();
+        const isConn = (await this.sqlitePlugin.isConnection(DB_NAME, false)).result;
+
+        if (ret.result && isConn) {
+          this.db = await this.sqlitePlugin.retrieveConnection(DB_NAME, false);
+        } else {
+          this.db = await this.sqlitePlugin.createConnection(
+            DB_NAME,
+            false,
+            'no-encryption',
+            CURRENT_DB_VERSION,
+            false
+          );
+        }
+
+        const isDBOpen = (await this.db.isDBOpen()).result;
+        if (!isDBOpen) {
+          await this.db.open();
+        }
+
+        // Ativa suporte estrito a chaves estrangeiras fora de qualquer transação
+        await this.db.execute('PRAGMA foreign_keys = ON;', false);
+
+        // Executa criação do esquema inicial sem iniciar transação interna
+        await this.db.execute(INITIAL_SCHEMA_SQL, false);
+
+        // Migração defensiva e versionada
+        await this.runMigrations();
+
+        this.isInitialized = true;
+      } catch (err) {
+        console.error('Falha ao inicializar banco de dados SQLite nativo:', err);
+        throw err;
       }
-
-      await this.db.open();
-
-      // Ativa suporte estrito a chaves estrangeiras
-      await this.db.execute('PRAGMA foreign_keys = ON;');
-
-      // Executa criação do esquema inicial
-      await this.db.execute(INITIAL_SCHEMA_SQL);
-
-      // Migração defensiva e versionada
-      await this.runMigrations();
-
-      this.isInitialized = true;
-    } catch (err) {
-      console.error('Falha ao inicializar banco de dados SQLite nativo:', err);
-      throw err;
-    }
+    });
   }
 
   /**
@@ -834,7 +907,8 @@ class NativeSQLiteDatabaseAdapter implements IDatabaseService {
     if (!appliedVersions.has(1)) {
       await this.db.run(
         'INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (?, ?);',
-        [1, Date.now()]
+        [1, Date.now()],
+        false
       );
       appliedVersions.add(1);
     }
@@ -848,24 +922,24 @@ class NativeSQLiteDatabaseAdapter implements IDatabaseService {
         const columns = (colCheck.values || []).map((c: any) => String(c.name).toLowerCase());
 
         if (!columns.includes('formatos_json')) {
-          await this.db.execute('ALTER TABLE books ADD COLUMN formatos_json TEXT;');
+          await this.db.execute('ALTER TABLE books ADD COLUMN formatos_json TEXT;', false);
         }
         if (!columns.includes('uuid')) {
-          await this.db.execute('ALTER TABLE books ADD COLUMN uuid TEXT;');
+          await this.db.execute('ALTER TABLE books ADD COLUMN uuid TEXT;', false);
         }
 
-        // Novas tabelas de anexos, posições e sessões
-        await this.db.execute(V2_MIGRATION_SQL);
+        // Novas tabelas de anexos, posições e sessões (executa com transaction = false)
+        await this.db.execute(V2_MIGRATION_SQL, false);
 
         // Backfill defensivo de UUIDs para registros legados que não possuam identificador estável
         try {
-          const rowsWithoutUuid = await this.db.query('SELECT id FROM books WHERE uuid IS NULL OR uuid = \'\';');
+          const rowsWithoutUuid = await this.db.query("SELECT id FROM books WHERE uuid IS NULL OR uuid = '';");
           if (rowsWithoutUuid.values && rowsWithoutUuid.values.length > 0) {
             for (const row of rowsWithoutUuid.values as any[]) {
               const generatedUuid = typeof crypto !== 'undefined' && crypto.randomUUID
                 ? crypto.randomUUID()
                 : `book-${row.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-              await this.db.run('UPDATE books SET uuid = ? WHERE id = ?;', [generatedUuid, row.id]);
+              await this.db.run('UPDATE books SET uuid = ? WHERE id = ?;', [generatedUuid, row.id], false);
             }
           }
         } catch (uuidErr) {
@@ -875,12 +949,20 @@ class NativeSQLiteDatabaseAdapter implements IDatabaseService {
         // Registra versão 2 concluída
         await this.db.run(
           'INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?);',
-          [2, Date.now()]
+          [2, Date.now()],
+          false
         );
 
         await this.db.commitTransaction();
       } catch (err) {
-        await this.db.rollbackTransaction();
+        try {
+          const active = (await this.db.isTransactionActive()).result;
+          if (active) {
+            await this.db.rollbackTransaction();
+          }
+        } catch (rollbackErr) {
+          console.warn('Erro ao executar rollback da migração 2:', rollbackErr);
+        }
         console.error('Falha na migração da Versão 2:', err);
         throw err;
       }
@@ -889,11 +971,23 @@ class NativeSQLiteDatabaseAdapter implements IDatabaseService {
 
   async execute(sql: string, params: any[] = []): Promise<any> {
     if (!this.db) throw new Error('Banco SQLite não inicializado');
-    const inTx = (await this.db.isTransactionActive()).result;
-    if (params.length === 0) {
-      return await this.db.execute(sql, !inTx);
+
+    // Se chamado no contexto de uma transação ativa nesta conexão, executa dentro dela com transaction = false
+    if (this.currentTxContext) {
+      return await this.currentTxContext.execute(sql, params);
     }
-    return await this.db.run(sql, params, !inTx);
+
+    // Execução autônoma fora de transação serializada pelo mutex
+    return await this.mutex.runExclusive(async () => {
+      if (!this.db) throw new Error('Banco SQLite não inicializado');
+      if (this.currentTxContext) {
+        return await this.currentTxContext.execute(sql, params);
+      }
+      if (params.length === 0) {
+        return await this.db.execute(sql, false);
+      }
+      return await this.db.run(sql, params, false);
+    });
   }
 
   async query<T>(sql: string, params: any[] = []): Promise<T[]> {
@@ -902,43 +996,60 @@ class NativeSQLiteDatabaseAdapter implements IDatabaseService {
     return (res.values || []) as T[];
   }
 
-  async runInTransaction<T>(fn: () => Promise<T>): Promise<T> {
+  async runInTransaction<T>(fn: (tx?: IDatabaseService) => Promise<T>): Promise<T> {
     if (!this.db) throw new Error('Banco SQLite não inicializado');
-    const active = (await this.db.isTransactionActive()).result;
-    if (active) {
-      return await fn();
+
+    // Se já estiver dentro de uma transação ativa neste contexto, reentrância transparente
+    if (this.currentTxContext) {
+      return await fn(this.currentTxContext);
     }
 
-    await this.db.beginTransaction();
-    try {
-      const result = await fn();
-      const stillActive = (await this.db.isTransactionActive()).result;
-      if (stillActive) {
-        await this.db.commitTransaction();
-      }
-      return result;
-    } catch (err) {
+    // Transação de nível superior: adquire bloqueio exclusivo no mutex
+    return await this.mutex.runExclusive(async () => {
+      if (!this.db) throw new Error('Banco SQLite não inicializado');
+
+      const txContext = new NativeTransactionContext(this.db);
+      this.currentTxContext = txContext;
+
+      await this.db.beginTransaction();
       try {
-        const stillActive = (await this.db.isTransactionActive()).result;
-        if (stillActive) {
-          await this.db.rollbackTransaction();
+        const result = await fn(txContext);
+        const active = (await this.db.isTransactionActive()).result;
+        if (active) {
+          await this.db.commitTransaction();
         }
-      } catch (rollbackErr) {
-        console.warn('Erro ao executar rollback:', rollbackErr);
+        return result;
+      } catch (err) {
+        try {
+          const active = (await this.db.isTransactionActive()).result;
+          if (active) {
+            await this.db.rollbackTransaction();
+          }
+        } catch (rollbackErr) {
+          console.warn('Erro ao executar rollback nativo:', rollbackErr);
+        }
+        throw err;
+      } finally {
+        this.currentTxContext = null;
       }
-      throw err;
-    }
+    });
   }
 
   async close(): Promise<void> {
-    if (this.db) {
-      await this.db.close();
-      if (this.sqlitePlugin) {
-        await this.sqlitePlugin.closeConnection(DB_NAME, false);
+    return await this.mutex.runExclusive(async () => {
+      this.currentTxContext = null;
+      if (this.db) {
+        const isOpen = (await this.db.isDBOpen()).result;
+        if (isOpen) {
+          await this.db.close();
+        }
+        if (this.sqlitePlugin) {
+          await this.sqlitePlugin.closeConnection(DB_NAME, false);
+        }
+        this.db = null;
+        this.isInitialized = false;
       }
-      this.db = null;
-      this.isInitialized = false;
-    }
+    });
   }
 }
 
@@ -985,7 +1096,7 @@ export class DatabaseService implements IDatabaseService {
     return this.adapter.query<T>(sql, params);
   }
 
-  public async runInTransaction<T>(fn: () => Promise<T>): Promise<T> {
+  public async runInTransaction<T>(fn: (tx?: IDatabaseService) => Promise<T>): Promise<T> {
     await this.initialize();
     return this.adapter.runInTransaction(fn);
   }

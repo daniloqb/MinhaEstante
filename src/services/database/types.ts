@@ -157,6 +157,6 @@ export interface IDatabaseService {
   initialize(): Promise<void>;
   execute(sql: string, params?: any[]): Promise<any>;
   query<T>(sql: string, params?: any[]): Promise<T[]>;
-  runInTransaction<T>(fn: () => Promise<T>): Promise<T>;
+  runInTransaction<T>(fn: (tx?: IDatabaseService) => Promise<T>): Promise<T>;
   close(): Promise<void>;
 }

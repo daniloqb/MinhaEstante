@@ -339,11 +339,12 @@ export class BookRepository implements IBookRepository {
     if (!books || books.length === 0) return 0;
 
     let inserted = 0;
-    await this.db.runInTransaction(async () => {
+    await this.db.runInTransaction(async (tx) => {
+      const executor = tx || this.db;
       const now = Date.now();
       for (const book of books) {
         const params = this.bookToInsertParams(book, now);
-        await this.db.execute(
+        await executor.execute(
           `INSERT INTO books (
             id, origem, id_externo, titulo, subtitulo, autores_json, editora,
             ano_publicacao, paginas, isbn10, isbn13, generos_json, descricao,
