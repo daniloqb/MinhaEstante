@@ -24,6 +24,8 @@ export type BookOrigin = 'google' | 'openlibrary' | 'brasilapi' | 'inventaire' |
 
 export interface Book {
   id: number;
+  /** Identificador estável (UUID) para preservação de vínculos entre dispositivos */
+  uuid?: string;
   origem: BookOrigin;
   idExterno?: string | null;
   titulo: string;
@@ -346,3 +348,7 @@ export function formatReadingDate(ano?: number | null, mes?: number | null): str
   }
   return 'Sem data';
 }
+
+// Re-exportação de tipos e utilitários da versão 2.0
+export * from './digitalMedia';
+

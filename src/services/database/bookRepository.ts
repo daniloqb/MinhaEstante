@@ -89,6 +89,7 @@ export class BookRepository implements IBookRepository {
       observacoes: row.observacoes || null,
       dataCadastro: Number(row.data_cadastro) || Date.now(),
       dataAtualizacao: Number(row.data_atualizacao) || Date.now(),
+      uuid: row.uuid || undefined,
     };
   }
 
@@ -105,6 +106,8 @@ export class BookRepository implements IBookRepository {
     const formato = book.formato || formatos[0] || 'fisico';
     const tenhoFisico = (book.tenho_fisico !== undefined ? book.tenho_fisico : formatos.includes('fisico')) ? 1 : 0;
     const statusLeitura = book.status_leitura || 'nenhum';
+
+    const uuid = book.uuid || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `book-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
 
     return [
       id,
@@ -133,6 +136,7 @@ export class BookRepository implements IBookRepository {
       book.observacoes || null,
       book.dataCadastro || now,
       now,
+      uuid,
     ];
   }
 
@@ -149,6 +153,16 @@ export class BookRepository implements IBookRepository {
     const rows = await this.db.query<DbBookRow>(
       `SELECT * FROM books WHERE id = ? LIMIT 1;`,
       [id]
+    );
+    if (!rows || rows.length === 0) return null;
+    return this.rowToBook(rows[0]);
+  }
+
+  async getByUuid(uuid: string): Promise<Book | null> {
+    await this.initialize();
+    const rows = await this.db.query<DbBookRow>(
+      `SELECT * FROM books WHERE uuid = ? LIMIT 1;`,
+      [uuid]
     );
     if (!rows || rows.length === 0) return null;
     return this.rowToBook(rows[0]);
@@ -171,14 +185,15 @@ export class BookRepository implements IBookRepository {
     }
 
     const params = this.bookToInsertParams(bookToSave, now);
+    const assignedUuid = params[26];
     const result = await this.db.execute(
       `INSERT INTO books (
         id, origem, id_externo, titulo, subtitulo, autores_json, editora,
         ano_publicacao, paginas, isbn10, isbn13, generos_json, descricao,
         capa_url, capa_local_path, formato, formatos_json, tenho_fisico, status_leitura,
         emprestimo_json, mes_leitura, ano_leitura, nota, observacoes,
-        data_cadastro, data_atualizacao
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        data_cadastro, data_atualizacao, uuid
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
       params
     );
 
@@ -186,6 +201,7 @@ export class BookRepository implements IBookRepository {
     return {
       ...bookToSave,
       id: Number(insertedId),
+      uuid: bookToSave.uuid || assignedUuid,
       dataCadastro: bookToSave.dataCadastro || now,
       dataAtualizacao: now,
     };
