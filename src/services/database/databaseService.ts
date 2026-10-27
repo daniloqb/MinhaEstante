@@ -5,6 +5,8 @@ import {
   SQLiteDBConnection,
 } from '@capacitor-community/sqlite';
 import { IDatabaseService } from './types';
+import { DigitalStorageException } from '../storage/digital/errors';
+import { WebPersistentDatabaseAdapter } from './webPersistentDatabaseAdapter';
 
 const DB_NAME = 'minha_estante_db';
 export const CURRENT_DB_VERSION = 2;
@@ -134,6 +136,13 @@ CREATE INDEX IF NOT EXISTS idx_books_uuid ON books(uuid);
  * Adaptador Web/Memória para desenvolvimento no Vite desktop e execução de testes no Vitest
  * Fornece integridade referencial, restrições UNIQUE e migrações transparentes
  */
+export interface WebDatabaseSnapshot {
+  version: 1;
+  books: [number, any][]; attachments: [string, any][]; positions: [string, any][];
+  sessions: [string, any][]; progress: [string, any][]; migrations: [number, number][];
+  autoIncrementId: number;
+}
+
 export class WebInMemoryDatabaseAdapter implements IDatabaseService {
   private books: Map<number, any> = new Map();
   private attachments: Map<string, any> = new Map();
@@ -150,6 +159,37 @@ export class WebInMemoryDatabaseAdapter implements IDatabaseService {
     this.migrations.set(1, Date.now());
     this.migrations.set(2, Date.now());
     this.isReady = true;
+  }
+
+  exportSnapshot(): WebDatabaseSnapshot {
+    return structuredClone({ version: 1, books: [...this.books], attachments: [...this.attachments], positions: [...this.positions],
+      sessions: [...this.sessions], progress: [...this.progress], migrations: [...this.migrations], autoIncrementId: this.autoIncrementId });
+  }
+  restoreSnapshot(snapshot: WebDatabaseSnapshot): void {
+    if (!snapshot || snapshot.version !== 1 || !Number.isSafeInteger(snapshot.autoIncrementId) || snapshot.autoIncrementId < 1
+      || !['books', 'attachments', 'positions', 'sessions', 'progress', 'migrations'].every((key) => Array.isArray((snapshot as any)[key]))) {
+      throw new DigitalStorageException('RECOVERY_REQUIRED');
+    }
+    const tables = [snapshot.books, snapshot.attachments, snapshot.positions, snapshot.sessions, snapshot.progress];
+    const valid = tables.every((table) => table.every((entry) => Array.isArray(entry) && entry.length === 2
+      && entry[1] && typeof entry[1] === 'object' && entry[0] === entry[1].id)
+      && new Set(table.map(([key]) => key)).size === table.length);
+    const bookIds = new Set(snapshot.books.map(([id]) => id));
+    const attachmentIds = new Set(snapshot.attachments.map(([id]) => id));
+    const sessionIds = new Set(snapshot.sessions.map(([id]) => id));
+    if (!valid || snapshot.books.some(([id]) => !Number.isSafeInteger(id) || id <= 0 || id >= snapshot.autoIncrementId)
+      || snapshot.attachments.some(([,row]) => !bookIds.has(row.book_id))
+      || snapshot.positions.some(([,row]) => !attachmentIds.has(row.attachment_id))
+      || snapshot.sessions.some(([,row]) => !bookIds.has(row.book_id))
+      || snapshot.progress.some(([,row]) => !sessionIds.has(row.session_id))
+      || new Set(snapshot.attachments.map(([,row]) => `${row.book_id}:${row.type}`)).size !== snapshot.attachments.length
+      || new Set(snapshot.positions.map(([,row]) => row.attachment_id)).size !== snapshot.positions.length) {
+      throw new DigitalStorageException('RECOVERY_REQUIRED');
+    }
+    const copy = structuredClone(snapshot);
+    this.books = new Map(copy.books); this.attachments = new Map(copy.attachments); this.positions = new Map(copy.positions);
+    this.sessions = new Map(copy.sessions); this.progress = new Map(copy.progress); this.migrations = new Map(copy.migrations);
+    this.autoIncrementId = copy.autoIncrementId;
   }
 
   getAppliedMigrationVersions(): number[] {
@@ -574,6 +614,9 @@ export class WebInMemoryDatabaseAdapter implements IDatabaseService {
     if (upper.includes('FROM BOOK_ATTACHMENTS')) {
       if (upper.includes('COUNT(*)')) {
         return [{ count: this.attachments.size }] as any;
+      }
+      if (upper.includes('WHERE STORAGE_PROVIDER = ? AND STORAGE_REFERENCE = ?')) {
+        return Array.from(this.attachments.values()).filter((row) => row.storage_provider === params[0] && row.storage_reference === params[1]) as T[];
       }
       if (upper.includes('WHERE BOOK_ID = ? AND TYPE = ?') || upper.includes('WHERE BOOK_ID = ? AND TYPE =')) {
         const bookId = Number(params[0]);
@@ -1004,6 +1047,11 @@ export class NativeSQLiteDatabaseAdapter implements IDatabaseService {
       return await fn(this.currentTxContext);
     }
 
+    return this.runIsolatedInTransaction(fn);
+  }
+
+  /** Same established mutex/transaction path; explicit top-level callers cannot join an unrelated active transaction. */
+  async runIsolatedInTransaction<T>(fn: (tx?: IDatabaseService) => Promise<T>): Promise<T> {
     // Transação de nível superior: adquire bloqueio exclusivo no mutex
     return await this.mutex.runExclusive(async () => {
       if (!this.db) throw new Error('Banco SQLite não inicializado');
@@ -1065,7 +1113,7 @@ export class DatabaseService implements IDatabaseService {
     if (Capacitor.isNativePlatform()) {
       this.adapter = new NativeSQLiteDatabaseAdapter();
     } else {
-      this.adapter = new WebInMemoryDatabaseAdapter();
+      this.adapter = typeof window === 'undefined' ? new WebInMemoryDatabaseAdapter() : new WebPersistentDatabaseAdapter();
     }
   }
 
@@ -1099,6 +1147,11 @@ export class DatabaseService implements IDatabaseService {
   public async runInTransaction<T>(fn: (tx?: IDatabaseService) => Promise<T>): Promise<T> {
     await this.initialize();
     return this.adapter.runInTransaction(fn);
+  }
+
+  public async runIsolatedInTransaction<T>(fn: (tx?: IDatabaseService) => Promise<T>): Promise<T> {
+    await this.initialize();
+    return this.adapter.runIsolatedInTransaction ? this.adapter.runIsolatedInTransaction(fn) : this.adapter.runInTransaction(fn);
   }
 
   public async close(): Promise<void> {

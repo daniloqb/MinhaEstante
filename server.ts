@@ -1,4 +1,5 @@
 import express from 'express';
+import { assertAndroidPackageSafe } from './scripts/publicAssetPolicy.ts';
 import { GoogleGenAI } from '@google/genai';
 import path from 'path';
 import fs from 'fs';
@@ -12,6 +13,18 @@ try {
 
 const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+
+// Deny sensitive material before API, Vite and static middleware.
+app.use((req, res, next) => {
+  let pathname: string;
+  try { pathname = decodeURIComponent(req.path); } catch { res.sendStatus(400); return; }
+  if (/\.(?:jks|keystore|p12|key)(?:$|[/?])/i.test(pathname) || pathname.includes('/assets/aistudio/')
+    || (/\.(?:apk|aab)$/i.test(pathname) && !['/booknook.aab', '/minha-estante.aab', '/minha-estante.apk', '/app-debug.apk', '/booknook.apk'].includes(pathname))) {
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendStatus(404); return;
+  }
+  next();
+});
 
 // Health check endpoint para Cloud Run e monitoramento
 app.get(['/health', '/api/health'], (_req, res) => {
@@ -512,7 +525,7 @@ app.post('/api/fetch-image', async (req, res) => {
 });
 
 // Servir arquivos APK e AAB diretamente
-app.get(['/booknook.aab', '/minha-estante.aab'], (req, res) => {
+app.get(['/booknook.aab', '/minha-estante.aab'], async (req, res) => {
   const isMinhaEstante = req.path.includes('minha-estante');
   const targetName = isMinhaEstante ? 'minha-estante.aab' : 'booknook.aab';
   let filePath = path.resolve(process.cwd(), targetName);
@@ -523,6 +536,7 @@ app.get(['/booknook.aab', '/minha-estante.aab'], (req, res) => {
     filePath = path.resolve(process.cwd(), 'public', targetName);
   }
   if (fs.existsSync(filePath)) {
+    try { await assertAndroidPackageSafe(filePath); } catch { res.setHeader('Cache-Control', 'no-store'); res.sendStatus(404); return; }
     const stats = fs.statSync(filePath);
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${targetName}"`);
@@ -534,7 +548,7 @@ app.get(['/booknook.aab', '/minha-estante.aab'], (req, res) => {
   }
 });
 
-app.get(['/minha-estante.apk', '/app-debug.apk', '/booknook.apk'], (req, res) => {
+app.get(['/minha-estante.apk', '/app-debug.apk', '/booknook.apk'], async (req, res) => {
   const isDebug = req.path.includes('app-debug');
   const isBooknook = req.path.includes('booknook');
   const fileName = isDebug ? 'app-debug.apk' : isBooknook ? 'booknook.apk' : 'minha-estante.apk';
@@ -547,6 +561,7 @@ app.get(['/minha-estante.apk', '/app-debug.apk', '/booknook.apk'], (req, res) =>
   }
 
   if (fs.existsSync(filePath)) {
+    try { await assertAndroidPackageSafe(filePath); } catch { res.setHeader('Cache-Control', 'no-store'); res.sendStatus(404); return; }
     const stats = fs.statSync(filePath);
     res.setHeader('Content-Type', 'application/vnd.android.package-archive');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
@@ -575,19 +590,6 @@ app.get('/upload_certificate.pem', (req, res) => {
   }
 });
 
-app.get('/booknook-release-key.jks', (req, res) => {
-  const filePath = path.resolve(process.cwd(), 'booknook-release-key.jks');
-  if (fs.existsSync(filePath)) {
-    const stats = fs.statSync(filePath);
-    res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Content-Disposition', 'attachment; filename="booknook-release-key.jks"');
-    res.setHeader('Content-Length', stats.size);
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    fs.createReadStream(filePath).pipe(res);
-  } else {
-    res.status(404).send('Keystore JKS não encontrada.');
-  }
-});
 
 
 async function startServer() {

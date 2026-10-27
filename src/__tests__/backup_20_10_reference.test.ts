@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import fs from 'fs';
-import path from 'path';
+import { syntheticLegacyBackup } from './helpers/syntheticLegacyBackup';
 import JSZip from 'jszip';
 import { BackupService } from '../services/storage/backupService';
 import { CoverStorageService } from '../services/storage/coverStorageService';
@@ -8,9 +8,9 @@ import { BookRepository } from '../services/database/bookRepository';
 import { DatabaseService } from '../services/database/databaseService';
 import { Book, isBookInTab } from '../types/book';
 
-const REFERENCE_ZIP_PATH = path.resolve(process.cwd(), 'public/assets/aistudio/20-10_019c1511.zip');
+const REFERENCE_ZIP_PATH = process.env.MINHAESTANTE_PRIVATE_BACKUP;
 
-describe('MinhaEstante 2.0 — Validação e Restauração Integral do Backup de Referência (20-10.zip)', () => {
+describe('MinhaEstante 2.0 — Validação e Restauração Integral do Backup de Referência (legado sintético ou privado configurado)', () => {
   let dbService: DatabaseService;
   let repo: BookRepository;
   let referenceZipBuffer: Uint8Array;
@@ -23,14 +23,11 @@ describe('MinhaEstante 2.0 — Validação e Restauração Integral do Backup de
     await repo.clearAll();
     BackupService.setRepository(repo);
 
-    if (fs.existsSync(REFERENCE_ZIP_PATH)) {
-      referenceZipBuffer = new Uint8Array(fs.readFileSync(REFERENCE_ZIP_PATH));
-    } else {
-      throw new Error(`Arquivo de referência não encontrado em: ${REFERENCE_ZIP_PATH}`);
-    }
+    referenceZipBuffer = REFERENCE_ZIP_PATH
+      ? new Uint8Array(fs.readFileSync(REFERENCE_ZIP_PATH)) : await syntheticLegacyBackup();
   });
 
-  it('A. Análise e validação estrutural do arquivo 20-10.zip', async () => {
+  it('A. Análise e validação estrutural do arquivo legado sintético ou privado configurado', async () => {
     expect(referenceZipBuffer).toBeDefined();
     expect(referenceZipBuffer.length).toBeGreaterThan(0);
 
@@ -93,7 +90,7 @@ describe('MinhaEstante 2.0 — Validação e Restauração Integral do Backup de
     }
   });
 
-  it('B. Restauração integral do 20-10.zip em instância limpa', async () => {
+  it('B. Restauração integral do legado sintético ou privado configurado em instância limpa', async () => {
     // Executa restauração completa no modo 'replace'
     const result = await BackupService.restoreFromZip(referenceZipBuffer, 'replace');
 
@@ -177,28 +174,16 @@ describe('MinhaEstante 2.0 — Validação e Restauração Integral do Backup de
 
     expect(await newRepo.count()).toBe(215);
 
-    // Verifica um livro específico (id 221: 'Breve História da Economia, Uma')
-    const book221 = await newRepo.getById(221);
-    expect(book221).not.toBeNull();
-    expect(book221?.titulo).toBe('Breve História da Economia, Uma');
-    expect(book221?.autores).toContain('Paul Strathern');
-    expect(book221?.anoPublicacao).toBe(2003);
-    expect(book221?.anoLeitura).toBe(2019);
-    expect(book221?.mesLeitura).toBe(2);
-    expect(book221?.nota).toBe(6);
-    expect(book221?.status_leitura).toBe('lido');
-    expect(book221?.tenho_fisico).toBe(false); // Estritamente preservado!
-    expect(book221?.capaLocalPath).toBe('covers/cover_new_1792724790188_e0b52r.jpg');
-    expect(book221?.uuid).toBeDefined();
-
-    // Verifica outro livro específico (id 79: 'Os quatro amores')
-    const book79 = await newRepo.getById(79);
-    expect(book79).not.toBeNull();
-    expect(book79?.titulo).toBe('Os quatro amores');
-    expect(book79?.autores).toContain('C. S. Lewis');
-    expect(book79?.status_leitura).toBe('nenhum');
-    expect(book79?.tenho_fisico).toBe(true); // Estritamente preservado!
-    expect(book79?.capaLocalPath).toBe('covers/cover_79_1792020917634_2hl3w8.jpg');
+    // Verify persistence without embedding any personal fixture values in the test source.
+    const source = JSON.parse(await (await JSZip.loadAsync(referenceZipBuffer)).file('books.json')!.async('string'));
+    for (const original of source) {
+      const saved = await newRepo.getById(original.id);
+      expect(saved).not.toBeNull();
+      for (const field of ['titulo', 'autores', 'anoPublicacao', 'anoLeitura', 'mesLeitura', 'nota', 'status_leitura', 'tenho_fisico', 'capaLocalPath']) {
+        if (original[field] !== undefined) expect((saved as any)[field]).toEqual(original[field]);
+      }
+      expect(saved?.uuid).toBeDefined();
+    }
   });
 
   it('D. Re-exportação da biblioteca restaurada com integridade total', async () => {
@@ -299,7 +284,7 @@ describe('MinhaEstante 2.0 — Validação e Restauração Integral do Backup de
 
     expect(await repo.count()).toBe(1);
 
-    // 2. Restaura o 20-10.zip em modo 'merge'
+    // 2. Restaura o legado sintético ou privado configurado em modo 'merge'
     const mergeResult = await BackupService.restoreFromZip(referenceZipBuffer, 'merge');
     expect(mergeResult.mode).toBe('merge');
     expect(mergeResult.booksRestored).toBe(215);

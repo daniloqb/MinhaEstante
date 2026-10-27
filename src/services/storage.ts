@@ -1,5 +1,8 @@
+import { Capacitor } from '@capacitor/core';
 import { Book, EstanteStats, ReadingStatus, BookFormat, getBookFormats, hasBookFormat, isBookOwned } from '../types/book';
-import { bookRepository } from './database/bookRepository';
+import { bookRepository, BookRepository } from './database/bookRepository';
+import { hasPersistedWebCatalog } from './database/webPersistentDatabaseAdapter';
+import { DatabaseService } from './database/databaseService';
 import { CoverStorageService } from './storage/coverStorageService';
 
 export const STORAGE_KEY_BOOKS = 'minha_estante_livros_v1';
@@ -221,6 +224,10 @@ export function migrateLegacyBooks(rawBooks: any[], deduplicate = true): Book[] 
 }
 
 export const BookStorage = {
+  async shouldImportLegacyCatalog(): Promise<boolean> {
+    if (Capacitor.isNativePlatform() || typeof window === 'undefined') return true;
+    return !await hasPersistedWebCatalog();
+  },
   loadBooks(): Book[] {
     try {
       let data = localStorage.getItem(STORAGE_KEY_BOOKS);
@@ -275,8 +282,8 @@ export const BookStorage = {
       await CoverStorageService.warmDisplayCache(books);
       return books;
     } catch (err) {
-      console.error('Falha ao carregar livros do SQLite:', err);
-      return [];
+      console.error('Falha ao acessar a biblioteca persistida.');
+      throw err;
     }
   },
 
@@ -304,9 +311,28 @@ export const BookStorage = {
    * Persiste lote de livros no SQLite com transação atômica (usado em restauração de backup)
    */
   async saveAllBooksToDatabase(books: Book[]): Promise<number> {
-    await bookRepository.initialize();
-    await bookRepository.clearAll();
-    return await bookRepository.bulkInsert(books);
+    // Preserve the pre-existing native batch flow; this phase changes Web durability only.
+    if (Capacitor.isNativePlatform()) {
+      await bookRepository.initialize();
+      await bookRepository.clearAll();
+      return bookRepository.bulkInsert(books);
+    }
+    // Non-destructive Web upsert. Removal belongs to the explicit delete/restore flows.
+    return DatabaseService.getInstance().runIsolatedInTransaction(async (tx) => {
+      const repo = new BookRepository(tx);
+      const current = new Map((await repo.getAll()).map((book) => [book.id, book]));
+      const ids = new Set<number>();
+      for (const book of books) {
+        if (ids.has(book.id)) throw new Error('ATTACHMENT_CONFLICT');
+        ids.add(book.id);
+        const old = current.get(book.id);
+        if (old) {
+          if (book.uuid && old.uuid && book.uuid !== old.uuid) throw new Error('ATTACHMENT_CONFLICT');
+          await repo.update({ ...book, uuid: old.uuid });
+        } else { await repo.insert(book); }
+      }
+      return books.length;
+    });
   },
 
   saveAllBooks(books: Book[]): void {

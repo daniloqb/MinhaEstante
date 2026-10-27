@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { assertAndroidPackageSafe, assertPublicAssetsSafe } from './scripts/publicAssetPolicy';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -9,19 +10,33 @@ import path from 'node:path';
 export default defineConfig({
   base: './',
   define: {
-    'import.meta.env.VITE_GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || ''),
     'import.meta.env.VITE_APP_URL': JSON.stringify(process.env.APP_URL || ''),
   },
   plugins: [
+    { name: 'public-asset-policy', buildStart() { assertPublicAssetsSafe(path.resolve('public')); },
+      configureServer(server) {
+        assertPublicAssetsSafe(path.resolve('public'));
+        server.middlewares.use((req, res, next) => {
+          let url: string;
+          try { url = decodeURIComponent((req.url || '').split('?')[0]); } catch { res.statusCode = 400; res.end(); return; }
+          if (/\.(?:jks|keystore|p12|key)(?:$|[/?])/i.test(url) || url.includes('/assets/aistudio/')
+            || (/\.(?:apk|aab)$/i.test(url) && !['/booknook.aab', '/minha-estante.apk', '/app-debug.apk'].includes(url))) {
+            res.statusCode = 404; res.setHeader('Cache-Control', 'no-store'); res.end(); return;
+          }
+          next();
+        });
+      } },
     {
       name: 'serve-apk',
       configureServer(server) {
-        server.middlewares.use((req, res, next) => {
+        server.middlewares.use(async (req, res, next) => {
           const rawUrl = req.url || '';
-          const cleanUrl = rawUrl.split('?')[0];
+          let cleanUrl: string;
+          try { cleanUrl = decodeURIComponent(rawUrl.split('?')[0]); } catch { res.statusCode = 400; res.end(); return; }
           if (cleanUrl === '/booknook.aab') {
             const filePath = path.resolve(process.cwd(), 'booknook.aab');
             if (fs.existsSync(filePath)) {
+              try { await assertAndroidPackageSafe(filePath); } catch { res.statusCode = 404; res.setHeader('Cache-Control', 'no-store'); res.end(); return; }
               const stats = fs.statSync(filePath);
               res.statusCode = 200;
               res.setHeader('Content-Type', 'application/octet-stream');
@@ -36,6 +51,7 @@ export default defineConfig({
             const fileName = cleanUrl === '/app-debug.apk' ? 'app-debug.apk' : 'minha-estante.apk';
             const filePath = path.resolve(process.cwd(), fileName);
             if (fs.existsSync(filePath)) {
+              try { await assertAndroidPackageSafe(filePath); } catch { res.statusCode = 404; res.setHeader('Cache-Control', 'no-store'); res.end(); return; }
               const stats = fs.statSync(filePath);
               res.statusCode = 200;
               res.setHeader('Content-Type', 'application/vnd.android.package-archive');

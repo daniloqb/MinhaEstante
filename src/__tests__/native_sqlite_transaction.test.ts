@@ -234,6 +234,32 @@ describe('MinhaEstante — Correção Crítica do SQLite Nativo Android', () => 
       (adapter as any).isInitialized = true;
     });
 
+    it.each([false, true])('coordenação isolada espera pelo mutex existente (transação anterior isolada=%s)', async (isolated) => {
+      const events: string[] = [];
+      let entered!: () => void; let release!: () => void;
+      const started = new Promise<void>((resolve) => { entered = resolve; });
+      const held = new Promise<void>((resolve) => { release = resolve; });
+      const runFirst = isolated ? adapter.runIsolatedInTransaction.bind(adapter) : adapter.runInTransaction.bind(adapter);
+      const first = runFirst(async (tx) => {
+        events.push('first-start'); entered(); await held;
+        await tx!.execute('INSERT INTO books (id) VALUES (?);', [9001]);
+        events.push('first-end');
+        throw new Error('Synthetic rollback');
+      });
+      await started;
+      const second = adapter.runIsolatedInTransaction(async (tx) => {
+        events.push('second-start');
+        await tx!.runInTransaction(() => tx!.execute('INSERT INTO books (id) VALUES (?);', [9002]));
+        events.push('second-end');
+      });
+      release();
+      const results = await Promise.allSettled([first, second]);
+      expect(results.map((r) => r.status)).toEqual(['rejected', 'fulfilled']);
+      expect(events).toEqual(['first-start', 'first-end', 'second-start', 'second-end']);
+      expect((await simulator.isTransactionActive()).result).toBe(false);
+      expect(simulator.executeLog.every((line) => line.includes('tx=false'))).toBe(true);
+    });
+
     it('Executa operações individuais sem erro e sem deixar transações ativas pendentes', async () => {
       await adapter.execute('CREATE TABLE IF NOT EXISTS sample (id INT);');
       await adapter.execute('INSERT INTO sample VALUES (?);', [42]);

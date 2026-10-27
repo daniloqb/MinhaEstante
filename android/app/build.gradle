@@ -1,8 +1,10 @@
 apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
     namespace = "com.booknookapp"
     compileSdk = rootProject.ext.compileSdkVersion
+    buildFeatures { buildConfig true }
     defaultConfig {
         applicationId "com.booknookapp"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -35,6 +37,10 @@ android {
         }
     }
     buildTypes {
+        debug {
+            applicationIdSuffix '.dev'
+            resValue 'string', 'app_name', 'MinhaEstante DEV'
+        }
         release {
             def releaseKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH") ?: "booknook-release-key.jks"
             def hasKeystore = file(releaseKeystorePath).exists() || file("../${releaseKeystorePath}").exists() || file("../../${releaseKeystorePath}").exists()
@@ -45,7 +51,17 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    // Isolated diagnostic bundle: exclude ALL ordinary app assets, including personal fixtures.
+    if (project.hasProperty('digitalDiagnosticAssets')) {
+        if (!gradle.startParameter.taskNames.every { it.endsWith('Debug') || it.contains('DebugUnitTest') || it.contains('DebugKotlin') }) {
+            throw new GradleException('digitalDiagnosticAssets requires explicit debug tasks')
+        }
+        sourceSets.main.assets.setSrcDirs([])
+        sourceSets.debug.assets.srcDir(project.property('digitalDiagnosticAssets'))
+    }
 }
+
+kotlin { jvmToolchain(21) }
 
 repositories {
     flatDir{

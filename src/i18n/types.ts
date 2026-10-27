@@ -54,6 +54,7 @@ export const AVAILABLE_LOCALES: LocaleInfo[] = [
 ];
 
 export interface Translations {
+  digitalStorage: { fileUnavailable: string; unavailable: string; quota: string; integrity: string; review: string; persistenceDenied: string; recovering: string; failed: string };
   common: {
     appName: string;
     bookshelfTitle: string;

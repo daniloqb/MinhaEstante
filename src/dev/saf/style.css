@@ -1,0 +1,8 @@
+:root { font-family: system-ui, sans-serif; color: #302218; background: #f3e6cf; }
+body { margin: 0; }
+main { max-width: 720px; padding: 28px 20px; margin: auto; }
+h1 { font-size: 1.4rem; }
+.controls { display: grid; gap: 12px; }
+button { padding: 14px; font-size: 1rem; text-align: left; border: 1px solid #8b5a33; border-radius: 6px; background: #fff8eb; color: inherit; }
+button:disabled { opacity: .5; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #fff8eb; padding: 16px; }

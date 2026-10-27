@@ -158,5 +158,7 @@ export interface IDatabaseService {
   execute(sql: string, params?: any[]): Promise<any>;
   query<T>(sql: string, params?: any[]): Promise<T[]>;
   runInTransaction<T>(fn: (tx?: IDatabaseService) => Promise<T>): Promise<T>;
+  /** Top-level coordination must queue on the existing adapter mutex, not join another caller's transaction. */
+  runIsolatedInTransaction?<T>(fn: (tx?: IDatabaseService) => Promise<T>): Promise<T>;
   close(): Promise<void>;
 }

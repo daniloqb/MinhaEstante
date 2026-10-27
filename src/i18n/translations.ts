@@ -2,6 +2,7 @@ import { LocaleId, Translations } from './types';
 
 export const TRANSLATIONS: Record<LocaleId, Translations> = {
   'pt-BR': {
+    digitalStorage: {fileUnavailable: "O arquivo não está acessível. O vínculo e os dados do livro foram preservados.", "unavailable": "Este navegador não oferece o armazenamento necessário para anexos.", "quota": "Não foi possível concluir por falta de espaço. O anexo anterior foi preservado.", "integrity": "O arquivo não passou na verificação de integridade. Nenhum vínculo foi substituído.", "review": "Há uma importação que precisa de revisão. Os arquivos foram preservados.", "persistenceDenied": "A persistência não foi concedida. O navegador poderá remover os dados; mantenha cópias dos arquivos originais.", "recovering": "Verificando uma importação interrompida…", "failed": "Não foi possível concluir a operação. Seus arquivos anteriores foram preservados."},
     common: {
       appName: 'Booknook',
       bookshelfTitle: 'Booknook',
@@ -147,6 +148,7 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     },
   },
   'en-US': {
+    digitalStorage: {fileUnavailable: "The file is unavailable. Its attachment link and book metadata were preserved.", "unavailable": "This browser does not provide the storage required for attachments.", "quota": "There is not enough space to finish. The previous attachment was preserved.", "integrity": "The file failed its integrity check. No attachment link was replaced.", "review": "An import needs review. Your files were preserved.", "persistenceDenied": "Persistent storage was not granted. The browser may remove data; keep copies of the original files.", "recovering": "Checking an interrupted import…", "failed": "The operation could not be completed. Your previous files were preserved."},
     common: {
       appName: 'Booknook',
       bookshelfTitle: 'Booknook',
@@ -292,6 +294,7 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     },
   },
   'es-ES': {
+    digitalStorage: {fileUnavailable: "El archivo no está accesible. Se conservaron el vínculo y los datos del libro.", "unavailable": "Este navegador no ofrece el almacenamiento necesario para los archivos adjuntos.", "quota": "No hay espacio suficiente para terminar. Se conservó el archivo adjunto anterior.", "integrity": "El archivo no superó la comprobación de integridad. No se sustituyó ningún vínculo.", "review": "Una importación necesita revisión. Se conservaron los archivos.", "persistenceDenied": "No se concedió almacenamiento persistente. El navegador puede borrar los datos; conserve copias de los archivos originales.", "recovering": "Comprobando una importación interrumpida…", "failed": "No se pudo completar la operación. Se conservaron los archivos anteriores."},
     common: {
       appName: 'Booknook',
       bookshelfTitle: 'Booknook',
@@ -437,6 +440,7 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     },
   },
   'fr-FR': {
+    digitalStorage: {fileUnavailable: "Le fichier est inaccessible. Son lien et les données du livre ont été conservés.", "unavailable": "Ce navigateur ne fournit pas le stockage nécessaire aux fichiers joints.", "quota": "Espace insuffisant pour terminer. Le fichier joint précédent a été conservé.", "integrity": "Le contrôle d’intégrité du fichier a échoué. Aucun lien n’a été remplacé.", "review": "Une importation nécessite une vérification. Vos fichiers ont été conservés.", "persistenceDenied": "Le stockage persistant n’a pas été accordé. Le navigateur peut effacer les données ; conservez les fichiers originaux.", "recovering": "Vérification d’une importation interrompue…", "failed": "L’opération n’a pas pu aboutir. Vos fichiers précédents ont été conservés."},
     common: {
       appName: 'Booknook',
       bookshelfTitle: 'Booknook',
@@ -582,6 +586,7 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     },
   },
   'de-DE': {
+    digitalStorage: {fileUnavailable: "Die Datei ist nicht verfügbar. Die Verknüpfung und Buchdaten wurden beibehalten.", "unavailable": "Dieser Browser bietet nicht den benötigten Speicher für Anhänge.", "quota": "Nicht genügend Speicherplatz. Der vorherige Anhang wurde beibehalten.", "integrity": "Die Integritätsprüfung der Datei ist fehlgeschlagen. Keine Verknüpfung wurde ersetzt.", "review": "Ein Import muss überprüft werden. Ihre Dateien wurden beibehalten.", "persistenceDenied": "Dauerhafter Speicher wurde nicht gewährt. Der Browser kann Daten entfernen; bewahren Sie Kopien der Originaldateien auf.", "recovering": "Ein unterbrochener Import wird überprüft…", "failed": "Der Vorgang konnte nicht abgeschlossen werden. Ihre bisherigen Dateien wurden beibehalten."},
     common: {
       appName: 'Booknook',
       bookshelfTitle: 'Booknook',
@@ -727,6 +732,7 @@ export const TRANSLATIONS: Record<LocaleId, Translations> = {
     },
   },
   'it-IT': {
+    digitalStorage: {fileUnavailable: "Il file non è accessibile. Il collegamento e i dati del libro sono stati conservati.", "unavailable": "Questo browser non offre lo spazio di archiviazione necessario per gli allegati.", "quota": "Spazio insufficiente per completare. L’allegato precedente è stato conservato.", "integrity": "Il file non ha superato la verifica di integrità. Nessun collegamento è stato sostituito.", "review": "Un’importazione richiede una verifica. I file sono stati conservati.", "persistenceDenied": "L’archiviazione persistente non è stata concessa. Il browser può rimuovere i dati; conserva copie dei file originali.", "recovering": "Verifica di un’importazione interrotta…", "failed": "Impossibile completare l’operazione. I file precedenti sono stati conservati."},
     common: {
       appName: 'Booknook',
       bookshelfTitle: 'Booknook',

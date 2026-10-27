@@ -38,3 +38,10 @@ yarn-debug.log*
 yarn-error.log*
 *.patch
 
+
+# Private imports/backups must never be published
+/public/assets/aistudio/
+/public/**/*.zip
+/public/**/*.jks
+/public/**/*.keystore
+/private-fixtures/

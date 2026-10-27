@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { syntheticLegacyBackup } from './helpers/syntheticLegacyBackup';
 import { createHash } from 'node:crypto';
 import { BookRepository } from '../services/database/bookRepository';
 import { INITIAL_SCHEMA_SQL, V2_MIGRATION_SQL } from '../services/database/databaseService';
@@ -111,8 +112,9 @@ describe('Posse no BookRepository com SQLite real e backup isolado', () => {
   });
 
   it('restaura e reexporta o ZIP histórico com os mesmos dados e capas em SQLite real', async () => {
-    // Fixture pessoal já existente e autorizada: nunca imprimir seus registros.
-    const reference = new Uint8Array(readFileSync('public/assets/aistudio/20-10_019c1511.zip'));
+    // Default synthetic; optional explicit private fixture never enters public artifacts.
+    const reference = process.env.MINHAESTANTE_PRIVATE_BACKUP
+      ? new Uint8Array(readFileSync(process.env.MINHAESTANTE_PRIVATE_BACKUP)) : await syntheticLegacyBackup();
     BackupService.setRepository(repo);
     const restored = await BackupService.restoreFromZip(reference, 'replace');
     expect(restored.booksRestored).toBe(215);

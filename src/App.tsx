@@ -46,7 +46,7 @@ import { useI18n } from './i18n/I18nContext';
 import { CheckCircle2 } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // App Persistent State (gerenciado via SQLite nativo)
   const [books, setBooks] = useState<Book[]>([]);
   const [isDbReady, setIsDbReady] = useState<boolean>(false);
@@ -310,7 +310,7 @@ export const App: React.FC = () => {
     const initializeDatabase = async () => {
       try {
         let loadedBooks = await BookStorage.loadBooksFromDatabase();
-        if (loadedBooks.length === 0) {
+        if (loadedBooks.length === 0 && await BookStorage.shouldImportLegacyCatalog()) {
           const fallbackBooks = BookStorage.loadBooks();
           if (fallbackBooks && fallbackBooks.length > 0) {
             await BookStorage.saveAllBooksToDatabase(fallbackBooks);
@@ -320,6 +320,17 @@ export const App: React.FC = () => {
         if (active) {
           setBooks(loadedBooks);
           setIsDbReady(true);
+          {
+            // The storage layer selects the platform and recovers only configured media.
+            let lastStorageNotice: string | null = null;
+            void import('./services/storage/digital/startup').then(({ recoverConfiguredDigitalStorage }) =>
+              recoverConfiguredDigitalStorage((message) => {
+                if (!active) return;
+                const previousNotice = lastStorageNotice; lastStorageNotice = message;
+                setToastMessage((current) => current === null || current === previousNotice ? message : current);
+              }, { locale })
+            ).catch(() => { if (active) setToastMessage(t.digitalStorage.review); });
+          }
         }
       } catch (err) {
         console.error('Falha ao inicializar banco de dados SQLite:', err);
