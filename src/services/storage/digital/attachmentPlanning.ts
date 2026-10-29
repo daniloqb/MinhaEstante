@@ -9,10 +9,14 @@ import { managedFileReference, normalizeStoredFile, requireStorage } from './val
 export type BookAttachmentCreateInput = Parameters<IBookAttachmentRepository['create']>[0];
 export interface AttachmentChangeRequest {
   readonly bookId: number;
+  readonly expectedBookUuid?: string;
   readonly type: AttachmentType;
   readonly imported: StoredDigitalFile;
   readonly intent: 'attach' | 'replace';
   readonly expectedAttachmentId?: string;
+  readonly expectedStorageReference?: string;
+  readonly expectedProvider?: string;
+  readonly expectedUpdatedAt?: number;
   readonly positionDecision?: 'invalidate-current';
 }
 export interface AttachmentChangePlan {
@@ -28,6 +32,11 @@ export interface AttachmentChangePlan {
 export interface DetachAttachmentRequest {
   readonly attachmentId: string;
   readonly intent: 'detach-only';
+  readonly expectedBookUuid?: string;
+  readonly expectedType?: AttachmentType;
+  readonly expectedStorageReference?: string;
+  readonly expectedProvider?: string;
+  readonly expectedUpdatedAt?: number;
   /** Explicit acknowledgement: the current position is removed with the link, never sessions. */
   readonly positionDecision?: 'remove-current';
 }

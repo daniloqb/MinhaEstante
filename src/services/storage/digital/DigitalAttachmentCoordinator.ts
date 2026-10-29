@@ -42,6 +42,14 @@ export class DigitalAttachmentCoordinator implements IDigitalAttachmentCoordinat
     requireStorage(context.bookId === request.bookId && context.type === request.type && context.intent === request.intent
       && context.expectedAttachmentId === request.expectedAttachmentId
       && (context.positionPolicy !== 'invalidate-current' || request.positionDecision === 'invalidate-current'), 'OPERATION_CONFLICT');
+    requireStorage(request.expectedBookUuid === undefined || context.bookUuid === request.expectedBookUuid, 'ATTACHMENT_CONFLICT');
+    this.assertExpected(request, { storageProvider: context.expectedProvider, storageReference: context.expectedStorageReference, updatedAt: context.expectedUpdatedAt });
+  }
+  private assertExpected(request: { expectedStorageReference?: string; expectedProvider?: string; expectedUpdatedAt?: number },
+    current: { storageProvider?: string; storageReference?: string; updatedAt?: number } | null) {
+    requireStorage((request.expectedStorageReference === undefined || current?.storageReference === request.expectedStorageReference)
+      && (request.expectedProvider === undefined || current?.storageProvider === request.expectedProvider)
+      && (request.expectedUpdatedAt === undefined || current?.updatedAt === request.expectedUpdatedAt), 'ATTACHMENT_CONFLICT');
   }
   async applyChange(request: AttachmentChangeRequest): Promise<StorageResult<BookAttachment>> {
     return this.slot(`${request.bookId}:${request.type}`, async () => {
@@ -58,7 +66,9 @@ export class DigitalAttachmentCoordinator implements IDigitalAttachmentCoordinat
       } else {
         const book = await new BookRepository(this.db).getById(request.bookId);
         requireStorage(book?.uuid, 'ATTACHMENT_CONFLICT');
+        requireStorage(request.expectedBookUuid === undefined || book.uuid === request.expectedBookUuid, 'ATTACHMENT_CONFLICT');
         const current = await new BookAttachmentRepository(this.db).getByBookAndType(request.bookId, request.type);
+        this.assertExpected(request, current);
         unwrap(planAttachmentChange(request, current));
         const identical = !!current && current.checksum === stored.integrity.checksum.value
           && current.format === stored.metadata.format && current.sizeBytes === stored.integrity.sizeBytes;
@@ -149,12 +159,23 @@ export class DigitalAttachmentCoordinator implements IDigitalAttachmentCoordinat
     try {
       requireStorage(request.intent === 'detach-only', 'UNSUPPORTED_OPERATION');
       const previous = await new BookAttachmentRepository(this.db).getById(request.attachmentId);
-      if (!previous) return storageSuccess(undefined);
+      if (!previous) {
+        requireStorage(request.expectedStorageReference === undefined, 'ATTACHMENT_CONFLICT');
+        return storageSuccess(undefined);
+      }
+      this.assertExpected(request, previous);
+      requireStorage(request.expectedType === undefined || previous.type === request.expectedType, 'ATTACHMENT_CONFLICT');
       return this.slot(`${previous.bookId}:${previous.type}`, async () => {
         await this.transaction(async (tx) => {
           const repo = new BookAttachmentRepository(tx);
           const current = await repo.getById(previous.id);
-          requireStorage(current?.storageReference === previous.storageReference, 'ATTACHMENT_CONFLICT');
+          requireStorage(current?.storageReference === previous.storageReference && current?.storageProvider === previous.storageProvider
+            && current?.updatedAt === previous.updatedAt && current?.bookId === previous.bookId && current?.type === previous.type, 'ATTACHMENT_CONFLICT');
+          this.assertExpected(request, current);
+          if (request.expectedBookUuid !== undefined) {
+            const book = await new BookRepository(tx).getById(previous.bookId);
+            requireStorage(book?.uuid === request.expectedBookUuid, 'ATTACHMENT_CONFLICT');
+          }
           requireStorage(!await new ReaderPositionRepository(tx).getByAttachmentId(previous.id)
             || request.positionDecision === 'remove-current', 'POSITION_POLICY_REQUIRED');
           await repo.delete(previous.id);

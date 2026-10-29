@@ -6,7 +6,7 @@ import {
 import type {
   DeleteManagedFileRequest, DigitalFileReference, DigitalReadAccess, FileIntegrity, IDigitalStorageProvider,
   ImportDigitalFileRequest, ImportOperationContext, SelectedDigitalFile, StorageCapabilities, StorageConfiguration,
-  StorageFeature, StorageResult, StoredDigitalFile,
+  StorageFeature, StorageOperationContext, StorageResult, StoredDigitalFile,
 } from '../../services/storage/digital';
 
 export const TEST_SHA256 = 'a'.repeat(64);
@@ -66,7 +66,7 @@ export class DigitalStorageTestProvider implements IDigitalStorageProvider {
   checkAccess = vi.fn(async (file: DigitalFileReference): Promise<StorageResult<{ accessible: true }>> =>
     file.kind === 'source' || this.files.has(file.storageReference)
       ? storageSuccess({ accessible: true }) : storageFailure('FILE_NOT_FOUND'));
-  verifyIntegrity = vi.fn(async (_file: StoredDigitalFile['file'], expected: FileIntegrity): Promise<StorageResult<FileIntegrity>> => storageSuccess(expected));
+  verifyIntegrity = vi.fn(async (_file: StoredDigitalFile['file'], expected: FileIntegrity, _context?: StorageOperationContext): Promise<StorageResult<FileIntegrity>> => storageSuccess(expected));
   acquireReadAccess = vi.fn(async (file: StoredDigitalFile['file']): Promise<StorageResult<DigitalReadAccess>> =>
     this.files.has(file.storageReference)
       ? storageSuccess({ file, token: opaqueToken<'read-access'>('ephemeral-token'), consumption: 'provider-stream' })

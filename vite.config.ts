@@ -10,6 +10,7 @@ import path from 'node:path';
 export default defineConfig({
   base: './',
   define: {
+    __ATTACHMENTS_DEV_BUILD__: 'false',
     'import.meta.env.VITE_APP_URL': JSON.stringify(process.env.APP_URL || ''),
   },
   plugins: [

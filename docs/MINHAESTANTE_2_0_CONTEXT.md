@@ -372,3 +372,61 @@ pendências Android da 2.2C por causa da implementação Web posterior.
 APK debug DEV foi compilado/atualizado com autorização expressa desta tarefa;
 produção preservou versão/data de atualização. Sem release, cap sync, alterações de
 versão/assinatura, limpeza de dados, reboot, commit ou push.
+
+## Interface inicial da Fase 3 — DEV (27/10/2026)
+
+Registro da entrega 3.1; a evolução de gerenciamento está na seção 3.2 abaixo.
+
+A interface em desenvolvimento nos detalhes de livro salvo permite adicionar um
+e-book e um audiolivro usando a composição da Fase 2.4. Permanece restrita a DEV
+local ou Android com gate nativo de debug; o build público exclui seu chunk.
+Categorias ocupadas são somente consultadas. Não há substituição/desassociação,
+filtros, leitor/player nem encerramento da Fase 3 nesta entrega.
+
+Continuação validada com 570 testes, TypeScript e builds Web/PWA público e DEV.
+Ensaio Chrome headless com OPFS/IndexedDB reais confirmou PDF+MP3 e persistência
+após reload; conclusão do seletor injetada, sem comprovação gráfica/nativa.
+Ensaio adicional no Android 14 físico confirmou o seletor SAF gráfico (seleções feitas
+pelo usuário), cancelamento do seletor, EPUB+MP3 pela interface, dois recibos completos,
+SHA-256 e preservação de UUID/metadados após encerrar/reabrir o processo DEV. Rollback
+e concorrência SQLite nativos também passaram. Assets atuais foram carregados apenas
+em runtime pelo cache DEV, sem atualizar pacote ou persistir configuração do servidor;
+produção permaneceu com a mesma versão/data de atualização. A largura real de 392 px
+CSS foi inspecionada sem overflow horizontal. Perda de acesso pela nova interface,
+cancelamento durante cópia maior, outros navegadores e acessibilidade continuam pendentes.
+Sem APK/AAB, cap sync, alteração SQL ou teste de backup pessoal nesta continuação.
+Detalhes: [MINHAESTANTE_3_ATTACHMENTS_DEV_VALIDATION.md](MINHAESTANTE_3_ATTACHMENTS_DEV_VALIDATION.md).
+
+## Fase 3.2 — gerenciamento DEV (27/10/2026)
+
+Slots ocupados agora permitem substituir com confirmação, desassociar sem excluir
+bytes e verificar acesso/SHA explicitamente. Conteúdo idêntico preserva ID/posição;
+diferente exige confirmação da invalidação quando há posição. Sessões, progresso
+deliberado, livro, posse, modalidades e status permanecem independentes. Cópias
+preparadas canceladas ficam no journal, sem intenção de associação automática.
+
+Serviço, coordenador, journal e provedores anteriores foram reutilizados. O contrato
+do coordenador aceita expectativas opcionais de UUID/referência/provedor/timestamp
+e categoria na desassociação para rejeitar confirmações desatualizadas. Não há SQL,
+migração, backend ou mecanismo físico de limpeza novos. Não foi improvisada uma
+reautorização por troca da pasta ativa: a interface orienta e permite nova verificação;
+reautorização direcionada segura permanece uma decisão contratual futura.
+
+612 Vitest/34 arquivos (42 novos, 81 de interface/gate), 32 JVM reexecutados,
+TypeScript e builds público/DEV/Gradle debug aprovados. A mesma suíte de 22 checks
+da seção real passou em SAF/SQLite Android físico, Chrome desktop, Chrome Android
+e Firefox; conclusão do seletor foi injetada nesses cenários, mas I/O/transações
+foram reais. SAF manual adicional confirmou troca idêntica de MP3 e preservou a
+posição de áudio. Duas abas reais Chrome desktop/Android preservaram o vencedor.
+PWA desktop instalada passou em standalone, offline, fechamento/reabertura de janela
+e processo. Foco inicial, retorno, Tab/Escape e geometria foram ensaiados no WebView.
+
+APK debug com interface efetivamente empacotada foi compilado e atualizado somente
+em `com.booknookapp.dev`, conforme pedido explícito da fase, após conferir assinatura
+debug idêntica. Snapshot sintético anterior preservado, sem limpeza de dados ou
+alteração de versão/assinatura de produção. O build público continua sem o módulo.
+
+Detalhes, matriz e limites: [MINHAESTANTE_3_2_ATTACHMENTS_MANAGEMENT.md](MINHAESTANTE_3_2_ATTACHMENTS_MANAGEMENT.md).
+Apta a seguir para a Fase 3.3; Safari, leitores de tela, reautorização direcionada e
+novos cenários SAF/PWA mobile permanecem pendentes. ZIP sem mídia, retenção conservadora
+e bloqueio de publicação por privacidade histórica preservados. Sem release/commit/push.

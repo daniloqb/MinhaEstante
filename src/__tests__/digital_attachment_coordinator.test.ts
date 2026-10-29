@@ -1,15 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { DatabaseSync } from 'node:sqlite';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { INITIAL_SCHEMA_SQL, V2_MIGRATION_SQL } from '../services/database/databaseService';
 import { BookRepository } from '../services/database/bookRepository';
 import { BookAttachmentRepository } from '../services/database/bookAttachmentRepository';
 import { ReaderPositionRepository } from '../services/database/readerPositionRepository';
 import { ReadingProgressRepository } from '../services/database/readingProgressRepository';
 import { ReadingSessionRepository } from '../services/database/readingSessionRepository';
-import type { IDatabaseService } from '../services/database/types';
+import { TransactionalSqliteTestDatabase as SQLite } from './helpers/TransactionalSqliteTestDatabase';
 import { DigitalAttachmentCoordinator } from '../services/storage/digital/DigitalAttachmentCoordinator';
 import { DigitalFileStorageService } from '../services/storage/digital/DigitalFileStorageService';
 import type { AttachmentLinkIntent, IDigitalStorageJournal, StorageOperationSnapshot } from '../services/storage/digital/operations';
@@ -21,27 +19,6 @@ import { DigitalStorageTestProvider, storedFile } from './helpers/DigitalStorage
 import type { Book } from '../types/book';
 
 // Real desktop SQLite transactions; the journal/provider below are metadata fakes, NOT Android evidence.
-class SQLite implements IDatabaseService {
-  readonly sql: DatabaseSync;
-  failInsert = false;
-  failCommit = false;
-  failUpdate = false;
-  constructor(path: string) { this.sql = new DatabaseSync(path); this.sql.exec(`PRAGMA foreign_keys=ON;${INITIAL_SCHEMA_SQL}${V2_MIGRATION_SQL}`); }
-  async initialize() {}
-  async execute(sql: string, parameters: any[] = []) {
-    if (this.failInsert && sql.trimStart().startsWith('INSERT INTO book_attachments')) throw new Error('Synthetic SQLite failure');
-    if (this.failUpdate && sql.trimStart().startsWith('UPDATE book_attachments')) throw new Error('Synthetic update failure');
-    const result = this.sql.prepare(sql).run(...parameters);
-    return { changes: Number(result.changes), lastId: Number(result.lastInsertRowid) };
-  }
-  async query<T>(sql: string, parameters: any[] = []) { return this.sql.prepare(sql).all(...parameters) as T[]; }
-  async runInTransaction<T>(fn: (tx?: IDatabaseService) => Promise<T>) {
-    this.sql.exec('BEGIN');
-    try { const result = await fn(this); if (this.failCommit) throw new Error('Synthetic commit failure'); this.sql.exec('COMMIT'); return result; }
-    catch (error) { this.sql.exec('ROLLBACK'); throw error; }
-  }
-  async close() { this.sql.close(); }
-}
 class Journal implements IDigitalStorageJournal {
   readonly records = new Map<string, StorageOperationSnapshot>();
   failCompletion = false;

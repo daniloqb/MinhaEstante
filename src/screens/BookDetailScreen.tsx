@@ -5,6 +5,7 @@ import { WoodTopAppBar } from '../components/WoodTopAppBar';
 import { WoodShelf } from '../components/WoodShelf';
 import { BookCoverView } from '../components/BookCoverView';
 import { BookOwnershipToggle } from '../components/BookOwnershipToggle';
+import { DigitalAttachmentsGate } from '../components/DigitalAttachmentsGate';
 import { PaperCard } from '../components/PaperCard';
 import { StarRatingBar } from '../components/StarRatingBar';
 import { BookSummaryAiModal } from '../components/BookSummaryAiModal';
@@ -691,6 +692,8 @@ export const BookDetailScreen: React.FC<BookDetailScreenProps> = ({
             </div>
           )}
         </PaperCard>
+
+        <DigitalAttachmentsGate key={`${book.id}:${book.uuid}`} book={book} palette={palette} />
 
         {/* Card de Empréstimo Ativo */}
         {book.emprestimo && !book.emprestimo.devolvido && (

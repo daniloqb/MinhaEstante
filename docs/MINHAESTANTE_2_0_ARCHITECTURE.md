@@ -2,7 +2,8 @@
 
 **Documento Técnico da Fase 1 — Modelos, Esquema SQLite e Contratos Arquiteturais**
 
-Atualizado até a **Fase 2.4: integração e conformidade multiplataforma**.
+Atualizado até a **Fase 3.2: gerenciamento DEV de anexos**.
+O adendo 29 descreve a evolução de interface; as seções anteriores são históricas.
 A seção 28 e o relatório 2.4 descrevem a composição vigente, os testes reais e as
 pendências. As seções anteriores preservam o contexto histórico; afirmações de
 funcionalidade futura referem-se à fase então entregue.
@@ -1188,3 +1189,49 @@ condicionado à capability, sem antecipar leitor/player.
 - Apta a desenvolver a interface da Fase 3 nos ambientes ensaiados; sem garantia de
   produção universal ou restauração de mídia pelo ZIP. Mídias no backup ficam para
   a Fase 4. Nenhuma UI definitiva/leitor/player foi adicionada.
+
+## 29. Fase 3.2 — gerenciamento DEV por apresentação compartilhada
+
+`BookDetailScreen` → `DigitalAttachmentsGate` → a mesma `DigitalAttachmentsSection`
+da 3.1. O menu de cada categoria ocupada oferece Substituir, Verificar/Tentar novamente
+e Desassociar. `attachmentsPresentation` mantém a operação ativa por ID/UUID fora da
+montagem do React; o ciclo de vida do componente não cancela cópias nativas nem muda
+o alvo. O build público remove a entrada lazy; Android exige gate nativo debug + DEV.
+
+A substituição usa importação existente até FILE_READY e pausa para confirmação,
+sem criar intenção de vínculo nesse ponto. Equivalência exige checksum SHA-256,
+tamanho e formato compatíveis. O diálogo explica posições, histórico e retenção.
+Somente confirmar chama `applyChange` com expectativas do anexo observado e decisão
+explícita de posição. Cancelar mantém o vínculo/posição e a cópia preparada no journal.
+Não há compensação física ou segundo protocolo de armazenamento.
+
+`AttachmentChangeRequest` aceita expectativas opcionais `expectedBookUuid`,
+`expectedStorageReference`, `expectedProvider`, `expectedUpdatedAt`, além do ID já
+existente. `DetachAttachmentRequest` aceita as mesmas expectativas e `expectedType`.
+O coordenador valida-as e mantém a transação/recuperação anteriores; a desassociação
+reconsulta livro/categoria/referência dentro da transação. O recibo durável existente
+já registra UUID e referências; não foi preciso alterar journal nativo/Web, SQL,
+parâmetros posicionais ou migrações. Chamadores antigos continuam compatíveis.
+
+ReaderPosition continua sendo localização do conteúdo: idêntico preserva identidade
+e posição; diferente invalida apenas com confirmação, no mesmo commit do novo vínculo.
+Rollback preserva o estado anterior. ReadingSession e ReadingProgress não participam
+da remoção lógica do anexo. A fila de retenção não autoriza exclusão de bytes.
+
+Disponibilidade é consultada no refresh; SHA é recalculado apenas por intenção explícita
+ou pela associação segura já existente. Capabilities condicionam SHA/cancelamento;
+acesso bem-sucedido sozinho não confirma integridade. Recuperação explícita usa
+`coordinator.recover` apenas para operações com intenção já registrada para aquele UUID.
+Sem contrato público seguro de reautorização direcionada, a interface fornece orientação
+e nova verificação; não remapeia tokens selecionando outra pasta ativa.
+
+Diálogo modal reutiliza PaperCard, com foco inicial em Cancelar, ciclo explícito de
+Tab/Shift+Tab, Escape e retorno de foco. Testes de runtime montam a mesma seção no
+diagnóstico optativo `attachments-management.html`, sem segunda interface. A conclusão
+do seletor é injetada na suíte; armazenamento, hashes e transações são reais.
+
+Relatório: [MINHAESTANTE_3_2_ATTACHMENTS_MANAGEMENT.md](MINHAESTANTE_3_2_ATTACHMENTS_MANAGEMENT.md).
+612 Vitest, 32 JVM e builds aprovados; 22 checks comuns em quatro runtimes, conflito
+de duas abas e PWA desktop instalada. APK DEV real foi atualizado com assinatura
+compatível e dados preservados; produção permaneceu inalterada. Reautorização segura,
+leitores de tela, Safari e a cobertura adicional da Fase 3.3 permanecem pendentes.

@@ -3,9 +3,15 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # Dedicated temporary assets, no cap sync, no personal public/ assets, no install.
+# The full app DEV entry is opt-in; existing SAF diagnostics remain the default.
+DIGITAL_DEBUG_CONFIG=${DIGITAL_DEBUG_CONFIG:-vite.saf-diagnostics.config.ts}
+case "$DIGITAL_DEBUG_CONFIG" in
+  vite.saf-diagnostics.config.ts|vite.attachments-dev.config.ts) ;;
+  *) echo "Unsupported diagnostic build configuration" >&2; exit 1 ;;
+esac
 SAF_ASSETS_DIR=$(mktemp -d /tmp/minhaestante-saf-debug.XXXXXX)
 node_modules/.bin/tsc --noEmit
-node_modules/.bin/vite build --config vite.saf-diagnostics.config.ts --outDir "$SAF_ASSETS_DIR/public" --emptyOutDir
+node_modules/.bin/vite build --config "$DIGITAL_DEBUG_CONFIG" --outDir "$SAF_ASSETS_DIR/public" --emptyOutDir
 cp android/app/src/main/assets/capacitor.plugins.json "$SAF_ASSETS_DIR/capacitor.plugins.json"
 python3 - "$SAF_ASSETS_DIR" <<'PY'
 import json, pathlib, sys
