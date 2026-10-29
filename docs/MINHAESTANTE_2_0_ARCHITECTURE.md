@@ -2,8 +2,8 @@
 
 **Documento Técnico da Fase 1 — Modelos, Esquema SQLite e Contratos Arquiteturais**
 
-Atualizado até a **Fase 3.2: gerenciamento DEV de anexos**.
-O adendo 29 descreve a evolução de interface; as seções anteriores são históricas.
+Atualizado até a **Fase 3.3: validação da experiência DEV de anexos**.
+Os adendos 29–30 descrevem a evolução e sua validação; as seções anteriores são históricas.
 A seção 28 e o relatório 2.4 descrevem a composição vigente, os testes reais e as
 pendências. As seções anteriores preservam o contexto histórico; afirmações de
 funcionalidade futura referem-se à fase então entregue.
@@ -1235,3 +1235,40 @@ Relatório: [MINHAESTANTE_3_2_ATTACHMENTS_MANAGEMENT.md](MINHAESTANTE_3_2_ATTACH
 de duas abas e PWA desktop instalada. APK DEV real foi atualizado com assinatura
 compatível e dados preservados; produção permaneceu inalterada. Reautorização segura,
 leitores de tela, Safari e a cobertura adicional da Fase 3.3 permanecem pendentes.
+
+## 30. Fase 3.3 — validação e correções localizadas (28/10/2026)
+
+Relatório vigente e limites: [MINHAESTANTE_3_3_UX_VALIDATION.md](MINHAESTANTE_3_3_UX_VALIDATION.md).
+Não houve novo backend, contrato de associação, tabela, SQL, migração ou política
+de exclusão. Serviços, coordenador, journal e apresentação compartilhada permanecem.
+
+`App.handleNativeBack` respeita o cancelamento do `<dialog>` antes de fechar detalhes;
+o Voltar físico foi confirmado com snapshot intacto. Reflow fica na seção/dialogs.
+`BookCoverView` adiciona semântica e Enter/Espaço somente às capas com ação, para
+permitir chegar aos detalhes por teclado sem tornar capas decorativas interativas.
+No modo Lista, o título recebe botão nativo e impede propagação duplicada para o
+card. Os dois modos foram reensaiados por Espaço no Chrome e WebView.
+
+O diagnóstico optativo monta o App real e os seis idiomas, com companheira sintética
+e nomes únicos/longos. `validate_attachments_ux.mjs` percorre navegação, teclado,
+432 combinações de layout e persistência; `validate_installed_pwa.mjs --attachments`
+reutiliza instalação/CDP pipe/offline e exige igualdade de snapshot e dois hashes.
+São ferramentas de validação DEV, sem entrada no bundle público.
+
+614 Vitest, 32 JVM, builds e runtime em seis ambientes foram aprovados no escopo
+registrado. Android manteve SQLite nativo, assinatura/versão DEV e assets empacotados
+em `public`; atualização e force-stop/reabertura preservaram anexos/posições/histórico.
+PWAs instaladas e offline emulado não comprovam evicção ou perda de energia.
+
+Revogar e reconceder a mesma concessão SAF de teste preservou o snapshot e os hashes.
+A identidade continua no registro privado e na árvore original de cada arquivo;
+`active` serve para novas cópias. Não foi adicionada reautorização dirigida. O contrato
+futuro exige identidade documental/árvore, capacidade explícita, gesto do usuário,
+verificação incremental e ausência de remapeamento silencioso; proposta em
+[MINHAESTANTE_3_3_REAUTHORIZATION_PROPOSAL.md](MINHAESTANTE_3_3_REAUTHORIZATION_PROPOSAL.md).
+
+Fase 4 pode ser planejada preservando ZIP padrão e duas opções de mídia desmarcadas.
+Exportação incremental nativa precisa de porta adequada: `readAccess` continua
+indisponível, sem autorização para vazar URIs ou usar arquivos inteiros em JS.
+Safari, leitores de tela reais, provedores SAF adicionais e demais limites do
+relatório permanecem abertos. Publicação e saneamento histórico continuam separados.

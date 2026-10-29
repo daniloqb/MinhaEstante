@@ -430,3 +430,43 @@ Detalhes, matriz e limites: [MINHAESTANTE_3_2_ATTACHMENTS_MANAGEMENT.md](MINHAES
 Apta a seguir para a Fase 3.3; Safari, leitores de tela, reautorização direcionada e
 novos cenários SAF/PWA mobile permanecem pendentes. ZIP sem mídia, retenção conservadora
 e bloqueio de publicação por privacidade histórica preservados. Sem release/commit/push.
+
+## Fase 3.3 — validação da experiência (28/10/2026)
+
+Relatório vigente: [MINHAESTANTE_3_3_UX_VALIDATION.md](MINHAESTANTE_3_3_UX_VALIDATION.md).
+Validação funcional concluída no escopo ensaiado, com pendências explícitas;
+publicação continua bloqueada. As seções anteriores são evidências históricas.
+
+- 614 Vitest/35 arquivos, incluindo dois testes novos de capas acionáveis/decorativas;
+  81 de interface/gate preservados. 32 JVM efetivamente reexecutados no baseline,
+  TypeScript e builds público/DEV/Android debug aprovados, sem cap sync.
+- Correções localizadas: reflow de textos/fontes ampliadas nos anexos/dialogs;
+  Voltar cancela o diálogo antes dos detalhes; capas da Estante tornam-se acionáveis
+  por teclado, sem mudar visual. Não há nova regra de domínio, SQL ou migração.
+- 22 checks da seção real em Android SAF/SQLite empacotado, Chrome desktop/Android,
+  Firefox e PWAs desktop/Android instaladas. Conclusão do seletor injetada, com I/O,
+  SHA e transações reais, distinguida de interações manuais no relatório.
+- 91 checks adicionais de integração/teclado no App Chrome/WebView; 432 combinações
+  de idioma/largura/fonte/estado em cada Chrome, Firefox e WebView. Foco/aria/CDP
+  não substituem leitor de tela. TalkBack/Orca e paisagem física permanecem manuais.
+- APK somente DEV atualizado por `install -r`, assinatura debug idêntica e 31/2.0-31
+  preservados. Snapshot anterior intacto; force-stop/reabertura preservou dois anexos,
+  duas posições, obra e histórico, com SHA novamente aprovado e servidor `public`.
+  Voltar físico usado pelo usuário cancelou só o diálogo, com snapshot idêntico.
+- Revogação SAF real apenas da pasta de teste DEV mostrou permissão necessária,
+  sem apagar metadados. O usuário reconcedeu acesso à mesma pasta pelo seletor
+  oficial comum; snapshot e hashes preservados. Isso não cria recuperação dirigida:
+  [proposta separada](MINHAESTANTE_3_3_REAUTHORIZATION_PROPOSAL.md), sem implementação.
+- PWA Android instalada/fechada/reaberta pelo usuário confirmou standalone e dados.
+  Offline emulado com sessão CDP contínua permitiu reload, SHA, troca e desassociação;
+  rede restaurada. PWA desktop também passou por fechar/relançar e atualização de SW.
+- Duas operações Web de 32 MiB comprovaram cancelamento durante cópia e navegação
+  entre obras sem misturar progresso/vínculos; arquivos preparados continuam retidos.
+- Safari, leitores de tela reais, outros provedores SAF, novos ensaios de cópia longa
+  nativa/perda de energia e revisão linguística humana permanecem pendentes.
+  ZIP padrão sem mídia; fase 4 não implementada. `readAccess` nativo ainda ausente
+  exige decisão para exportação incremental futura.
+
+Cinco commits de inclusão/alteração privada e 21 pacotes antigos afetados continuam
+como bloqueios de publicação; a recontagem também distinguiu 12 árvores alcançáveis
+que contêm o diretório. Não houve expurgo, release, limpeza de dados, commit ou push.

@@ -626,7 +626,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                         className="font-serif font-bold text-lg sm:text-xl leading-snug line-clamp-2"
                         style={{ color: palette.textOnPaper }}
                       >
-                        {book.titulo}
+                        <button type="button"
+                          aria-label={[book.titulo, book.autores[0]].filter(Boolean).join(' — ')}
+                          className="text-left cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                          onClick={(event) => { event.stopPropagation(); onSelectBook(book); }}>
+                          {book.titulo}
+                        </button>
                       </h3>
 
                       {/* Modalidades declaradas, independentes da posse. */}

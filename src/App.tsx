@@ -136,6 +136,12 @@ export const App: React.FC = () => {
 
   // Função central de navegação ao pressionar voltar no smartphone (Android / navegador)
   const handleNativeBack = useCallback((): boolean => {
+    // Honor the modal's cancellation policy before navigating away from its screen.
+    const dialog = [...document.querySelectorAll<HTMLDialogElement>('dialog[open]')].at(-1);
+    if (dialog) {
+      if (dialog.dispatchEvent(new Event('cancel', { cancelable: true }))) dialog.close();
+      return true;
+    }
     const s = navStateRef.current;
 
     // 1. Fechar Modais e Diálogos em ordem de profundidade

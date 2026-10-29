@@ -1,5 +1,8 @@
 import { createRoot } from 'react-dom/client';
 import { I18nProvider } from '../../i18n/I18nContext';
+import { App } from '../../App';
+import { TRANSLATIONS } from '../../i18n/translations';
+import { AVAILABLE_LOCALES, type LocaleId } from '../../i18n/types';
 import { BookStorage } from '../../services/storage';
 import DigitalAttachmentsSection from '../../components/DigitalAttachmentsSection';
 import { DarkWalnutPalette } from '../../theme/woodTheme';
@@ -34,7 +37,7 @@ async function prepareDiagnostic() {
     for (let i = 0; i < 300; i++) { if (condition()) return; await new Promise(resolve => setTimeout(resolve, 50)); }
     throw Error('Synthetic UI condition timed out');
   };
-  const section = () => document.querySelector('section[aria-label="Arquivos digitais"]');
+  const section = () => document.querySelector('section:has([data-attachment-slot])');
   const idle = () => wait(() => section()?.getAttribute('aria-busy') === 'false');
   const click = (label: string) => {
     const button = [...document.querySelectorAll('button')].find(button => button.textContent === label);
@@ -49,10 +52,12 @@ async function prepareDiagnostic() {
     const key = `${format}:${variant}`, cached = sources.get(key); if (cached) return cached;
     if (library.provider.id === 'saf_document') {
       const { AndroidSafPlugin } = await import('../../services/storage/digital/android/bridge');
-      const result = await AndroidSafPlugin.createDiagnosticSources({ interaction: 'user-initiated', intent: 'create-synthetic-fixtures-in-dev-library', includeLarge: false,
+      const result = await AndroidSafPlugin.createDiagnosticSources({ interaction: 'user-initiated', intent: 'create-synthetic-fixtures-in-dev-library', includeLarge: variant === 'large',
         variant: variant === 'different' ? 'different' : 'base' });
       if (result.status !== 'success') throw Error('Native synthetic sources unavailable');
-      for (const source of result.value.sources) if (source.fixture === 'valid') sources.set(`${source.selected.filename.split('.').pop()}:${variant}`, source.selected);
+      for (const source of result.value.sources) if (source.fixture === 'valid' || source.fixture === 'large') {
+        sources.set(`${source.selected.filename.split('.').pop()}:${source.fixture === 'large' ? 'large' : variant}`, source.selected);
+      }
       return sources.get(key)!;
     }
     const provider = library.provider as WebOpfsStorageProvider;
@@ -62,9 +67,10 @@ async function prepareDiagnostic() {
       zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' });
       zip.file('META-INF/container.xml', '<container/>'); zip.file('synthetic.txt', variant);
       bytes = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
-    } else if (format === 'pdf') bytes = new Blob(['%PDF-1.4\n', variant, '\n%%EOF\n'], { type: 'application/pdf' });
+    } else if (format === 'pdf') bytes = new Blob(['%PDF-1.4\n', variant === 'large' ? new Uint8Array(32 * 1024 * 1024) : variant, '\n%%EOF\n'], { type: 'application/pdf' });
     else bytes = new Blob(['ID3', new Uint8Array(256), variant], { type: 'audio/mpeg' });
-    const selected = provider.registerSource(bytes, `synthetic.${format}`); sources.set(key, selected); return selected;
+    const filename = variant === 'long' ? `${'synthetic-long-name-'.repeat(11)}.${format}` : `synthetic.${format}`;
+    const selected = provider.registerSource(bytes, filename); sources.set(key, selected); return selected;
   }
   async function choose(format: AttachmentFormat, variant = 'base') {
     const selected = await fixture(format, variant), original = library.service.selectSource.bind(library.service);
@@ -91,16 +97,32 @@ async function prepareDiagnostic() {
       const stored = await books.getByUuid(uuid);
       if (!stored || stored.observacoes !== marker) throw Error('Only this diagnostic synthetic book can be reopened'); book = stored;
     } else {
-      const inserted = await books.insert({ origem: 'manual', titulo: 'Attachments management synthetic', autores: ['Synthetic'], generos: [],
+      const inserted = await books.insert({ origem: 'manual', titulo: `Attachments management synthetic ${crypto.randomUUID().slice(0, 8)}`, autores: ['Synthetic'], generos: [],
         tenho_fisico: false, formato: 'fisico', formatos: ['fisico'], status_leitura: 'quero_ler', nota: 8, observacoes: marker,
         dataCadastro: Date.now(), dataAtualizacao: Date.now() }); book = (await books.getById(inserted.id))!;
     }
-    BookStorage.saveLocale('pt-BR');
-    root.render(<I18nProvider><main className="max-w-3xl mx-auto p-4" style={{ background: DarkWalnutPalette.woodDark, minHeight: '100dvh' }}>
-      <DigitalAttachmentsSection key={book.uuid} book={book} palette={DarkWalnutPalette} />
-    </main></I18nProvider>);
+    await render();
+    return { bookUuid: book.uuid, provider: library.provider.id };
+  }
+  async function render(locale: LocaleId = 'pt-BR', mode: 'section' | 'app' = 'section') {
+    if (!AVAILABLE_LOCALES.some(value => value.id === locale)) throw Error('Unknown diagnostic locale');
+    BookStorage.saveLocale(locale);
+    root.render(<I18nProvider key={`${locale}:${mode}`}>{mode === 'app' ? <App /> :
+      <main className="max-w-3xl mx-auto p-4" style={{ background: DarkWalnutPalette.woodDark, minHeight: '100dvh' }}>
+        <DigitalAttachmentsSection key={book.uuid} book={book} palette={DarkWalnutPalette} />
+      </main>}
+    </I18nProvider>);
     await new Promise(resolve => setTimeout(resolve, 50));
-    await idle(); return { bookUuid: book.uuid, provider: library.provider.id };
+    if (mode === 'section') await idle();
+    return TRANSLATIONS[locale].attachments;
+  }
+  async function navigationFixture() {
+    const inserted = await books.insert({ origem: 'manual', titulo: `UX 3.3 companion synthetic ${crypto.randomUUID().slice(0, 8)}`, autores: ['Synthetic'], generos: ['Synthetic'],
+      tenho_fisico: true, formato: 'ebook', formatos: ['ebook', 'audiolivro'], status_leitura: 'lido', nota: 7,
+      observacoes: marker, editora: 'Synthetic', paginas: 100, anoPublicacao: 2026, mesLeitura: 10, anoLeitura: 2026,
+      emprestimo: { nomePessoa: 'Synthetic borrower', dataEmprestimo: '2026-10-01', dataDevolucao: '2099-01-01', devolvido: false },
+      dataCadastro: Date.now(), dataAtualizacao: Date.now() });
+    return (await books.getById(inserted.id))!;
   }
   async function run() {
     await start(); const checks: string[] = [], initial = await snapshot();
@@ -154,7 +176,7 @@ async function prepareDiagnostic() {
     status: (await library.service.verifyIntegrity(managedFileReference(current.storageProvider, current.storageReference), {
       sizeBytes: current.sizeBytes, checksum: { algorithm: 'sha256', value: current.checksum! },
     })).status })));
-  return { start, run, choose, snapshot, seedPosition, idle, verifyAll };
+  return { start, run, choose, snapshot, seedPosition, idle, verifyAll, render, navigationFixture };
 }
 function unwrap<T>(result: StorageResult<T>): T {
   if (result.status !== 'success') throw Error(result.status === 'error' ? result.error.code : result.code); return result.value;

@@ -67,7 +67,7 @@ export function AttachmentConfirmationDialog({ confirmation, palette, t, onConfi
     };
   }, [returnFocusId, returnFocusElement]);
   const replace = confirmation.kind === 'replace';
-  const buttonClass = 'min-h-11 px-4 py-2 rounded-lg font-sans font-semibold text-sm cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2';
+  const buttonClass = 'min-h-11 min-w-0 max-w-full px-4 py-2 rounded-lg font-sans font-semibold text-sm cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2';
   return <dialog ref={ref} aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId}
     onCancel={event => { event.preventDefault(); onDismiss(); }}
     onKeyDown={event => {
@@ -78,7 +78,7 @@ export function AttachmentConfirmationDialog({ confirmation, palette, t, onConfi
       const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
       buttons[(index + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length].focus();
     }}
-    className="m-auto w-[calc(100%-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border p-0 shadow-2xl backdrop:bg-black/65 backdrop:backdrop-blur-xs"
+    className="m-auto w-[calc(100%-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto [overflow-wrap:anywhere] rounded-2xl border p-0 shadow-2xl backdrop:bg-black/65 backdrop:backdrop-blur-xs"
     style={{ backgroundColor: palette.paperSurface, color: palette.textOnPaper, borderColor: palette.woodBorder }}>
     <PaperCard palette={palette} elevated className="flex flex-col gap-4 !border-0">
       <h2 id={titleId} className="font-serif text-2xl font-bold">{replace ? t.confirmReplace : t.confirmDetach}</h2>
@@ -105,13 +105,13 @@ export function DigitalAttachmentsView({ state, palette, locale, t, loadingText,
   onReplace, onDetach, onVerify, onRecover, onConfirm, onDismiss }: ViewProps) {
   const sectionTitleId = useId();
   const actionTrigger = useRef<HTMLElement | null>(null);
-  const buttonClass = 'min-h-11 px-4 py-2 rounded-lg font-sans text-sm font-semibold cursor-pointer disabled:opacity-60 disabled:cursor-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 hover:brightness-95';
+  const buttonClass = 'min-h-11 min-w-0 max-w-full px-4 py-2 rounded-lg font-sans text-sm font-semibold cursor-pointer disabled:opacity-60 disabled:cursor-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 hover:brightness-95';
   const buttonStyle = { backgroundColor: palette.woodDark, color: palette.textOnWood, outlineColor: palette.woodBorder };
   const percent = attachmentProgress(state);
   const feedback = state.feedback;
   const message = feedback?.kind === 'success' ? feedback.message ? t[feedback.message] : t.completed : feedback?.kind === 'cancelled' ? t.cancelled
     : feedback ? attachmentErrorText(feedback.code, t) : '';
-  return <section aria-label={t.title} aria-busy={state.loading || !!state.busy} className="min-w-0 w-full">
+  return <section aria-label={t.title} aria-busy={state.loading || !!state.busy} className="min-w-0 w-full [overflow-wrap:anywhere]">
     <PaperCard palette={palette} elevated className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id={sectionTitleId} tabIndex={-1} className="font-serif text-2xl font-bold" style={{ color: palette.textOnPaper }}>{t.title}</h2>
@@ -133,7 +133,7 @@ export function DigitalAttachmentsView({ state, palette, locale, t, loadingText,
           const label = type === 'ebook' ? t.ebook : t.audiobook;
           const disabled = state.loading || !state.persisted || !state.manageable || !!state.busy || state.pending.includes(type);
           return <div key={type} data-attachment-slot={type} className="min-w-0 rounded-xl border p-4 flex flex-col gap-3" style={{ backgroundColor: palette.paperSurface, borderColor: palette.paperBorder }}>
-            <h3 className="font-serif text-xl font-bold flex items-center gap-2"><Icon size={21} aria-hidden="true" />{label}</h3>
+            <h3 className="font-serif text-xl font-bold flex items-center gap-2"><Icon size={21} className="shrink-0" aria-hidden="true" />{label}</h3>
             {item ? <>
               <p className="font-sans text-base font-semibold [overflow-wrap:anywhere]" title={item.attachment.filename}>{item.attachment.filename}</p>
               <p className="font-sans text-sm" style={{ color: palette.textSecondaryOnPaper }}>{item.attachment.format.toUpperCase()} · {attachmentSize(item.attachment.sizeBytes, locale)}</p>

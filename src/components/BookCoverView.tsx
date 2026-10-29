@@ -238,6 +238,15 @@ export const BookCoverView: React.FC<BookCoverViewProps> = ({
   return (
     <div
       onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? [title, author].filter(Boolean).join(' — ') : undefined}
+      onKeyDown={onClick ? (event) => {
+        if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          onClick();
+        }
+      } : undefined}
       onContextMenu={onContextMenu}
       className={`relative isolate overflow-hidden rounded-r-md rounded-l-xs cursor-pointer select-none transition-transform duration-200 hover:-translate-y-1 hover:brightness-105 active:scale-95 group flex-shrink-0 ${className}`}
       style={{
