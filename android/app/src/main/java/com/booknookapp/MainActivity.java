@@ -18,6 +18,11 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(DigitalLibraryStoragePlugin.class);
+        if (BuildConfig.DEBUG && getPackageName().equals("com.booknookapp.dev")) {
+            try {
+                registerPlugin(Class.forName("com.booknookapp.BackupV2ExportPlugin").asSubclass(com.getcapacitor.Plugin.class));
+            } catch (ClassNotFoundException ignored) { /* Companion exists only in src/debug. */ }
+        }
         super.onCreate(savedInstanceState);
         if (bridge != null && bridge.getWebView() != null) {
             bridge.getWebView().addJavascriptInterface(new AndroidBridge(), "AndroidApp");

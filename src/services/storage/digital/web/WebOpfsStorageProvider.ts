@@ -332,6 +332,17 @@ export class WebOpfsStorageProvider implements IDigitalStorageProvider, IDigital
     if (saved && saved.file.storageReference !== access.file.storageReference) return storageFailure('INVALID_REFERENCE');
     this.reads.delete(access.token); return storageSuccess(undefined);
   }
+  /** DEV export source snapshot. Hashing belongs to the ZIP Worker, avoiding a media pass on the UI thread. */
+  openExportSource(file: ManagedFileReference, expected: FileIntegrity): Promise<StorageResult<Blob>> {
+    return this.result(async () => {
+      const r = await this.managed(file), normalized = normalizeIntegrity(expected);
+      requireStorage((await this.all()).some(o => o.token === r.token && o.confirmed), 'RECOVERY_REQUIRED');
+      requireStorage(r.expected?.sizeBytes === normalized.sizeBytes && r.expected?.checksum.value === normalized.checksum.value, 'INTEGRITY_MISMATCH');
+      const bytes = await this.files.read('committed', r.token);
+      requireStorage(bytes.size === normalized.sizeBytes, 'INTEGRITY_MISMATCH');
+      return bytes;
+    });
+  }
   async deleteManagedFile(_request: DeleteManagedFileRequest): Promise<StorageResult<void>> { return storageFailure('UNSUPPORTED_OPERATION'); }
   readonly recovery = {
     listPendingImports: async () => {

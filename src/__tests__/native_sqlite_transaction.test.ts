@@ -6,6 +6,7 @@ import {
 } from '../services/database/databaseService';
 import { BookRepository } from '../services/database/bookRepository';
 import { Book } from '../types/book';
+import type { IDatabaseService } from '../services/database/types';
 
 /**
  * Simulador de alta fidelidade do comportamento nativo do @capacitor-community/sqlite no Android
@@ -232,6 +233,20 @@ describe('MinhaEstante — Correção Crítica do SQLite Nativo Android', () => 
       // Injeta conexão simulada diretamente para validação unitária
       (adapter as any).db = simulator;
       (adapter as any).isInitialized = true;
+    });
+
+    it.each(['execute', 'transaction'] as const)('snapshot não permite que %s global participe da leitura', async mode => {
+      let outside!: Promise<unknown>;
+      await adapter.readInSnapshot(async tx => {
+        await tx.query('SELECT * FROM books');
+        const write = (scoped: IDatabaseService) => scoped.execute('INSERT INTO books (id) VALUES (?);', [777]);
+        outside = mode === 'execute' ? write(adapter) : adapter.runInTransaction(scoped => write(scoped!));
+        await new Promise(resolve => setTimeout(resolve, 10));
+        expect(simulator.executeLog).toHaveLength(0);
+      });
+      await outside;
+      expect(simulator.executeLog).toHaveLength(1);
+      expect((await simulator.isTransactionActive()).result).toBe(false);
     });
 
     it.each([false, true])('coordenação isolada espera pelo mutex existente (transação anterior isolada=%s)', async (isolated) => {

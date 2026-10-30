@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 # The full app DEV entry is opt-in; existing SAF diagnostics remain the default.
 DIGITAL_DEBUG_CONFIG=${DIGITAL_DEBUG_CONFIG:-vite.saf-diagnostics.config.ts}
 case "$DIGITAL_DEBUG_CONFIG" in
-  vite.saf-diagnostics.config.ts|vite.attachments-dev.config.ts) ;;
+  vite.saf-diagnostics.config.ts|vite.attachments-dev.config.ts|vite.backup-export-dev.config.ts) ;;
   *) echo "Unsupported diagnostic build configuration" >&2; exit 1 ;;
 esac
 SAF_ASSETS_DIR=$(mktemp -d /tmp/minhaestante-saf-debug.XXXXXX)

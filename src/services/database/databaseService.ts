@@ -1052,12 +1052,21 @@ export class NativeSQLiteDatabaseAdapter implements IDatabaseService {
 
   /** Same established mutex/transaction path; explicit top-level callers cannot join an unrelated active transaction. */
   async runIsolatedInTransaction<T>(fn: (tx?: IDatabaseService) => Promise<T>): Promise<T> {
+    return this.withNativeTransaction(fn, true);
+  }
+
+  async readInSnapshot<T>(fn: (tx: IDatabaseService) => Promise<T>): Promise<T> {
+    // Only scoped repositories may reenter this read. Unrelated global writes must await the mutex.
+    return this.withNativeTransaction(tx => fn(tx!), false);
+  }
+
+  private async withNativeTransaction<T>(fn: (tx?: IDatabaseService) => Promise<T>, publishContext: boolean): Promise<T> {
     // Transação de nível superior: adquire bloqueio exclusivo no mutex
     return await this.mutex.runExclusive(async () => {
       if (!this.db) throw new Error('Banco SQLite não inicializado');
 
       const txContext = new NativeTransactionContext(this.db);
-      this.currentTxContext = txContext;
+      this.currentTxContext = publishContext ? txContext : null;
 
       await this.db.beginTransaction();
       try {
@@ -1147,6 +1156,13 @@ export class DatabaseService implements IDatabaseService {
   public async runInTransaction<T>(fn: (tx?: IDatabaseService) => Promise<T>): Promise<T> {
     await this.initialize();
     return this.adapter.runInTransaction(fn);
+  }
+
+  public async readInSnapshot<T>(fn: (tx: IDatabaseService) => Promise<T>): Promise<T> {
+    await this.initialize();
+    if (this.adapter.readInSnapshot) return this.adapter.readInSnapshot(fn);
+    const run = this.adapter.runIsolatedInTransaction ?? this.adapter.runInTransaction;
+    return run.call(this.adapter, (tx) => fn(tx ?? this.adapter)) as Promise<T>;
   }
 
   public async runIsolatedInTransaction<T>(fn: (tx?: IDatabaseService) => Promise<T>): Promise<T> {

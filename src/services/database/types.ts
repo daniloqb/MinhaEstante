@@ -154,6 +154,8 @@ export interface IReadingProgressRepository {
 }
 
 export interface IDatabaseService {
+  /** Short coherent read; callbacks must use repositories and perform no writes or file I/O. */
+  readInSnapshot?<T>(fn: (tx: IDatabaseService) => Promise<T>): Promise<T>;
   initialize(): Promise<void>;
   execute(sql: string, params?: any[]): Promise<any>;
   query<T>(sql: string, params?: any[]): Promise<T[]>;

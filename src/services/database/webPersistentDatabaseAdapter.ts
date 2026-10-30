@@ -21,6 +21,11 @@ export class WebPersistentDatabaseAdapter implements IDatabaseService {
     return { rows, revision: record?.revision ?? 0 };
   }
   async query<T>(sql: string, params?: any[]): Promise<T[]> { return (await this.load()).rows.query(sql, params); }
+  async readInSnapshot<T>(fn: (tx: IDatabaseService) => Promise<T>): Promise<T> {
+    // A single persisted revision; unlike a write transaction, this never commits/CASes domain.
+    const { rows } = await this.load();
+    return fn(rows);
+  }
   execute(sql: string, params?: any[]): Promise<any> { return this.runIsolatedInTransaction((tx) => tx!.execute(sql, params)); }
   runInTransaction<T>(fn: (tx?: IDatabaseService) => Promise<T>): Promise<T> { return this.runIsolatedInTransaction(fn); }
   runIsolatedInTransaction<T>(fn: (tx?: IDatabaseService) => Promise<T>): Promise<T> {

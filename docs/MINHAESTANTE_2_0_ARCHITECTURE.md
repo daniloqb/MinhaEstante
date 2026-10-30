@@ -2,8 +2,8 @@
 
 **Documento Técnico da Fase 1 — Modelos, Esquema SQLite e Contratos Arquiteturais**
 
-Atualizado até a **Fase 3.3: validação da experiência DEV de anexos**.
-Os adendos 29–30 descrevem a evolução e sua validação; as seções anteriores são históricas.
+Atualizado até a **Fase 4.2A: prova técnica isolada de streaming ZIP**.
+Os adendos 29–32 descrevem a evolução e sua validação; as seções anteriores são históricas.
 A seção 28 e o relatório 2.4 descrevem a composição vigente, os testes reais e as
 pendências. As seções anteriores preservam o contexto histórico; afirmações de
 funcionalidade futura referem-se à fase então entregue.
@@ -1272,3 +1272,111 @@ Exportação incremental nativa precisa de porta adequada: `readAccess` continua
 indisponível, sem autorização para vazar URIs ou usar arquivos inteiros em JS.
 Safari, leitores de tela reais, provedores SAF adicionais e demais limites do
 relatório permanecem abertos. Publicação e saneamento histórico continuam separados.
+
+## 31. Fase 4.1 — arquitetura e contratos do Backup v2 (29/10/2026)
+
+Especificação vigente, auditoria do legado, matriz de decisões e critérios das fases
+seguintes em [MINHAESTANTE_4_1_BACKUP_V2_ARCHITECTURE.md](MINHAESTANTE_4_1_BACKUP_V2_ARCHITECTURE.md).
+Este adendo atualiza o planejamento histórico da seção 11; não modifica seu executor.
+
+`src/services/storage/backupV2/index.ts` expõe tipos/resultados/checkpoints, manifesto
+v2, parser limitado, validadores de domínio/inventário/integridade e planejamento
+puro. Reutiliza digitalMedia e StoredDigitalFile, sem segundo modelo operacional
+de anexo, inicialização de banco, I/O, plugin ou extensão dos estados de journals.
+
+O manifesto padrão existente permanece version:1, sem novo campo. V2 usa outro
+discriminador (format + backupVersion:2), livros/capas nos nomes atuais, reading.json
+e mídia em media/ebooks|audiobooks. Opções independentes, falsas por novo fluxo.
+Payloads têm tamanho/hash; manifesto distingue incluído, opt-out e falha selecionada.
+Campos físicos são rejeitados. O futuro dispatcher não está ligado ao restore atual.
+
+Restore v2 terá validação antes da extração, staging no provider local, SHA-256 e
+formato verificados, mapas de identidades e transação curta com revisão concorrente.
+Posição só via evidência correspondente; sessões/progresso sobrevivem à mídia omitida.
+Journal coordenador de backup comporá os individuais, com pontos duráveis antes de
+criação/vínculo e reconciliação depois do commit. Arquivos existentes serão preservados;
+rollback SQL não desfaz bytes e limpeza automática permanece fora do escopo.
+
+Auditoria confirmou que a rotina legada não serializa os quatro modelos digitais,
+tem merge com sobrescrita por identidade/ISBN e clearAll, e compensação limitada a
+livros no replace. O novo plano não reutiliza esse algoritmo para importar histórico.
+Novas políticas merge/replace e APIs de importação de histórico precisam de decisão
+na 4.3; esta entrega não corrige o serviço antigo nem altera transações estabilizadas.
+
+Android precisa de porta de leitura/exportação nativa e destino incremental SAF;
+Web de pipeline ZIP/hash/source/sink com backpressure. A biblioteca instalada JSZip
+não aprova ZIP64/grandes arquivos no fluxo atual; zip.js é candidata Web à prova,
+sem instalação. Limites de segurança são configuráveis e separados de limites reais.
+Nenhuma promessa de compatibilidade universal, durabilidade externa ou autenticidade.
+
+Verificação desta fase: **722 Vitest / 36 arquivos (108 novos)**, TypeScript e build
+Web/PWA aprovados. Saída Web em `/tmp`, aviso conhecido de chunk >500 kB. Sem cap sync,
+JVM/Gradle novo, testes em aparelho, SQLite/migração alterados, novo journal, APK/AAB,
+dependência, mudança de UI, versão/assinatura ou commit/push. Produção/publicação
+continuam bloqueadas pelas questões históricas; 4.2/4.3 não estão implementadas.
+
+
+## 32. Fase 4.2A — prova isolada de streaming ZIP (29/10/2026)
+
+[Relatório com matriz, hashes e limites](MINHAESTANTE_4_2A_ZIP_STREAMING_INTEROP.md).
+`backupV2/experimental` e a entrada local `experiments/backup-zip-proof` não são
+importados pelo aplicativo público. zip.js 2.24.0 é dependência de desenvolvimento;
+Kotlin está restrito a src/debug e testes JVM. Não há método experimental no plugin
+Capacitor de produção nem alteração de banco, anexos ou backup legado.
+
+Fontes SAF são abertas via ContentResolver com recibos dev-proof-42a-* do journal
+existente; saída usa ACTION_CREATE_DOCUMENT/OutputStream não posicionável. Para
+ZipFile, a reabertura SAF usa cópia limitada em disco privado. Web lê slices OPFS,
+usa entradas sequenciais sem buffering integral e grava WritableStream durável.
+Acesso de prova ao FILE_READY não fabrica associação: uma porta gerenciada explícita
+será necessária na 4.2B, preservando concorrência e propriedade das fontes.
+
+Manifesto, inventário e hashes são validados pelos contratos da 4.1. ZipFile↔zip.js
+passou no JVM e Android físico; ZipInputStream falhou com descriptors/ZIP64 Web no
+JDK21. A arquitetura de leitura futura precisa admitir seek/staging limitado.
+ZIP64 estrutural/count 65.536 aprovados; >4 GiB não testado. Progressão real até
+PDF 134.218.405 bytes nos três browsers e PDF SAF 104.858.276 bytes no Android.
+
+Destino externo SAF e Chrome desktop pequeno aprovados; Firefox sem API, Chrome
+Android externo parcial por falha de readback. OPFS é interno. Sem worker, pausas
+Web de segundos impedem tratar o protótipo como UI definitiva. 4.2B exige worker,
+capacidade de destino, snapshot, journal/cancelamento e política para saída incompleta.
+
+761 Vitest, 47 JVM, TypeScript e builds Web/PWA/experimental/debug DEV aprovados;
+DEV atualizado com autorização explícita e install -r. SQLite DEV e instalação
+principal preservados. Nenhuma exportação pública/restauração, commit/push, release
+ou alteração de versão/assinatura principal. Publicação continua bloqueada pelo
+histórico privado. Safari/PWA instalada/>4 GiB/morte de processo permanecem pendentes.
+
+## 33. Fase 4.2B — coordenador de exportação DEV (30/10/2026)
+
+Detalhes, evidências e limites em
+[MINHAESTANTE_4_2B_BACKUP_EXPORT.md](MINHAESTANTE_4_2B_BACKUP_EXPORT.md).
+
+`backupV2/export/` compõe planejamento/snapshot, journal e coordenador. A biblioteca
+é consultada pelos repositórios existentes. `readInSnapshot` lê uma revisão IndexedDB
+sem CAS ou usa a transação nativa isolada curta, encerrada antes do I/O. Snapshot
+congelado, digest canônico, revisões/vínculos e SHA das fontes são revalidados; conflito
+invalida a confirmação, preservando biblioteca e originais. Exportação não inicia
+sessões nem modifica progresso/posição/status/posse/modalidades.
+
+`backupV2/zip/streamingZip.ts` promove o codec 4.2A sem duplicá-lo. Worker Web recebe
+Files/handle, escreve sequencialmente e verifica o arquivo reaberto; checkpoints com
+ACK, progresso limitado e cancelamento com término limitado. SAF fica inteiramente
+nativo em `BackupV2ExportPlugin` debug: ContentResolver, ZipOutputStream/SHA incremental,
+releitura para cópia privada limitada e ZipFile/CRC. `BackupExportOwnership` libera
+CAS com a referência armazenada, aceitando igualdade textual entre chamadas da bridge.
+Web Locks e ownership nativo impedem exportações simultâneas; nenhuma transação
+SQLite permanece aberta durante exportações longas.
+
+`BackupExportGate` testa flags diretamente no import dinâmico, removendo UI, engine,
+Worker e precache do build público. Companion registrado somente debug/ID DEV. V1,
+serialização, entrega e restauração permanecem intactos; ambas as opções falsas
+chamam exatamente o serviço legado. Qualquer categoria marcada seleciona v2.
+
+Journal de backup separado de importação, sem binários/referências físicas no relatório.
+Não há retomada automática, limpeza de originais ou apagamento de ZIPs externos parciais.
+Somente destinos da matriz comprovada; Firefox externo e Web móvel desabilitados.
+Limites DEV: Web 129 MiB e Android 101 MiB totais; não são os 16/256 GiB contratuais.
+821 Vitest e 58 JVM completos, leituras cruzadas reais, TypeScript/builds e testes
+SAF/SQLite no aparelho. Não há restauração de mídia; publicação continua bloqueada.

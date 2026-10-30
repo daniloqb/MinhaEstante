@@ -28,6 +28,7 @@ import { useI18n } from '../i18n/I18nContext';
 import { LocaleId } from '../i18n/types';
 import { BackupService } from '../services/storage/backupService';
 import { BookStorage } from '../services/storage';
+import { BackupExportGate } from '../components/BackupExportGate';
 import {
   ReadingPreferencesService,
   ReadingPreferences,
@@ -1244,6 +1245,8 @@ export const SettingsBackupScreen: React.FC<SettingsBackupScreenProps> = ({
               />
             </div>
           </div>
+
+            <BackupExportGate palette={palette} legacyExport={handleExportZip} />
 
             {/* Gerenciamento / Limpar Tudo */}
             <div className="pt-2.5 mt-1 border-t border-black/10 flex flex-col gap-2">

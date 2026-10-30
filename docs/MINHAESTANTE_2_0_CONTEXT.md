@@ -470,3 +470,100 @@ publicação continua bloqueada. As seções anteriores são evidências histór
 Cinco commits de inclusão/alteração privada e 21 pacotes antigos afetados continuam
 como bloqueios de publicação; a recontagem também distinguiu 12 árvores alcançáveis
 que contêm o diretório. Não houve expurgo, release, limpeza de dados, commit ou push.
+
+## Fase 4.1 — contratos do Backup v2 (29/10/2026)
+
+Arquitetura e auditoria efetiva em
+[MINHAESTANTE_4_1_BACKUP_V2_ARCHITECTURE.md](MINHAESTANTE_4_1_BACKUP_V2_ARCHITECTURE.md).
+Implementação restrita a tipos, validadores e planejamento puros em
+`src/services/storage/backupV2/`, sem integração à UI/ZIP, SQLite, SAF/OPFS ou journals.
+
+- ZIP padrão **inalterado**: já possui manifest.json (version:1), books.json e covers/.
+  Somente seleção explícita de pelo menos uma categoria usará o futuro v2; as duas
+  opções recomeçam falsas a cada fluxo. Não inferir seleção por modalidade/posse.
+- V2 identifica format/backupVersion:2, mantém nomes bibliográficos, acrescenta
+  reading.json e media/ebooks|audiobooks/<attachment-id>.<ext>. Manifesto com hashes
+  por payload, contagens, omissões e reconhecimento explícito de falhas selecionadas.
+- Projeção de anexo exclui referências físicas. Restauração futura só planeja vínculo
+  com novo StoredDigitalFile verificado no destino. Posição exige conteúdo/formato/hash
+  correspondente; sessões/progresso são independentes de transportar mídia.
+- Auditoria encontrou limites legados: merge ZIP substitui coincidências por UUID,
+  ISBN13 ou origem+idExterno e reconstrói lista com clearAll; snapshot/compensação só
+  de livros em replace, sem rollback integral de arquivos/histórico. Esses fluxos
+  foram preservados, não promovidos a garantia segura de restore digital.
+- Contratos validam versão, estrutura, FKs lógicas, paths, duplicatas, hashes, tamanhos,
+  inventário bruto/limites e orçamento observado. Não leem ZIP/binários nem substituem
+  verificação real, validação do parser ZIP e finalização do destino.
+- Estratégia proposta: ZIP Kotlin nativo no Android; streaming Web com sink compatível
+  e prova técnica de biblioteca (zip.js candidata, não instalada). ZIP64/múltiplos GiB
+  não aprovados; tetos configuráveis de segurança não representam capacidade real.
+- Journal coordenador composto, checkpoints e commit curto planejados, sem implementar
+  journal novo. Merge/replace v2 e política de conflito/histórico exigem decisões antes
+  da 4.3. Não reaproveitar tokens SAF/OPFS de outra instalação.
+
+Validação: **722 Vitest / 36 arquivos, 108 testes novos**, preservando os 614 anteriores;
+TypeScript e Web/PWA aprovados, com aviso conhecido de bundle >500 kB. Build por Vite
+em `/tmp`, sem `npm run build` composto/cap sync. Nenhum JVM/Gradle ou teste físico
+Android/SAF/OPFS novo nesta fase; evidências históricas permanecem separadas.
+Backup privado não foi aberto. Fases 4.2/4.3 continuam sem exportação/restauração real
+de mídias. Sem APK/AAB, migração, dependência nova, versão/assinatura, commit ou push.
+Publicação continua bloqueada pelo histórico privado já documentado.
+
+
+## Fase 4.2A — prova técnica ZIP incremental (29/10/2026)
+
+Implementação exclusivamente experimental; detalhes, hashes, matriz e comandos em
+[MINHAESTANTE_4_2A_ZIP_STREAMING_INTEROP.md](MINHAESTANTE_4_2A_ZIP_STREAMING_INTEROP.md).
+Não há exportação pública v2 ou restauração de mídias. ZIP legado e domínio preservados.
+
+- Kotlin debug: ZipOutputStream, 64 KiB, SHA/CRC incrementais, ContentResolver SAF;
+  DEV atualizado por install -r com autorização explícita, ID/certificado/assets auditados.
+- Web: zip.js 2.24.0 devDependency isolada, entradas sequenciais, Streams→OPFS ou sink
+  externo detectado; provedores/journal existentes e namespace exclusivo sintético.
+- Interoperabilidade ZipFile↔zip.js aprovada no JVM e Android físico; seis ZIPs dos
+  browsers reais lidos no aparelho. ZipInputStream não aprovado no JDK21 ensaiado.
+- Progressão 1/16/64/128 MiB em Chrome, Firefox e Chrome Android; SAF físico com PDF
+  de cerca de 100 MiB. ZIP64 estrutural e 65.536 entradas comprovados, >4 GiB pendente.
+- SAF externo e Chrome desktop pequeno aprovados. Firefox sem picker; externo Chrome
+  Android parcial por ZIP_FORMAT na reabertura. OPFS não comprova entrega externa.
+- Sem worker, houve pausas de segundos na thread principal: resolver antes da 4.2B.
+  Definir também porta de fonte gerenciada, snapshot, destino/journal e política de parcial.
+- 761 Vitest (39 novos), 47 JVM (15 novos), TypeScript, builds Web/PWA, experimental
+  e APK debug DEV aprovados. Cancelamentos/falhas injetados não são provas físicas.
+- Hash SQLite DEV preservado; app principal manteve versão/data. Sem SQL, migração,
+  leitura de backup pessoal, release, versionamento/assinatura principal, commit/push.
+  Safari, PWA instalada, perda de energia, outros provedores SAF e >4 GiB pendentes.
+
+4.2B pode ser desenvolvida com essas restrições; ainda não foi implementada. Publicação
+continua bloqueada pelo histórico privado, sem saneamento automático nesta fase.
+
+## Fase 4.2B — exportação real exclusivamente DEV (30/10/2026)
+
+O registro acima é histórico. Estado atual e matriz de destinos:
+[MINHAESTANTE_4_2B_BACKUP_EXPORT.md](MINHAESTANTE_4_2B_BACKUP_EXPORT.md).
+
+- Coordenador sobre catálogo/repositórios reais, snapshot curto coerente, projeção
+  imutável e revalidação de livros, vínculos e leitura antes de confirmar. Sem SQL,
+  esquema ou migração novos e sem transação aberta durante transferência de mídia.
+- Dois checkboxes independentes/desmarcados; ambas falsas chamam o v1 existente.
+  Manifesto/reading da 4.1, capas, EPUB/PDF/áudio selecionados, SHA/CRC e verificação
+  obrigatória do destino antes de sucesso. Nenhuma alteração de posse/status/formatos.
+- Kotlin/SAF nativo com buffers limitados e cópia privada informada para ZipFile;
+  Web com zip.js 2.24.0 em Worker, handle/File, backpressure, ACKs, progresso e cancelamento.
+  Journal próprio; identificar inconclusivas e reiniciar com novo ID, sem retomar/escrever
+  automaticamente. Não há parcialidade silenciosa nem exclusão de documentos externos.
+- Android DEV físico passou com PDF de 100 MiB, três seleções, cancelamento e falhas
+  controladas de escrita/finalização/verificação; SQLite com hash idêntico e transação
+  de snapshot concorrente realmente ensaiada. Corrigido CAS que não liberava ownership
+  quando a bridge produzia outra instância String com o mesmo ID; três regressões JVM.
+- Chrome/Firefox OPFS reais até 128 MiB, Workers responsivos; Chrome desktop externo
+  e PWA desktop instalada com destino externo, reabertura e offline OPFS aprovados no
+  escopo descrito. Firefox externo indisponível. Chrome Android externo reproduziu
+  readback de zero bytes após close e continua bloqueado. Safari/PWA Android específicos
+  e payload >4 GiB continuam pendentes; não afirmar compatibilidade universal.
+- 821 Vitest, 58 JVM na validação completa, TypeScript e builds público/DEV/debug;
+  15 ZIPs reais lidos por JVM e Python independentes, três SAF também pelo leitor Web.
+  A constante foi movida ao ponto do import para impedir Worker órfão/precache no build
+  público. DEV atualizado sem mudar 31/2.0-31/certificado; instalação principal intacta.
+
+Restauração v2 continua reservada à 4.3. Publicação bloqueada; sem release/commit/push.
